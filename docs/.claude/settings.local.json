@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"from '\\\\.\\\\./\\\\.\\\\./api\" apps/saas-admin/src/views --include=\"*.vue\")",
+      "Bash(grep -r \"from '\\\\.\\\\./\\\\.\\\\./components\" apps/saas-admin/src/views --include=\"*.vue\")",
+      "Bash(grep -c \"from '\\\\.\\\\./\\\\.\\\\.\" apps/saas-admin/src/views/**/*.vue)"
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "logistics-platform-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Logistics Platform Web - Monorepo",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:shell": "turbo run dev --filter=@logistics/shell",
+    "dev:saas": "turbo run dev --filter=@logistics/saas-admin",
+    "dev:wms": "turbo run dev --filter=@logistics/wms",
+    "dev:yms": "turbo run dev --filter=@logistics/yms",
+    "dev:tms": "turbo run dev --filter=@logistics/tms",
+    "dev:oms": "turbo run dev --filter=@logistics/oms",
+    "dev:crm": "turbo run dev --filter=@logistics/crm",
+    "build": "turbo run build",
+    "build:shell": "turbo run build --filter=@logistics/shell",
+    "build:saas": "turbo run build --filter=@logistics/saas-admin",
+    "build:wms": "turbo run build --filter=@logistics/wms",
+    "build:yms": "turbo run build --filter=@logistics/yms",
+    "build:tms": "turbo run build --filter=@logistics/tms",
+    "build:oms": "turbo run build --filter=@logistics/oms",
+    "build:crm": "turbo run build --filter=@logistics/crm",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{js,ts,vue,json,md}\"",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.20.0",
+    "prettier": "^3.2.0",
+    "turbo": "^1.12.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vue-tsc": "^1.8.0"
+  }
+}

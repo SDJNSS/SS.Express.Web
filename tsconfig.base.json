@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@logistics/ui": ["./packages/ui/src"],
+      "@logistics/request": ["./packages/request/src"],
+      "@logistics/auth": ["./packages/auth/src"],
+      "@logistics/permission": ["./packages/permission/src"],
+      "@logistics/dict": ["./packages/dict/src"],
+      "@logistics/layout": ["./packages/layout/src"],
+      "@logistics/router": ["./packages/router/src"],
+      "@logistics/store": ["./packages/store/src"],
+      "@logistics/types": ["./packages/types/src"],
+      "@logistics/utils": ["./packages/utils/src"],
+      "@logistics/config": ["./packages/config/src"]
+    }
+  },
+  "include": ["apps/**/*", "packages/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
