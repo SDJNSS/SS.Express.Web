@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "training-employee-archives",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/training-employee-archives.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "ee6763e1d18c537ab1e68e7f0b1b40ae1a7c9f10e6d1f814d56630aec7074495"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-17T18:48:17+08:00",
+    "evidence": "用户已完成培训考试模块第二组页面 review，并在当前会话明确悉予允行，授权完成开发、联调与验收；最终候选已通过三视口视觉复核和生产路由冒烟测试。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/training-employee-archives/desktop-1366.png",
+      "sha256": "7812b74df2eb53be3d9d62252320cad863058a0fb97d97422109ff7a6358ebe6"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/training-employee-archives/desktop-1440.png",
+      "sha256": "bde93e9987c35f9df273a96ee566d7c1454f984025d478cded78809be7194c81"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/training-employee-archives/desktop-1920.png",
+      "sha256": "c147c4bf59e18195827daca3f0eb9ccf2cd5e494f8aedea837ea428dbe60c24f"
+    }
+  ],
+  "readyText": "员工培训档案"
+}

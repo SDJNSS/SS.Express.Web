@@ -1,0 +1,44 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "training-course-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/training-course-management.yaml",
+    "revision": 1,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "5516b3b845a74291453cac079efcbd885ba133672af03cb25db524c7d4b79f65"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-15T19:15:24+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面review通过，请将他们“转正”。本记录对应本次培训资源与考试规则的四个页面，批准现有页面内容、视觉及交互设计；培训业务 API 与权限编码待后续提供。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": [
+    "desktop-1366",
+    "desktop-1440",
+    "desktop-1920"
+  ],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/training-course-management/desktop-1366.png",
+      "sha256": "05ce380cc6c560627ee9eb6b1c44fff9b9bc6c0c1171889faab3bac63e752b45"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/training-course-management/desktop-1440.png",
+      "sha256": "cd9e5e29a758fb871ae871656519dfa2995ceb9a6bd190493679967e51f0a057"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/training-course-management/desktop-1920.png",
+      "sha256": "961dc1660f67c5517dfb21b6d67a84cfbb3cb15e3a64484f7beada51ea057bcf"
+    }
+  ],
+  "readyText": "课程管理"
+}

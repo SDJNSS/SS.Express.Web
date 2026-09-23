@@ -1,0 +1,46 @@
+export const TRAINING_PERMISSIONS = Object.freeze({
+  overview: {
+    view: 'iam:training:overview:view',
+  },
+  plans: {
+    view: 'iam:training:plans:view',
+    detail: 'iam:training:plan-detail:view',
+    create: 'iam:training:plans:create',
+    update: 'iam:training:plans:update',
+    publish: 'iam:training:plans:publish',
+    delete: 'iam:training:plans:delete',
+    queryEmployees: 'iam:training:plans:employees:view',
+    addEmployees: 'iam:training:plans:employees:update',
+    exitEmployees: 'iam:training:plans:employees:update',
+    rejoinEmployee: 'iam:training:plans:employees:update',
+  },
+  tasks: {
+    view: 'iam:training:tasks:view',
+    detail: 'iam:training:task-detail:view',
+    create: 'iam:training:tasks:create',
+    update: 'iam:training:tasks:update',
+    start: 'iam:training:tasks:start',
+    delete: 'iam:training:tasks:delete',
+    queryEmployees: 'iam:training:tasks:employees',
+    arrangeReturnToWork: 'iam:training:return-to-work:arrange',
+    adminCompleteEmployee: 'iam:training:task-employees:admin-complete',
+  },
+  onboarding: {
+    view: 'iam:training:onboarding:view',
+    update: 'iam:training:onboarding:update',
+    retry: 'iam:training:onboarding:retry',
+  },
+  courses: { view: 'iam:training:courses:view' },
+  exams: { view: 'iam:training:exams:view' },
+  archives: {
+    view: 'iam:training:employee-archives:view',
+    examSnapshot: 'iam:training:employee-archives:audit',
+    export: 'iam:training:statistics:export',
+    exportExamMaterials: 'iam:training:statistics:audit-export',
+  },
+  statistics: {
+    view: 'iam:training:statistics:view',
+    export: 'iam:training:statistics:export',
+    auditExport: 'iam:training:statistics:audit-export',
+  },
+})

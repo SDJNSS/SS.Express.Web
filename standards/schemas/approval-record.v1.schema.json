@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ss.express.local/schemas/approval-record.v1.schema.json",
+  "title": "SS.Express.Web UIDesign Approval Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "pageId",
+    "status",
+    "contract",
+    "approval",
+    "scope",
+    "viewports",
+    "baselines",
+    "readyText"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "pageId": { "$ref": "#/$defs/id" },
+    "status": { "const": "approved" },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "revision", "digestAlgorithm", "digest"],
+      "properties": {
+        "path": { "$ref": "#/$defs/projectPath" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "digestAlgorithm": { "const": "sha256-canonical-json-v1" },
+        "digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "approvedAt", "evidence"],
+      "properties": {
+        "authority": { "const": "human" },
+        "approvedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "evidence": { "type": "string", "minLength": 1 }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "exceptionRefs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "exceptionRefs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "baselines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["viewportId", "path", "sha256"],
+        "properties": {
+          "viewportId": { "$ref": "#/$defs/id" },
+          "path": { "$ref": "#/$defs/projectPath" },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "readyText": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "projectPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+    }
+  }
+}

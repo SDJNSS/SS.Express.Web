@@ -1,0 +1,190 @@
+schemaVersion: '0.1'
+page:
+  id: iam-tenant-context
+  name: Tenant 选择与切换
+  feature: iam/foundation
+  type: AuthPage
+  patternKey: AuthPageTemplate
+  revision: 2
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: context-prd,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M06-F02 至 M06-F04,
+        purpose: 定义登录后 Tenant 选择、站内切换与退出,
+      }
+  api:
+    - {
+        id: context-api,
+        ref: docs/api/iam-admin-api.md,
+        section: Auth Login Logout SwitchTenant,
+        operation: POST /iam-admin/Auth/SwitchTenant; POST /iam-admin/Auth/Logout,
+        purpose: 定义候选 Tenant、会话版本与切换结果,
+      }
+  permissions:
+    - {
+        id: context-permission,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M06 权限与安全要求,
+        purpose: 只展示当前用户可进入的有效 Tenant,
+      }
+  ux:
+    - {
+        id: auth-ux,
+        ref: UX-CONTRACT.md,
+        section: Authentication and tenant context,
+        purpose: 约束受限状态、上下文切换与退出反馈,
+      }
+  references:
+    - {
+        id: approved-login,
+        ref: docs/page-specs/iam-login.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 延续已确认登录页的深色认证视觉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/foundation/components/TenantContextPageView.vue
+  previewEntry: src/features/iam/foundation/public.preview.ts
+  previewBinding: src/features/iam/foundation/preview/FoundationPreviewPage.vue
+  productionBinding: src/features/iam/foundation/pages/TenantContextPage.vue
+  productionRoute: /iam/select-tenant
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: StandaloneAuthLayout
+  regions:
+    - { id: brand, role: header, order: 1 }
+    - { id: tenant-list, role: data, order: 2 }
+    - { id: actions, role: actions, order: 3 }
+    - { id: feedback, role: feedback, order: 4 }
+  components:
+    - {
+        id: auth-template,
+        componentKey: shared.auth-page-template,
+        regionId: brand,
+        purpose: 提供登录后未确定 Tenant 的独立受限边界,
+      }
+    - {
+        id: auth-brand,
+        componentKey: shared.auth-brand,
+        regionId: brand,
+        purpose: 延续统一认证品牌,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 当前用户可进入 Tenant 平级列表、默认标识和进入动作可见,
+      ruleRef: context-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: tenant-list,
+      observableResult: 候选 Tenant 加载时保留稳定区域且不能进入业务页,
+      ruleRef: auth-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: tenant-list,
+      observableResult: 无可用 Tenant 时只提供退出并解释下一步,
+      ruleRef: context-prd,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: feedback,
+      observableResult: 加载失败不自动选择任何 Tenant 并提供重试,
+      ruleRef: auth-ux,
+    }
+interactions:
+  - {
+      id: select-tenant,
+      trigger: 选择一个 Tenant 并点击进入,
+      targetRef: tenant-list,
+      observableResult: 仅所选项为当前候选，未选择时进入按钮禁用,
+      ruleRef: context-prd,
+    }
+  - {
+      id: set-default,
+      trigger: 勾选设为默认,
+      targetRef: actions,
+      observableResult: 默认设置作为本次 SwitchTenant 参数且不预先改写旧默认项,
+      ruleRef: context-api,
+    }
+  - {
+      id: switch-tenant,
+      trigger: 使用 tenant-switch 场景选择另一个 Tenant,
+      targetRef: tenant-list,
+      observableResult: 服务端确认前保留原上下文，成功后才清理旧 Tenant 页面数据,
+      ruleRef: context-prd,
+    }
+  - {
+      id: logout-context,
+      trigger: 点击退出登录,
+      targetRef: actions,
+      observableResult: 清理受保护上下文并返回登录页,
+      ruleRef: context-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [tenant-context-flow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [tenant-context-flow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [tenant-context-flow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [tenant-context-flow],
+    }
+exceptions:
+  - {
+      id: auth-restricted-surface,
+      standardRef: standards/README.md#App-Shell-内容区约束,
+      scopeRef: page,
+      reason: 登录后尚未确定当前 Tenant 时不得进入 AppShell 业务内容区，复用 StandaloneAuthLayout,
+    }
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - {
+        id: existing-login,
+        description: M06-F01 登录页已有 approved 成果，本候选不重复设计,
+        affectedScopes: [preview-visual],
+      }
+acceptance:
+  - {
+      id: tenant-context-flow,
+      sourceRef: context-prd,
+      observableResult: Tenant 选择、默认设置、退出及站内切换场景明确且不存在半切换状态,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: auth-ux,
+      observableResult: Preview 使用登录响应静态 Fixture 且不发起认证或切换请求,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests: [tests/visual/iam-foundation-previews.spec.ts]

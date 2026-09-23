@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "platform-framework-shell",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/platform-framework-shell.yaml",
+    "revision": 3,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "16b57cddecbe5df98001832f734f40c33d5e7a45c17b26ed7d50f7d57d900b11"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-05T00:11:28+08:00",
+    "evidence": "用户已批准当前框架视觉，并在当前会话明确要求按所提供 IAM 接口完成生产实现"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": ["full-shell-preview", "app-layout-production-owner"]
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/platform-framework-shell/desktop-1366.png",
+      "sha256": "8f621dc2ebdeb58671c3775e6adb6347ae175900877d468d379979354c975c3f"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/platform-framework-shell/desktop-1440.png",
+      "sha256": "032ea1eb43fada7bbad82f1ddd0a39f02e23124667f3f82b88d060bb206339b1"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/platform-framework-shell/desktop-1920.png",
+      "sha256": "5a7de8de877893f0e2ee7d5412c1e3d0ae36e7af2e44c665364f3570648cf14b"
+    }
+  ],
+  "readyText": "运输任务"
+}

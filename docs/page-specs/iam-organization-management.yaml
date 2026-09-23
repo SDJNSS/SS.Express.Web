@@ -1,0 +1,211 @@
+schemaVersion: '0.1'
+page:
+  id: iam-organization-management
+  name: 组织管理
+  feature: iam/foundation
+  type: WorkspacePage
+  patternKey: WorkspacePageTemplate
+  revision: 6
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: organization-prd,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M03 组织管理,
+        purpose: 定义组织树、详情、创建、编辑、移动和停启用,
+      }
+  api:
+    - {
+        id: organization-leader-api,
+        ref: docs/api/iam-organization-leaders.md,
+        section: QueryLeaderCandidates,
+        operation: POST /iam-admin/Organization/QueryLeaderCandidates,
+        purpose: 当前租户有效负责人成员的最小字段分页搜索与只读回显,
+      }
+    - {
+        id: organization-api,
+        ref: docs/api/iam-admin-api.md,
+        section: 37-41 Organization endpoints,
+        operation: POST /iam-admin/Organization/Query; Create; Update; Move; ChangeStatus,
+        purpose: 定义组织树查询与维护,
+      }
+  permissions:
+    - {
+        id: organization-permission,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M03 权限与安全要求,
+        purpose: 组织普通管理按对应 Function、当前 Tenant/实体资源范围和业务状态授权，服务端最终裁决,
+      }
+  ux:
+    - {
+        id: workspace-ux,
+        ref: UX-CONTRACT.md,
+        section: Workspace and CRUD behavior,
+        purpose: 约束树与详情工作台、状态和失败恢复,
+      }
+  references:
+    - {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用平台 WorkspacePage 视觉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/foundation/components/OrganizationManagementPageView.vue
+  previewEntry: src/features/iam/foundation/public.preview.ts
+  previewBinding: src/features/iam/foundation/preview/FoundationPreviewPage.vue
+  productionBinding: src/features/iam/foundation/pages/OrganizationManagementPage.vue
+  productionRoute: /iam/organizations
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: context, role: summary, order: 2 }
+    - { id: navigation, role: navigation, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: form, role: form, order: 5 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 作为标题与页级动作代码 Owner；生产壳层由面包屑展示标题和刷新动作,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 承载组织创建编辑和移动表单,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 生产壳层由侧栏账户区展示当前 Tenant，内容区不重复绘制上下文横幅；无壳层 Preview 仍展示 Tenant 上下文，组织树与选中组织详情完整可见,
+      ruleRef: organization-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: navigation,
+      observableResult: 树区域保留几何并显示加载状态,
+      ruleRef: workspace-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: navigation,
+      observableResult: 当前 Tenant 无组织时显示空状态和创建入口,
+      ruleRef: workspace-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: navigation,
+      observableResult: 组织树失败显示重试且不混用旧 Tenant 数据,
+      ruleRef: workspace-ux,
+    }
+interactions:
+  - {
+      id: create-organization-with-server-code,
+      trigger: 点击组织树标题区的创建顶级组织,
+      targetRef: form,
+      observableResult: 上级组织默认为空且选择后按名称回显；组织编码由服务端生成，页面不采集也不提交,
+      ruleRef: organization-prd,
+    }
+  - {
+      id: select-organization-leader,
+      trigger: 新建或编辑组织时搜索负责人,
+      targetRef: form,
+      observableResult: 按当前租户分页搜索有效用户；默认不选且不展示内部ID；失败保留表单并支持重试；停用组织仅可保留或清空,
+      ruleRef: organization-leader-api,
+    }
+  - {
+      id: select-organization,
+      trigger: 在树中选择组织,
+      targetRef: detail,
+      observableResult: 右侧详情同步更新并保持树选中态,
+      ruleRef: organization-prd,
+    }
+  - {
+      id: move-subtree,
+      trigger: 点击调整层级,
+      targetRef: form,
+      observableResult: 展示完整子树影响和合法父级选择,
+      ruleRef: organization-prd,
+    }
+  - {
+      id: change-organization-status,
+      trigger: 点击停用或启用,
+      targetRef: detail,
+      observableResult: 展示子组织、成员、负责人及上级保护规则,
+      ruleRef: organization-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [organization-workspace, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [organization-workspace],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [organization-workspace],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [organization-workspace],
+    }
+exceptions: []
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - {
+        id: no-drag-move,
+        description: 移动组织使用明确目标选择而非拖拽，避免缺少键盘等价操作,
+        affectedScopes: [preview-interaction],
+      }
+acceptance:
+  - {
+      id: organization-workspace,
+      sourceRef: organization-prd,
+      observableResult: 组织工作台明确展示 Tenant 边界、树、详情、负责人、移动与状态保护,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: workspace-ux,
+      observableResult: Preview 仅使用静态组织树且不接真实接口,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: delegated-function-access,
+      sourceRef: organization-permission,
+      observableResult: 非 Tenant 管理员在当前 Tenant 获得对应 Function 后可完成查询、详情、负责人候选、创建、编辑、移动和状态操作；未获 Function 时入口不可用,
+      affectedScopes: [production-binding],
+      stateRef: ready,
+      testRef: tests/visual/iam-organization-position-authorization.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    - tests/visual/iam-foundation-previews.spec.ts
+    - tests/visual/iam-organization-leaders.spec.ts
+    - tests/visual/iam-organization-position-authorization.spec.ts

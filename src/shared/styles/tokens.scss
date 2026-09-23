@@ -1,0 +1,116 @@
+:root {
+  --color-primary: #2f6bff;
+  --color-primary-hover: #1f5be8;
+  --color-primary-light: #eaf1ff;
+  --color-success: #20b26b;
+  --color-success-light: #e8f7ef;
+  --color-warning: #f59a23;
+  --color-warning-light: #fff3e3;
+  --color-danger: #ef4e52;
+  --color-danger-light: #ffebec;
+  --color-info: #6b7a90;
+  --color-info-light: #edf1f6;
+  --color-license-plate: #1963bd;
+  --color-sidebar-brand: #6ea0ff;
+  --color-sidebar-label: #8fa2bf;
+  --color-sidebar-link: #b8c4d7;
+  --color-sidebar-muted: #9fb0c9;
+  --color-sidebar-indicator: #68a0ff;
+
+  --text-primary: #172033;
+  --text-regular: #344054;
+  --text-secondary: #667085;
+  --text-disabled: #98a2b3;
+  --text-inverse: #f8fafc;
+
+  --background-page: #f5f7fa;
+  --background-card: #ffffff;
+  --background-muted: #f8fafc;
+  --background-sidebar: #0b1830;
+  --background-sidebar-hover: rgba(55, 112, 235, 0.2);
+  --background-sidebar-active: #17478d;
+
+  --border-default: #dfe4ec;
+  --border-light: #edf0f5;
+  --border-focus: #2f6bff;
+
+  --scrollbar-track: var(--background-muted);
+  --scrollbar-thumb: var(--text-disabled);
+  --scrollbar-thumb-hover: var(--color-info);
+  --scrollbar-thumb-active: var(--text-secondary);
+
+  --font-family: Inter, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-metric: 20px;
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+
+  // Dense desktop operations profile. Keep the 4px scale above as the primitive
+  // source; semantic aliases let every page move as one governed density tier.
+  --spacing-page: var(--spacing-3);
+  --spacing-card: var(--spacing-3);
+  --spacing-section: var(--spacing-2);
+  --spacing-form: var(--spacing-2);
+
+  --radius-small: 4px;
+  --radius-default: 6px;
+  --radius-large: 8px;
+
+  --shadow-small: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-card: 0 2px 8px rgba(16, 24, 40, 0.05);
+  --shadow-floating: 0 12px 28px rgba(16, 24, 40, 0.14);
+  --shadow-route-marker: 0 0 0 3px rgba(47, 107, 255, 0.12);
+  --shadow-license-plate: 0 0 0 1px var(--color-license-plate);
+
+  --chart-tooltip-background: rgba(11, 24, 48, 0.94);
+
+  --size-header: 48px;
+  --size-sidebar: 200px;
+  --size-sidebar-collapsed: 56px;
+  --size-control: 28px;
+  --size-table-header: 34px;
+  --size-table-row: 36px;
+  --size-page-min-width: 1120px;
+  --size-scrollbar: 10px;
+  --size-scrollbar-border: 2px;
+
+  --z-header: 100;
+  --z-sidebar: 110;
+  --z-overlay: 1000;
+
+  --el-color-primary: var(--color-primary);
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-info: var(--color-info);
+  --el-border-radius-base: var(--radius-default);
+  --el-font-size-extra-large: var(--font-size-xl);
+  --el-font-size-large: var(--font-size-lg);
+  --el-font-size-medium: var(--font-size-md);
+  --el-font-size-base: var(--font-size-base);
+  --el-font-size-small: var(--font-size-sm);
+  --el-font-size-extra-small: var(--font-size-xs);
+  --el-component-size-large: calc(var(--size-control) + var(--spacing-1));
+  --el-component-size: var(--size-control);
+  --el-component-size-small: calc(var(--size-control) - var(--spacing-1));
+  --el-dialog-padding-primary: var(--spacing-card);
+  --el-drawer-padding-primary: var(--spacing-card);
+  --el-border-color: var(--border-default);
+  --el-border-color-light: var(--border-light);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-regular);
+  --el-text-color-secondary: var(--text-secondary);
+}

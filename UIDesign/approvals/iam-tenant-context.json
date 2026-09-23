@@ -1,0 +1,37 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-tenant-context",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-tenant-context.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "1fcee807d3d74b89d413709f0cdedd8974a10a0cd38d831f50d07d070b7aabfa"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-06T22:06:53+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面 approved。"
+  },
+  "scope": { "id": "page-content", "exceptionRefs": ["auth-restricted-surface"] },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-tenant-context/desktop-1366.png",
+      "sha256": "51070aa2a3acadbc427daa80c53c1f05a12ecf51d2974a611ba0b6bac9e124ae"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-tenant-context/desktop-1440.png",
+      "sha256": "e00ec10238e0adad1cb7ec587ac7be6b3908e0d3d30b0370787440a1fdecf963"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-tenant-context/desktop-1920.png",
+      "sha256": "8a3015aa4945ecba980a0ac27387f6c9f0eb1caa291f8c2efad4f3f299889493"
+    }
+  ],
+  "readyText": "选择要进入的 Tenant"
+}

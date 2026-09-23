@@ -1,0 +1,193 @@
+schemaVersion: '0.1'
+page:
+  id: iam-login
+  name: 统一登录页
+  feature: iam/login
+  type: AuthPage
+  patternKey: AuthPageTemplate
+  revision: 3
+sources:
+  inputMode: prd-with-reference
+  prd:
+    - id: login-brief
+      ref: docs/prd/iam/login.md
+      section: 候选范围
+      purpose: 记录用户当前确认的页面目标、参考边界与候选验收要求
+  api:
+    - id: iam-login-api
+      ref: docs/api/iam-auth.md
+      section: Login
+      operation: POST /iam-admin/Auth/Login
+      purpose: 定义登录请求、统一响应、登录状态与错误边界
+  permissions:
+    - id: iam-login-access
+      ref: docs/api/iam-auth.md
+      section: 权限与安全边界
+      purpose: 定义匿名登录入口及登录后后端授权边界
+  ux:
+    - id: auth-ux
+      ref: UX-CONTRACT.md
+      section: Authentication
+      purpose: 约束认证表单、密码、状态反馈与生产接入边界
+    - id: validation-ux
+      ref: UX-CONTRACT.md
+      section: Validation
+      purpose: 约束字段错误、首错聚焦和重复提交防护
+  references:
+    - id: user-login-reference
+      ref: docs/design/references/iam-login.png
+      origin: user
+      kind: image
+      purpose: 仅用于左右分区、深色桌面构图和物流视觉主题参考
+implementation:
+  canonicalEntry: src/features/iam/login/components/LoginPageView.vue
+  previewEntry: src/features/iam/login/public.preview.ts
+  previewBinding: src/features/iam/login/preview/LoginPreviewPage.vue
+  productionBinding: src/features/iam/login/pages/LoginPage.vue
+  productionRoute: /login
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: StandaloneAuthLayout
+  regions:
+    - { id: brand, role: header, order: 1 }
+    - { id: credentials, role: form, order: 2 }
+    - { id: form-feedback, role: feedback, order: 3 }
+    - { id: logistics-visual, role: other, order: 4 }
+  components:
+    - id: auth-layout
+      componentKey: shared.auth-page-template
+      regionId: brand
+      purpose: 提供独立于登录后 AppShell 的统一认证页面边界
+    - id: credential-form
+      componentKey: feature.iam.login.form
+      regionId: credentials
+      purpose: 展示账号、密码和候选登录动作
+    - id: access-feedback
+      componentKey: feature.iam.login.feedback
+      regionId: form-feedback
+      purpose: 展示字段错误、认证失败和候选交互结果
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 品牌、登录表单和统一身份通行轨迹完整可见
+    ruleRef: login-brief
+  - id: validation-error
+    scopeRef: credentials
+    observableResult: 空提交后字段错误可见并聚焦首个错误字段
+    ruleRef: validation-ux
+  - id: submitting
+    scopeRef: credentials
+    observableResult: 登录按钮保持几何、显示忙碌状态并阻止重复提交
+    ruleRef: auth-ux
+  - id: auth-error
+    scopeRef: form-feedback
+    observableResult: 展示不泄露账号存在性的通用认证失败信息
+    ruleRef: auth-ux
+  - id: authenticated
+    scopeRef: page
+    observableResult: 服务端返回 AUTHENTICATED 后保存会话并进入安全站内回跳地址或平台工作台
+    ruleRef: iam-login-api
+  - id: tenant-selection-required
+    scopeRef: form-feedback
+    observableResult: 服务端要求租户选择时不进入业务页面，并显示明确后续提示
+    ruleRef: iam-login-api
+  - id: initial-password-welcome
+    scopeRef: page
+    observableResult: 服务端要求修改初始密码时保存受限会话并进入 AppShell 欢迎页，不加载受限业务接口
+    ruleRef: iam-login-api
+interactions:
+  - id: reveal-password
+    trigger: 点击密码显示或隐藏按钮
+    targetRef: credentials
+    observableResult: 密码可见状态和中文可访问名称同步变化，焦点保持在密码输入框
+    ruleRef: auth-ux
+  - id: validate-login
+    trigger: 未填写完整时点击登录
+    targetRef: credentials
+    observableResult: 显示字段文本错误并聚焦首个无效字段
+    ruleRef: validation-ux
+  - id: submit-preview-login
+    trigger: 填写账号和密码后点击登录
+    targetRef: form-feedback
+    observableResult: 本地显示稳定提交态和候选完成反馈，不产生网络请求或路由跳转
+    ruleRef: login-brief
+  - id: request-password-recovery
+    trigger: 点击忘记密码
+    targetRef: form-feedback
+    observableResult: 明确提示正式流程等待 IAM 策略，不形成无动作入口
+    ruleRef: login-brief
+  - id: submit-production-login
+    trigger: 在生产路由填写账号和密码后点击登录
+    targetRef: form-feedback
+    observableResult: 通过统一 HTTP Client 调用 IAM Login；完整会话进入目标页，初始密码受限会话进入欢迎页，失败保留账号、清空密码并显示通用错误
+    ruleRef: iam-login-api
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/login/preview/login.fixture.ts
+    stateRef: ready
+    acceptanceRefs: [login-composition-visible, preview-isolated]
+  - id: submitting-state
+    fixtureRef: src/features/iam/login/preview/login.fixture.ts
+    stateRef: submitting
+    acceptanceRefs: [login-interactions-work]
+  - id: auth-error-state
+    fixtureRef: src/features/iam/login/preview/login.fixture.ts
+    stateRef: auth-error
+    acceptanceRefs: [auth-error-is-generic]
+exceptions:
+  - id: standalone-auth-surface
+    standardRef: standards/README.md#App-Shell-内容区约束
+    scopeRef: page
+    reason: 登录发生在认证前，使用 Registry 登记的 StandaloneAuthLayout 与 AuthPageTemplate，不进入登录后的 AppShell 内容区
+issues:
+  blockers: []
+  deferred:
+    - id: post-login-flows-deferred
+      description: 租户选择、初始密码修改和完整会话权限目录加载需要各自的权威接口后单独接入；当前初始密码状态仅开放本地欢迎页
+      affectedScopes: [production-binding, production-regression]
+      owner: IAM 与后端负责人
+      resolutionTarget: 提供对应接口后建立独立 Page Contract 或会话能力
+  outOfScope:
+    - id: no-mobile-or-dark-theme-variant
+      description: 当前只验证三个标准桌面视口；深色认证表面仍属于项目 Light Theme 的固定页面表达
+      affectedScopes: [preview-visual, production-regression]
+acceptance:
+  - id: login-composition-visible
+    sourceRef: login-brief
+    observableResult: 左侧品牌和表单、右侧统一身份通行轨迹在三个标准视口完整可见
+    affectedScopes: [preview-visual]
+    stateRef: ready
+    testRef: tests/visual/iam-login.spec.ts
+  - id: login-interactions-work
+    sourceRef: login-brief
+    observableResult: 字段校验、密码显示隐藏、记住我、忘记密码和提交态均有可观察结果
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-login.spec.ts
+  - id: auth-error-is-generic
+    sourceRef: auth-ux
+    observableResult: 认证失败文案不区分账号不存在或密码错误
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: auth-error
+    testRef: tests/visual/iam-login.spec.ts
+  - id: preview-isolated
+    sourceRef: login-brief
+    observableResult: Preview 使用静态 Fixture，不接真实 API、认证、Store 或路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-login.spec.ts
+  - id: production-login-integrated
+    sourceRef: iam-login-api
+    observableResult: 生产路由使用统一 Host、IAM 服务基础路径和 Login 操作路径完成请求、会话保存与安全回跳
+    affectedScopes: [production-binding, production-regression]
+    interactionRef: submit-production-login
+    testRef: tests/visual/iam-login-production.spec.ts
+  - id: initial-password-welcome-is-limited
+    sourceRef: iam-login-api
+    observableResult: INITIAL_PASSWORD_CHANGE_REQUIRED 登录后进入 AppShell 欢迎页，不请求受限框架接口且不能进入其他业务路由
+    affectedScopes: [production-binding, production-regression]
+    stateRef: initial-password-welcome
+    testRef: tests/visual/iam-login-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests: [tests/visual/iam-login.spec.ts, tests/visual/iam-login-production.spec.ts]

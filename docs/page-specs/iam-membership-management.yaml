@@ -1,0 +1,275 @@
+schemaVersion: '0.1'
+page:
+  id: iam-membership-management
+  name: 用户与成员
+  feature: iam/foundation
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 14
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: membership-prd,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M05 用户与 Tenant 成员,
+        purpose: 定义全局用户、成员、有效期和组织岗位归属完整流程,
+      }
+  api:
+    - {
+        id: membership-filter-options-api,
+        ref: docs/api/iam-membership-query-users.md,
+        section: 按需分页的筛选候选,
+        operation: POST /iam-admin/Membership/QueryFilterOptions,
+        purpose: 组织岗位角色候选按所选租户隔离并使用服务端搜索分页,
+      }
+    - {
+        id: membership-query-users-api,
+        ref: docs/api/iam-membership-query-users.md,
+        section: QueryUsers 查询契约,
+        operation: 'POST /iam-admin/Membership/QueryUsers with tenant_ids:int64[]',
+        purpose: 定义会话 Tenant 选项、多选默认值、空数组提交及统一用户成员响应,
+      }
+    - {
+        id: membership-api,
+        ref: docs/api/iam-admin-api.md,
+        section: 24-36 Membership endpoints,
+        operation: POST /iam-admin/Membership/CreateMember; UpdateMember; UpdateUser; SaveOrganization; SavePosition; QueryUserTenants; /iam-admin/MemberRole/Query; /iam-admin/Permission/QueryMemberFunctionPermissions,
+        purpose: 定义身份与归属维护、用户角色关系和当前 Tenant 成员 Function 只读结果,
+      }
+    - {
+        id: user-tenants-api,
+        ref: docs/api/iam-user-tenants.md,
+        section: 查询完整快照与保存显式变更,
+        operation: POST /iam-admin/Membership/QueryUserTenants; POST /iam-admin/Membership/UpdateUserTenants; POST /iam-admin/Tenant/Query,
+        purpose: 定义 SA 调整用户所属 Tenant、历史关系保留与并发快照契约,
+      }
+  permissions:
+    - {
+        id: membership-permission,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M05 权限与安全要求,
+        purpose: 区分全局用户与 Tenant 成员维护范围,
+      }
+  ux:
+    - {
+        id: workspace-ux,
+        ref: UX-CONTRACT.md,
+        section: Workspace and CRUD behavior,
+        purpose: 约束状态分层、复杂创建、归属与失败恢复,
+      }
+  references:
+    - {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用平台 WorkspacePage 视觉与密度,
+      }
+implementation:
+  canonicalEntry: src/features/iam/foundation/components/MembershipManagementPageView.vue
+  previewEntry: src/features/iam/foundation/public.preview.ts
+  previewBinding: src/features/iam/foundation/preview/FoundationPreviewPage.vue
+  productionBinding: src/features/iam/foundation/pages/MembershipManagementPage.vue
+  productionRoute: /iam/members
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: search, role: search, order: 2 }
+    - { id: data, role: data, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: form, role: form, order: 5 }
+    - { id: permissions, role: detail, order: 6 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 展示身份页面标题与主操作,
+      }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 承载接口查询字段并保持数据表宽度,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示全局用户或 Tenant 成员列表,
+      }
+    - { id: pagination, componentKey: shared.app-pagination, regionId: data, purpose: 展示统一分页 }
+    - {
+        id: detail-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 展示身份及归属详情,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 承载身份编辑、成员创建与归属维护,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 查询区不显示查询对象；刷新本人最新有效租户后默认全选并查询；用户名称置首列、Tenant 显示名称标为昵称、组织与岗位合并展示,
+      ruleRef: membership-query-users-api,
+    }
+  - {
+      id: loading,
+      scopeRef: data,
+      observableResult: 列表保留结构并显示加载状态,
+      ruleRef: workspace-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无成员或无结果时显示明确空状态,
+      ruleRef: workspace-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 加载失败显示重试且不混用旧 Tenant 数据,
+      ruleRef: workspace-ux,
+    }
+interactions:
+  - {
+      id: query-users-and-members,
+      trigger: 在统一查询区调整 Tenant 多选与用户或成员条件后查询,
+      targetRef: data,
+      observableResult: 首次进入或显式刷新 Tenant 上下文时才精确查询当前账号并刷新本人有效租户选项；查询、重置和回车各只触发一次使用当前筛选条件的业务 QueryUsers；初始全选，刷新保持手动选择与显式清空；业务查询始终显式提交 tenant_ids，空数组交后端校验,
+      ruleRef: membership-query-users-api,
+    }
+  - {
+      id: edit-global-user,
+      trigger: 点击成员或用户行的编辑用户,
+      targetRef: form,
+      observableResult: 用户和成员编辑的 ID、关联用户和租户 ID、版本只读且原值提交；业务资料可编辑,
+      ruleRef: membership-api,
+    }
+  - {
+      id: create-member,
+      trigger: 点击新增 Tenant 成员并完成三步流程,
+      targetRef: form,
+      observableResult: 新建字段不预填样本；逐步校验；确认页来自实际表单；上一步保留输入；切换租户清空组织岗位；创建失败保留填写内容且不采集密码,
+      ruleRef: membership-prd,
+    }
+  - {
+      id: maintain-relations,
+      trigger: 打开详情后维护组织或岗位归属,
+      targetRef: detail,
+      observableResult: 详情打开与归属保存后按 user_id 和单租户 tenant_ids 重新查询；目标初始未选无0；失败可重试；岗位不暗示授权,
+      ruleRef: membership-prd,
+    }
+  - {
+      id: change-member-status,
+      trigger: 点击停启用成员,
+      targetRef: detail,
+      observableResult: 说明仅影响目标 Tenant 并展示当前成员、最后管理员和负责人保护,
+      ruleRef: membership-prd,
+    }
+  - {
+      id: inspect-user-roles-and-permissions,
+      trigger: 点击用户行的角色与权限,
+      targetRef: permissions,
+      observableResult: 以 user_id + tenant_id 打开用户角色与权限页；角色页签可按权限维护当前 Tenant 角色关系，Function 页签以解析出的 tenant_user_id 查询当前 Tenant 成员权限并保持只读,
+      ruleRef: membership-permission,
+    }
+  - {
+      id: update-user-tenants,
+      trigger: SA 在用户详情的租户页签左上角点击编辑租户归属,
+      targetRef: detail,
+      observableResult: 打开时重新查询完整快照和 Tenant 全量分页候选；当前有效、历史和新增关系分组展示；历史默认保持，仅显式恢复或正式移除才提交；所有权限变化经影响复核后 pessimistic 保存,
+      ruleRef: user-tenants-api,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [membership-workspace, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [membership-workspace],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [membership-workspace],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [membership-workspace],
+    }
+exceptions: []
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - {
+        id: no-password,
+        description: 成员创建不采集生成或提交密码字段,
+        affectedScopes: [preview-visual, preview-interaction, production-binding],
+      }
+    - {
+        id: member-data-permission-shelved,
+        description: 成员数据权限入口、页签与首屏请求按当前产品决定暂时搁置，接口适配保留待后续恢复,
+        affectedScopes: [preview-visual, preview-interaction, production-binding],
+      }
+acceptance:
+  - {
+      id: membership-workspace,
+      sourceRef: membership-prd,
+      observableResult: 用户名称首列、昵称与组织/岗位列；仅详情按钮开启详情，列表无组织归属和岗位归属按钮；租户页签无显示名称列，编辑租户归属按钮左置；编辑 ID 只读，创建确认值真实且可后退,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: membership-query-users-contract,
+      sourceRef: membership-query-users-api,
+      observableResult: Tenant 选项仅在首次进入或显式 Tenant 上下文刷新时由 QueryUsers 精确本人查询的有效 memberships 建立且初始全选；查询、重置和回车各仅发送一次使用当前条件的业务 QueryUsers，清空后仍显式提交 tenant_ids 空数组交由后端校验,
+      affectedScopes: [preview-visual, preview-interaction, production-binding],
+      stateRef: ready,
+      testRef: tests/visual/iam-membership-query-contract.spec.ts,
+    }
+  - {
+      id: user-tenant-assignment-contract,
+      sourceRef: user-tenants-api,
+      observableResult: 编辑入口仅对拥有 iam:members:update-user-tenants 的用户可见；保存提交字符串版本完整快照、显式 upsert、restore 标志、显式移除成员 ID 与稳定 request_id，失败保留上下文并允许重新加载,
+      affectedScopes: [preview-interaction, production-binding],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-production.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: workspace-ux,
+      observableResult: Preview 使用静态身份数据且不发起业务请求,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-foundation-previews.spec.ts,
+      tests/visual/iam-foundation-production.spec.ts,
+      tests/visual/iam-membership-regression.spec.ts,
+      tests/visual/iam-membership-query-contract.spec.ts,
+    ]

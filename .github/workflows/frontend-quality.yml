@@ -1,0 +1,66 @@
+name: Frontend Quality
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: frontend-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Standards, build and visual regression
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install chromium
+
+      - name: Static standards and governance
+        run: pnpm lint
+
+      - name: Governance validator tests
+        run: pnpm test:governance
+
+      - name: Type check application, prototypes and tests
+        run: pnpm typecheck && pnpm ui:typecheck && pnpm test:typecheck
+
+      - name: Build application and prototypes
+        run: pnpm build && pnpm ui:build
+
+      - name: Compare three viewport screenshots
+        run: pnpm test:visual
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

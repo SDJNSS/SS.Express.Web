@@ -1,0 +1,208 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: iam-role-assignments,
+    name: 角色成员,
+    feature: iam/access-control,
+    type: ListPage,
+    patternKey: ListPageTemplate,
+    revision: 5,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: access-prd,
+        ref: docs/prd/iam/role-resource-data-permission.md,
+        section: 角色分配,
+        purpose: 定义以角色为主视角的成员查询、添加与移除,
+      }
+  api:
+    - {
+        id: assignment-api,
+        ref: docs/api/iam-access-control-api.md,
+        section: 角色分配,
+        operation: POST /iam-admin/MemberRole/Query; Assign; Revoke,
+        purpose: 定义按 role_id 查询、成员版本和角色关系添加移除,
+      }
+  permissions:
+    - {
+        id: assignment-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: IAM 权限治理页面权限约束,
+        purpose: 页面与写操作由对应 Function 及 can_maintain 共同约束,
+      }
+  ux:
+    - {
+        id: bulk-ux,
+        ref: UX-CONTRACT.md,
+        section: Dataset navigation and Flow ledger,
+        purpose: 约束当前页选择、批量确认、失败保留和分页,
+      }
+  references:
+    - {
+        id: approved-membership-sibling,
+        ref: docs/page-specs/iam-membership-management.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 复用已批准 IAM 成员筛选、宽表和抽屉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/access-control/components/RoleAssignmentPageView.vue
+  previewEntry: src/features/iam/access-control/public.preview.ts
+  previewBinding: src/features/iam/access-control/preview/AccessControlPreviewPage.vue
+  productionBinding: src/features/iam/access-control/pages/RoleAssignmentPage.vue
+  productionRoute: /iam/roles/assignments
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: search, role: search, order: 2 },
+      { id: context, role: summary, order: 3 },
+      { id: data, role: data, order: 4 },
+      { id: forms, role: form, order: 5 },
+    ]
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供 Tenant、角色、关键字与有效性筛选,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示直接分配和当前有效性,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: forms,
+        purpose: 为当前角色添加一个尚未直接分配的有效成员,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 当前角色上下文、直接成员、关系有效性与可维护状态清晰呈现,
+      ruleRef: access-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: data,
+      observableResult: 保留上下文和表框并禁用重复查询,
+      ruleRef: bulk-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无直接分配或无可分配角色时显示明确空状态,
+      ruleRef: bulk-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 查询失败保留条件并提供重试,
+      ruleRef: bulk-ux,
+    }
+interactions:
+  - {
+      id: query-role-members,
+      trigger: 选择 Tenant 和角色并查询,
+      targetRef: data,
+      observableResult: MemberRole/Query 只提交 role_id 不提交 tenant_user_id，切换角色清空旧结果后加载权威列表,
+      ruleRef: access-prd,
+    }
+  - {
+      id: add-role-member,
+      trigger: 点击添加成员并选择一个未直接分配的有效成员,
+      targetRef: forms,
+      observableResult: 使用成员 member_version 调用 Assign 且 role_ids 只包含当前角色，成功后刷新列表,
+      ruleRef: access-prd,
+    }
+  - {
+      id: remove-role-member,
+      trigger: 点击成员行的移除并确认,
+      targetRef: forms,
+      observableResult: 使用成员 member_version 调用 Revoke 且 role_ids 只包含当前角色；不影响整个 Tenant 成员状态,
+      ruleRef: access-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [assignment-workflow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [assignment-workflow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [assignment-workflow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [assignment-workflow],
+    }
+exceptions: []
+issues:
+  {
+    blockers: [],
+    deferred:
+      [
+        {
+          id: assignment-status-api,
+          description: 后端尚未提供角色成员关系级启停接口；不得使用 Membership/ChangeMemberStatus 代替,
+          affectedScopes: [preview-interaction, production-binding],
+          owner: backend,
+          resolutionTarget: 提供 assignment_id + version + target_status 的关系级接口后接入,
+        },
+      ],
+    outOfScope:
+      [
+        {
+          id: bulk-members,
+          description: 一个分配操作只针对一个成员，不提供跨成员批量分配,
+          affectedScopes: [preview-visual, preview-interaction],
+        },
+      ],
+  }
+acceptance:
+  - {
+      id: assignment-workflow,
+      sourceRef: access-prd,
+      observableResult: 页面仅有按角色查看；可添加或移除当前角色成员且无详情伪操作，查询和写请求都不混入另一查询维度,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: bulk-ux,
+      observableResult: Preview 仅使用静态成员、角色和关系 Fixture,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests:
+      [
+        tests/visual/iam-access-control-previews.spec.ts,
+        tests/visual/iam-access-control-production.spec.ts,
+      ],
+  }

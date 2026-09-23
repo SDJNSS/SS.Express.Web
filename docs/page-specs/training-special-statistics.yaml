@@ -1,0 +1,253 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-special-statistics,
+    name: 专项统计,
+    feature: training/operations-archive,
+    type: DashboardPage,
+    patternKey: DashboardPageTemplate,
+    revision: 3,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 专项统计,
+        purpose: 定义任务课程考试逾期四类统计和导出,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 档案、统计与导出,
+        purpose: 定义多轮执行筛选、完成来源和员工数与执行次数口径,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-statistics-api,
+        ref: docs/api/training-management-api.md,
+        section: 概览、档案、统计与导出,
+        operation: 'POST /iam-admin/TrainingStatistics/* + TrainingExport/ExportTaskLedger',
+        purpose: 定义四类统计、多轮执行筛选、长期任务逾期边界和当前筛选导出,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: iam-runtime-permission,
+        ref: docs/api/iam-admin-api.md,
+        section: Permission CurrentFunctions,
+        purpose: 定义查询与导出权限机制,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Data display and async behavior,
+        purpose: 约束独立页签筛选统计口径和导出反馈,
+      },
+    ]
+  references:
+    [
+      {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用物流平台管理端视觉语言,
+      },
+    ]
+implementation:
+  {
+    canonicalEntry: src/features/training/operations-archive/components/TrainingStatisticsPageView.vue,
+    previewEntry: src/features/training/operations-archive/public.preview.ts,
+    previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue,
+    productionBinding: src/features/training/operations-archive/pages/TrainingStatisticsPage.vue,
+    productionRoute: /iam/training/statistics,
+    routeSource: src/features/training/routes.ts,
+  }
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: tabs, role: navigation, order: 2 },
+      { id: search, role: search, order: 3 },
+      { id: data, role: data, order: 4 },
+      { id: export, role: feedback, order: 5 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区 },
+      {
+        id: tab-region,
+        componentKey: shared.app-page,
+        regionId: tabs,
+        purpose: 分隔四类统计并保持独立筛选,
+      },
+      {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供轮次、分配来源、完成来源、参加时间及各页签服务端筛选,
+      },
+      {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 明确执行次数与去重员工数并展示服务端精确统计,
+      },
+      {
+        id: export-dialog,
+        componentKey: shared.form-dialog,
+        regionId: export,
+        purpose: 确认当前页签与服务端筛选范围,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 展示四个统计页签、执行与员工口径及真实课程考试数据,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: data,
+      observableResult: 当前页签加载且旧 Tenant 响应失效,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: data,
+      observableResult: 当前页签无结果且不伪造零值,
+      ruleRef: project-ux,
+    },
+    {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 保留页签筛选并重试,
+      ruleRef: project-ux,
+    },
+  ]
+interactions:
+  [
+    {
+      id: switch-statistic,
+      trigger: 切换统计页签,
+      targetRef: data,
+      observableResult: 每个页签保留独立筛选状态,
+      ruleRef: training-operations-prd,
+    },
+    {
+      id: filter-executions,
+      trigger: 按轮次分配来源完成来源或参加时间查询,
+      targetRef: data,
+      observableResult: 服务端返回同一筛选范围的明细和汇总，页面不做客户端二次计算,
+      ruleRef: training-statistics-api,
+    },
+    {
+      id: inspect-rates,
+      trigger: 查看任务课程与考试统计,
+      targetRef: data,
+      observableResult: 管理员完成计入培训完成，但课程学习、考试提交分数与通过率保持真实结果,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: inspect-overdue,
+      trigger: 查看逾期统计,
+      targetRef: data,
+      observableResult: 无期限长期任务不进入当前或曾逾期口径,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: export-statistic,
+      trigger: 点击导出,
+      targetRef: export,
+      observableResult: 确认当前页签和服务端筛选范围并保留多轮与管理员完成字段,
+      ruleRef: training-standing-prd,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [statistics-complete, statistics-standing-executions],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [statistics-complete],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [statistics-complete],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [statistics-complete],
+    },
+  ]
+exceptions: []
+issues:
+  blockers:
+    [
+      {
+        id: standing-plan-preview-reapproval,
+        description: Contract revision 3 已使原 revision 2 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+        affectedScopes: [production-binding, production-regression],
+        owner: 产品评审,
+        resolutionTarget: 批准 revision 3 候选并固化三视口基线,
+      },
+    ]
+  deferred: []
+  outOfScope:
+    [
+      {
+        id: notification,
+        description: 催办通知与人工状态修复不在范围,
+        affectedScopes: [preview-visual, production-binding],
+      },
+    ]
+acceptance:
+  [
+    {
+      id: statistics-complete,
+      sourceRef: training-operations-prd,
+      observableResult: 四类统计页签分子分母独立口径与导出范围均可核对,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: statistics-standing-executions,
+      sourceRef: training-standing-prd,
+      observableResult: 可按多轮执行字段筛选并区分执行次数与去重员工数；管理员完成不污染真实课程考试率，无期限任务不产生逾期,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

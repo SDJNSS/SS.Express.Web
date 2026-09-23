@@ -1,0 +1,231 @@
+schemaVersion: '0.1'
+page:
+  id: iam-user-function-permissions
+  name: 用户角色与权限
+  feature: iam/access-control
+  type: DetailPage
+  patternKey: DetailPageTemplate
+  revision: 5
+sources:
+  inputMode: prd-only
+  prd:
+    - id: user-function-prd
+      ref: docs/prd/iam/user-function-permissions.md
+      section: 页面目标
+      purpose: 定义当前 Tenant 角色关系维护和 Tenant 成员 Function 只读核查
+  api:
+    - id: user-role-api
+      ref: docs/api/iam-access-control-api.md
+      section: 角色分配
+      operation: POST /iam-admin/Membership/QueryUserTenants; /iam-admin/RolePermission/QueryRoles; /iam-admin/MemberRole/Query; Assign; Revoke
+      purpose: 使用 user_id 解析 Tenant 成员关系后维护直接角色
+    - id: user-function-api
+      ref: docs/api/iam-access-control-api.md
+      section: Tenant 成员功能权限只读查询
+      operation: POST /iam-admin/Permission/QueryMemberFunctionPermissions
+      purpose: 定义 tenant_user_id、统一权限树、有效资源集合和来源角色
+  permissions:
+    - id: user-function-permission
+      ref: docs/permissions/iam-access-control.md
+      section: IAM 权限治理页面权限约束
+      purpose: 约束角色写操作门禁、Function 固定只读与服务端最终授权
+  ux:
+    - id: permission-ux
+      ref: UX-CONTRACT.md
+      section: Permission and clipboard and Async
+      purpose: 约束权限写入、错误恢复、路由门禁和工作区行为
+  references:
+    - id: role-function-sibling
+      ref: docs/page-specs/iam-role-function-permissions.yaml
+      origin: project
+      kind: approved-page
+      purpose: 复用角色功能权限页的 App 分组、权限树和资源详情视觉语言
+    - id: role-assignment-sibling
+      ref: docs/page-specs/iam-role-assignments.yaml
+      origin: project
+      kind: approved-page
+      purpose: 复用角色关系候选、悲观提交和版本冲突处理
+implementation:
+  canonicalEntry: src/features/iam/access-control/components/MemberPermissionPageView.vue
+  previewEntry: src/features/iam/access-control/public.preview.ts
+  previewBinding: src/features/iam/access-control/preview/AccessControlPreviewPage.vue
+  productionBinding: src/features/iam/access-control/pages/MemberPermissionPage.vue
+  productionRoute: /iam/members/permissions
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: user, role: summary, order: 2 }
+    - { id: tabs, role: navigation, order: 3 }
+    - { id: roles, role: data, order: 4 }
+    - { id: resources, role: data, order: 5 }
+    - { id: inspector, role: detail, order: 6 }
+    - { id: forms, role: form, order: 7 }
+    - { id: feedback, role: feedback, order: 8 }
+  components:
+    - id: app-page
+      componentKey: shared.app-page
+      regionId: header
+      purpose: 使用统一内容区和滚动边界
+    - id: page-header
+      componentKey: shared.page-header
+      regionId: header
+      purpose: 作为标题与动作代码 Owner；生产壳层由面包屑显示标题并将返回、刷新动作置于右侧，无壳层 Preview 自行显示完整页头
+    - id: data-table
+      componentKey: shared.data-table
+      regionId: roles
+      purpose: 展示当前 Tenant 的直接角色和关系状态
+    - id: form-drawer
+      componentKey: shared.form-drawer
+      regionId: forms
+      purpose: 选择可分配角色并悲观提交
+    - id: permission-workspace
+      componentKey: feature.iam.access-control.function-permission-workspace
+      regionId: resources
+      purpose: 复用权限树工作区并以用户只读变体展示有效集合
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 展示当前 Tenant 成员、直接角色、来源摘要和只读 Function 权限树
+    ruleRef: user-function-prd
+  - id: loading
+    scopeRef: resources
+    observableResult: 保持工作区结构并且不显示上一用户或上一 Tenant 的权限结果
+    ruleRef: permission-ux
+  - id: empty
+    scopeRef: resources
+    observableResult: 分别说明当前 Tenant 无直接角色或该 Tenant 成员无有效 Function 权限
+    ruleRef: user-function-prd
+  - id: retryable-error
+    scopeRef: resources
+    observableResult: 加载失败默认拒绝，不使用缓存推断，并提供重新加载入口
+    ruleRef: permission-ux
+  - id: readonly-functions
+    scopeRef: resources
+    observableResult: Function 页签不存在勾选、保存或用户直授权入口
+    ruleRef: user-function-permission
+  - id: filter-empty
+    scopeRef: resources
+    observableResult: 当前 App 无匹配资源时保留搜索条件并提供清空搜索入口，角色与 Function 只读状态不变
+    ruleRef: user-function-prd
+  - id: compressed-height
+    scopeRef: page
+    observableResult: 浏览器高度压缩时 AppPage 自动出现纵向滚动，用户上下文、角色表和 Function 工作区均可到达
+    ruleRef: permission-ux
+interactions:
+  - id: switch-tenant
+    trigger: 在角色页签选择用户所属的有效 Tenant
+    targetRef: roles
+    observableResult: 重新解析 tenant_user_id 与 member_version 并只加载所选 Tenant 的直接角色
+    ruleRef: user-role-api
+  - id: assign-user-roles
+    trigger: 点击分配角色并选择当前 Tenant 可维护角色
+    targetRef: forms
+    observableResult: 使用权威 member_version 调用 Assign，成功后刷新角色关系
+    ruleRef: user-role-api
+  - id: revoke-user-role
+    trigger: 点击角色行的移除并确认
+    targetRef: roles
+    observableResult: 使用权威 member_version 调用 Revoke，成功后刷新角色关系
+    ruleRef: user-role-api
+  - id: switch-app
+    trigger: 在 Function 页签点击 App 分组
+    targetRef: resources
+    observableResult: 仅切换当前资源树分组并保留只读状态
+    ruleRef: user-function-prd
+  - id: inspect-resource
+    trigger: 点击权限资源名称
+    targetRef: inspector
+    observableResult: 展示资源详情及 tenant_code 与角色名称组合的授权来源，不触发节点展开收起
+    ruleRef: user-function-prd
+  - id: search-resource-tree
+    trigger: 在 Function 页签输入资源名称、编码、权限标识、路由或 API Path 片段
+    targetRef: resources
+    observableResult: 在当前 App 完整树内执行不区分大小写的包含匹配并保留命中节点祖先；清空后恢复原树且不改变有效权限集合
+    ruleRef: user-function-prd
+  - id: retry-query
+    trigger: 点击重新加载或刷新权限结果
+    targetRef: feedback
+    observableResult: 重新进入加载状态并显示同一 user_id 的权威结果
+    ruleRef: permission-ux
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [role-editable-function-readonly, source-traceable, resource-tree-search, preview-isolated]
+  - id: empty-state
+    fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [role-editable-function-readonly]
+  - id: error-state
+    fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts
+    stateRef: retryable-error
+    acceptanceRefs: [retryable-failure]
+exceptions: []
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - id: no-user-function-grant
+      description: 用户 Function 直授权和 Function 保存不属于本页面
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-user-data-permission
+      description: 用户数据权限功能继续搁置
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - id: role-editable-function-readonly
+    sourceRef: user-function-prd
+    observableResult: 角色页签可按权限分配撤销当前 Tenant 角色；Function 页签只展示服务端有效结果且不存在写操作
+    affectedScopes: [preview-visual, preview-interaction, production-binding]
+    stateRef: readonly-functions
+    testRef: tests/visual/iam-access-control-production.spec.ts
+  - id: route-uses-global-user
+    sourceRef: user-role-api
+    observableResult: 生产入口使用 userId + tenantId；旧 tenantUserId 只在兼容解析后被替换，不作为后续请求主键
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/iam-access-control-production.spec.ts
+  - id: source-traceable
+    sourceRef: user-function-api
+    observableResult: 树节点只完整展示资源名称且不显示编码或状态标签；用户和有效权限上下文清晰，详情区使用 Tenant 编码与角色名称组合展示资源来源
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    interactionRef: inspect-resource
+    testRef: tests/visual/iam-access-control-previews.spec.ts
+  - id: resource-tree-search
+    sourceRef: user-function-api
+    observableResult: 普通有权管理员取得的权限树包含 API Path；任意路径片段按大小写不敏感方式命中对应资源并保留祖先，搜索不改变页面只读状态
+    affectedScopes: [preview-interaction, production-binding, production-regression]
+    stateRef: ready
+    interactionRef: search-resource-tree
+    testRef: tests/visual/iam-access-control-previews.spec.ts
+  - id: retryable-failure
+    sourceRef: permission-ux
+    observableResult: 错误状态不泄露或沿用其他用户结果，并提供明确重试动作
+    affectedScopes: [preview-interaction]
+    stateRef: retryable-error
+    interactionRef: retry-query
+    testRef: tests/visual/iam-access-control-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: permission-ux
+    observableResult: Preview 只使用静态 Fixture，不访问真实 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-access-control-previews.spec.ts
+  - id: compact-production-shell
+    sourceRef: permission-ux
+    observableResult: 生产页面只由壳层面包屑显示标题和动作，不显示页内同名标题、摘要提示条或用户态资源图例；1440×560 下 AppPage 可滚动并完整到达权限工作区
+    affectedScopes: [production-binding, production-regression]
+    stateRef: compressed-height
+    testRef: tests/visual/iam-foundation-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-access-control-previews.spec.ts,
+      tests/visual/iam-access-control-production.spec.ts,
+      tests/visual/iam-foundation-production.spec.ts,
+    ]

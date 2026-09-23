@@ -1,0 +1,63 @@
+.el-button,
+.el-input,
+.el-select,
+.el-form-item__label,
+.el-table,
+.el-pagination {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+}
+
+.el-button {
+  min-height: var(--size-control);
+  padding-right: var(--spacing-3);
+  padding-left: var(--spacing-3);
+  font-weight: 500;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  min-height: var(--size-control);
+}
+
+.el-form-item {
+  margin-bottom: var(--spacing-form);
+}
+
+.el-dialog {
+  --el-dialog-padding-primary: var(--spacing-card);
+}
+
+.el-drawer {
+  --el-drawer-padding-primary: var(--spacing-card);
+}
+
+.el-drawer__header {
+  margin-bottom: var(--spacing-card);
+}
+
+.el-drawer__title,
+.el-dialog__title {
+  font-size: var(--font-size-md);
+}
+
+.el-dialog__header,
+.el-dialog__body,
+.el-dialog__footer,
+.el-drawer__header,
+.el-drawer__body,
+.el-drawer__footer {
+  font-size: var(--font-size-base);
+}
+
+.el-table th.el-table__cell {
+  height: var(--size-table-header);
+  color: var(--text-regular);
+  font-weight: 600;
+  background: var(--background-muted);
+}
+
+.el-table .el-table__cell {
+  height: var(--size-table-row);
+  padding: 0;
+}

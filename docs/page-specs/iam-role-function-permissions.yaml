@@ -1,0 +1,257 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: iam-role-function-permissions,
+    name: 角色功能权限,
+    feature: iam/access-control,
+    type: WorkspacePage,
+    patternKey: WorkspacePageTemplate,
+    revision: 7,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: access-prd,
+        ref: docs/prd/iam/role-resource-data-permission.md,
+        section: 功能权限,
+        purpose: 定义精确授权、仅导航、失效、父级批量选择与完整集合替换,
+      }
+  api:
+    - {
+        id: function-api,
+        ref: docs/api/iam-access-control-api.md,
+        section: 功能权限,
+        operation: POST /iam-admin/RolePermission/QueryFunctionPermissions; SaveFunctionPermissions,
+        purpose: 定义资源树、直接集合、角色版本和保存响应,
+      }
+  permissions:
+    - {
+        id: function-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: IAM 权限治理页面权限约束,
+        purpose: 约束隐藏 Page 的 view Function 路由门禁、保存 Function 及只读角色,
+      }
+  ux:
+    - {
+        id: permission-ux,
+        ref: UX-CONTRACT.md,
+        section: Permission and clipboard and Async,
+        purpose: 约束权限变更确认、失败保留、Dirty 与安全反馈,
+      }
+  references:
+    - {
+        id: approved-workspace-sibling,
+        ref: docs/page-specs/iam-organization-management.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 复用已批准 IAM 树形工作区视觉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/access-control/components/RoleFunctionPermissionPageView.vue
+  previewEntry: src/features/iam/access-control/public.preview.ts
+  previewBinding: src/features/iam/access-control/preview/AccessControlPreviewPage.vue
+  productionBinding: src/features/iam/access-control/pages/RoleFunctionPermissionPage.vue
+  productionRoute: /iam/roles/function-permissions
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: role, role: summary, order: 2 },
+      { id: systems, role: navigation, order: 3 },
+      { id: resources, role: data, order: 4 },
+      { id: inspector, role: detail, order: 5 },
+      { id: confirmation, role: feedback, order: 6 },
+    ]
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: permission-workspace,
+        componentKey: feature.iam.access-control.function-permission-workspace,
+        regionId: resources,
+        purpose: 按系统配置完整直接选择集合并解释来源,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 资源树节点只展示完整资源名称且允许换行；复选框只以 direct_resource_ids 初始化，编码、来源与异常按需在详情区观察,
+      ruleRef: access-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: resources,
+      observableResult: 权限树加载时不展示未确认允许状态,
+      ruleRef: permission-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: resources,
+      observableResult: 空直接集合明确显示尚未配置,
+      ruleRef: access-prd,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: resources,
+      observableResult: 加载失败默认拒绝并提供重试,
+      ruleRef: permission-ux,
+    }
+  - {
+      id: dirty,
+      scopeRef: resources,
+      observableResult: 未保存直接集合有明确提示且可恢复,
+      ruleRef: access-prd,
+    }
+  - {
+      id: filter-empty,
+      scopeRef: resources,
+      observableResult: 当前 App 无匹配资源时保留搜索条件并提供清空搜索入口，不误报为角色无可配置资源,
+      ruleRef: access-prd,
+    }
+  - {
+      id: forbidden,
+      scopeRef: page,
+      observableResult: 缺少 iam:roles:function-permissions:view 或 Function 权限尚未成功加载时进入 403，且不调用 QueryFunctionPermissions,
+      ruleRef: function-permission,
+    }
+interactions:
+  - {
+      id: enter-function-permissions,
+      trigger: 从角色列表、详情、编辑抽屉或直接 URL 进入,
+      targetRef: resources,
+      observableResult: 入口与路由统一校验 iam:roles:function-permissions:view；授权后才调用 QueryFunctionPermissions,
+      ruleRef: function-permission,
+    }
+  - {
+      id: edit-direct-set,
+      trigger: 勾选或取消可分配资源,
+      targetRef: resources,
+      observableResult: 修改精确授权集合；点击父级时显式批量勾选或取消当前全部可维护有效子孙，随后仍可单独调整子项,
+      ruleRef: access-prd,
+    }
+  - {
+      id: control-tree-expansion,
+      trigger: 点击展开全部或收起全部，或手动折叠分支,
+      targetRef: resources,
+      observableResult: 当前系统资源树按指令展开或收起；普通勾选不改变已折叠分支，也不把滚动位置重置到顶部,
+      ruleRef: permission-ux,
+    }
+  - {
+      id: search-resource-tree,
+      trigger: 在资源树搜索框输入资源名称、编码、权限标识、路由或 API Path 片段,
+      targetRef: resources,
+      observableResult: 在当前 App 完整树内执行不区分大小写的包含匹配，保留命中节点祖先；清空后恢复原展开、滚动和选择状态，搜索不改变待保存集合,
+      ruleRef: access-prd,
+    }
+  - {
+      id: save-direct-set,
+      trigger: 点击保存功能权限并确认,
+      targetRef: confirmation,
+      observableResult: 仅具备 iam:roles:function-permissions:update 时明确替换完整集合，并等待服务端结果后重建树,
+      ruleRef: function-permission,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [source-visible, resource-tree-search, replacement-clear, preview-isolated],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [replacement-clear],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [source-visible],
+    }
+exceptions: []
+issues:
+  {
+    blockers: [],
+    deferred: [],
+    outOfScope:
+      [
+        {
+          id: deny-action,
+          description: 本期不配置显式拒绝或 action 二次授权,
+          affectedScopes: [preview-visual, preview-interaction],
+        },
+      ],
+  }
+acceptance:
+  - {
+      id: source-visible,
+      sourceRef: access-prd,
+      observableResult: 树节点不显示 resource_code、精确授权或其他状态标签，完整 resource_name 不被省略；选择节点后可在详情区查看来源、可选性和失效原因,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: replacement-clear,
+      sourceRef: access-prd,
+      observableResult: 保存确认明确完整集合替换并允许空集合；缺少 iam:roles:function-permissions:update 时不显示保存入口,
+      affectedScopes: [preview-interaction],
+      stateRef: dirty,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: exact-permission-selection,
+      sourceRef: access-prd,
+      observableResult: effective_resource_ids 与 is_inherited 不参与编辑勾选；父级批量后提交父级及每个最终勾选子孙的去重 ID，未来新增资源不会自动授权,
+      affectedScopes: [preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      interactionRef: edit-direct-set,
+      testRef: tests/visual/iam-access-control-production.spec.ts,
+    }
+  - {
+      id: tree-context-stable,
+      sourceRef: permission-ux,
+      observableResult: 展开全部与收起全部可用；任意复选操作后保留分支展开状态和树容器滚动位置,
+      affectedScopes: [preview-interaction, production-regression],
+      stateRef: ready,
+      interactionRef: control-tree-expansion,
+      testRef: tests/visual/iam-access-control-production.spec.ts,
+    }
+  - {
+      id: resource-tree-search,
+      sourceRef: access-prd,
+      observableResult: API Path 任意片段可按大小写不敏感方式命中对应资源并保留祖先；无结果可清空恢复，搜索期间父级批量操作仍覆盖原始完整后代,
+      affectedScopes: [preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      interactionRef: search-resource-tree,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: function-permission-code-gating,
+      sourceRef: function-permission,
+      observableResult: 页面入口、路由和查询统一使用 iam:roles:function-permissions:view，保存独立使用 iam:roles:function-permissions:update，Page 编码不参与运行时门禁,
+      affectedScopes: [production-binding, production-regression],
+      interactionRef: enter-function-permissions,
+      testRef: tests/visual/iam-access-control-production.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: permission-ux,
+      observableResult: Preview 不计算或提交真实权限,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests:
+      [
+        tests/visual/iam-access-control-previews.spec.ts,
+        tests/visual/iam-access-control-production.spec.ts,
+      ],
+  }

@@ -1,0 +1,262 @@
+schemaVersion: '0.1'
+page:
+  id: iam-application-resources
+  name: 应用与权限资源
+  feature: iam/application-resources
+  type: WorkspacePage
+  patternKey: WorkspacePageTemplate
+  revision: 7
+sources:
+  inputMode: prd-only
+  prd:
+    - id: application-resource-prd
+      ref: docs/prd/iam/application-permission-resources.md
+      section: 页面目标与范围至验收重点
+      purpose: 定义 App、Module、Menu、Page、Function 全量目录及安全维护流程
+  api:
+    - id: application-resource-api
+      ref: docs/api/iam-application-resources-api.md
+      section: 全量管理目录与维护接口
+      operation: POST /iam-admin/Permission/SystemResources; /iam-admin/AuthorizationCatalog/CreateSystem; UpdateSystem; ChangeSystemStatus; DeleteSystem; CreateResource; UpdateResource; ChangeResourceStatus; DeleteResource
+      purpose: 定义目录和维护操作的完整请求响应字段
+  permissions:
+    - id: application-resource-permission
+      ref: docs/permissions/iam-application-resources.md
+      section: IAM 应用与权限资源权限约束
+      purpose: 约束 SA 入口、can_maintain、拒绝和刷新行为
+  ux:
+    - id: workspace-ux
+      ref: UX-CONTRACT.md
+      section: Workspace and CRUD behavior
+      purpose: 约束工作区、表单、高风险确认和失败恢复
+  references:
+    - id: approved-organization-sibling
+      ref: docs/page-specs/iam-organization-management.yaml
+      origin: project
+      kind: approved-page
+      purpose: 复用已批准树形工作区的密度、焦点和详情结构
+implementation:
+  canonicalEntry: src/features/iam/application-resources/components/ApplicationResourcesPageView.vue
+  previewEntry: src/features/iam/application-resources/public.preview.ts
+  previewBinding: src/features/iam/application-resources/preview/ApplicationResourcesPreviewPage.vue
+  productionBinding: src/features/iam/application-resources/pages/ApplicationResourcesPage.vue
+  productionRoute: /iam/application-resources
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: filters, role: search, order: 2 }
+    - { id: applications, role: navigation, order: 3 }
+    - { id: resources, role: data, order: 4 }
+    - { id: inspector, role: detail, order: 5 }
+    - { id: forms, role: form, order: 6 }
+  components:
+    - id: app-page
+      componentKey: shared.app-page
+      regionId: header
+      purpose: 使用统一内容区边界并适配 AppShell content
+    - id: search-panel
+      componentKey: shared.search-panel
+      regionId: filters
+      purpose: 承载关键字、App 状态、资源状态与资源类型筛选
+    - id: workspace
+      componentKey: feature.iam.application-resources.workspace
+      regionId: applications
+      purpose: 组织 App 列表、资源树和节点完整详情
+    - id: app-form
+      componentKey: feature.iam.application-resources.application-form
+      regionId: forms
+      purpose: 按后端契约创建或编辑 App 并说明默认 Module 原子创建
+    - id: resource-form
+      componentKey: feature.iam.application-resources.resource-form
+      regionId: forms
+      purpose: 按 Module、Menu、Page、Function 字段矩阵创建或编辑资源
+    - id: impact-confirmation
+      componentKey: feature.iam.application-resources.impact-confirmation
+      regionId: forms
+      purpose: 承载启停和删除的影响提示、版本及精确编码确认
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: App 列表、合法资源树、完整详情、直接状态与当前有效性可见
+    ruleRef: application-resource-prd
+  - id: loading
+    scopeRef: applications
+    observableResult: 保留工作区几何并显示目录加载状态
+    ruleRef: workspace-ux
+  - id: empty
+    scopeRef: applications
+    observableResult: 无 App 时只保留新增 App 入口
+    ruleRef: application-resource-prd
+  - id: filter-empty
+    scopeRef: resources
+    observableResult: 无匹配项时保留筛选条件和清空入口
+    ruleRef: application-resource-prd
+  - id: retryable-error
+    scopeRef: applications
+    observableResult: 显示失败与重试且不把旧目录标记为最新
+    ruleRef: workspace-ux
+  - id: unauthorized
+    scopeRef: page
+    observableResult: 不展示目录或维护操作并提示无权访问
+    ruleRef: application-resource-permission
+  - id: processing
+    scopeRef: forms
+    observableResult: 写操作处理中锁定重复提交并保留当前上下文
+    ruleRef: workspace-ux
+  - id: conflict
+    scopeRef: forms
+    observableResult: 不覆盖服务端新版本并要求刷新后重试
+    ruleRef: workspace-ux
+interactions:
+  - id: filter-catalog
+    trigger: 提交或清空目录筛选
+    targetRef: applications
+    observableResult: 关键字对 App 名称/编码及资源名称/编码/API Path 执行不区分大小写的包含匹配，只展示命中节点及必要祖先，目录层级保持合法
+    ruleRef: application-resource-prd
+  - id: select-node
+    trigger: 选择 App 或资源节点
+    targetRef: inspector
+    observableResult: 详情同步为所选节点的全部接口字段和允许操作；点击节点名称只选择节点，不改变展开状态，展开或收起仅由左侧箭头触发
+    ruleRef: application-resource-prd
+  - id: maintain-application
+    trigger: 新增或编辑 App
+    targetRef: forms
+    observableResult: 新增与编辑均不允许用户填写 App 编码；服务端创建时生成编码，编辑只读展示现有编码，并提示默认 Module 的原子创建或名称同步影响
+    ruleRef: application-resource-api
+  - id: maintain-resource
+    trigger: 从 App、Module、Menu、Page、Function 进入新增或编辑资源
+    targetRef: forms
+    observableResult: 新增 Module、Menu、Page、Function 均不允许用户填写资源编码；服务端创建时生成编码，编辑只读展示现有编码；其余类型、父节点和专用字段遵循层级矩阵
+    ruleRef: application-resource-prd
+  - id: change-status
+    trigger: 启用或停用 App 或资源
+    targetRef: forms
+    observableResult: 明确直接状态与后代有效性影响并携带当前版本
+    ruleRef: application-resource-prd
+  - id: delete-node
+    trigger: 删除 App 或资源分支
+    targetRef: forms
+    observableResult: 展示已知结构影响，精确编码匹配前确认不可用
+    ruleRef: application-resource-prd
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/application-resources/preview/applicationResources.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [
+        full-catalog-visible,
+        api-path-filter,
+        explicit-tree-toggle,
+        bounded-workspace-scroll,
+        application-form-complete,
+        resource-form-complete,
+        destructive-action-safe,
+        preview-isolated,
+      ]
+  - id: loading-state
+    fixtureRef: src/features/iam/application-resources/preview/applicationResources.fixture.ts
+    stateRef: loading
+    acceptanceRefs: [explicit-page-states]
+  - id: empty-state
+    fixtureRef: src/features/iam/application-resources/preview/applicationResources.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [explicit-page-states]
+  - id: error-state
+    fixtureRef: src/features/iam/application-resources/preview/applicationResources.fixture.ts
+    stateRef: retryable-error
+    acceptanceRefs: [explicit-page-states]
+  - id: unauthorized-state
+    fixtureRef: src/features/iam/application-resources/preview/applicationResources.fixture.ts
+    stateRef: unauthorized
+    acceptanceRefs: [explicit-page-states]
+exceptions:
+  - id: structural-delete-impact
+    standardRef: docs/prd/iam/application-permission-resources.md#与当前后端契约的差异
+    scopeRef: forms
+    reason: 用户知悉后端暂无删除前授权影响查询并同意继续；生产页展示本次完整目录的结构影响、要求精确编码确认，最终删除及撤销授权数量以后端删除响应为准
+issues:
+  blockers: []
+  deferred:
+    - id: delete-impact-api-missing
+      description: 后端暂无删除前角色授权影响查询；当前按已批准例外展示结构影响，角色授权撤销数量在删除成功响应后反馈
+      affectedScopes: [production-binding]
+      owner: IAM 后端
+      resolutionTarget: 后续提供 App 与资源删除前影响查询接口后切换为权威预检
+  outOfScope:
+    - id: app-fields-not-in-api
+      description: 当前后端 App DTO 无 app_type 与 sort_order，遵循用户要求以后端接口为准，本期不生成不可提交字段
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: batch-or-restore
+      description: 批量导入导出、批量启停、物理删除和前端恢复不在本期
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - id: full-catalog-visible
+    sourceRef: application-resource-prd
+    observableResult: 页面以 App、Module、Menu、Page、叶子 Function 资源树展示全部未删除目录和完整详情
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: api-path-filter
+    sourceRef: application-resource-prd
+    observableResult: 输入 API Path 的任意大小写片段可以定位对应资源并保留合法祖先；重置后恢复完整目录
+    affectedScopes: [preview-interaction, production-binding, production-regression]
+    stateRef: ready
+    interactionRef: filter-catalog
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: bounded-workspace-scroll
+    sourceRef: workspace-ux
+    observableResult: 超长资源树工作区最多展开到两个内容区高度，页面滚动时 App 列表与详情保持可见，超过上限的节点由资源树内部滚动且末节点可达
+    affectedScopes: [preview-visual, preview-interaction, production-binding]
+    stateRef: ready
+    testRef: tests/visual/iam-application-resources-production.spec.ts
+  - id: explicit-tree-toggle
+    sourceRef: application-resource-prd
+    observableResult: 点击带子节点的名称只更新选中详情，节点保持原展开状态；点击左侧箭头才切换展开或收起
+    affectedScopes: [preview-interaction, production-binding]
+    stateRef: ready
+    interactionRef: select-node
+    testRef: tests/visual/iam-application-resources-production.spec.ts
+  - id: application-form-complete
+    sourceRef: application-resource-api
+    observableResult: App 新增和编辑表单覆盖当前后端可维护字段；app_code 由服务端生成且只读，不出现在创建或更新请求
+    affectedScopes: [preview-interaction]
+    interactionRef: maintain-application
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: resource-form-complete
+    sourceRef: application-resource-api
+    observableResult: 资源表单覆盖后端可维护字段并按类型控制路由、组件、权限编码和接口绑定；resource_code 由服务端生成且只读，不出现在创建或更新请求
+    affectedScopes: [preview-interaction]
+    interactionRef: maintain-resource
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: destructive-action-safe
+    sourceRef: application-resource-prd
+    observableResult: 启停展示分支影响，删除在精确编码匹配前不可提交
+    affectedScopes: [preview-interaction]
+    interactionRef: delete-node
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: production-api-contract
+    sourceRef: application-resource-api
+    observableResult: 生产路由一次加载完整目录；App 与资源新增、编辑请求不携带服务端生成的实体编码，启停和删除使用服务端返回的 ID、版本与现有编码确认
+    affectedScopes: [production-binding]
+    testRef: tests/visual/iam-application-resources-production.spec.ts
+  - id: explicit-page-states
+    sourceRef: workspace-ux
+    observableResult: 加载、空、筛选空、失败和无权限状态均明确且几何稳定
+    affectedScopes: [preview-visual, preview-interaction]
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+  - id: preview-isolated
+    sourceRef: workspace-ux
+    observableResult: Preview 仅使用静态 Fixture，不连接真实 API、认证、Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-application-resources-preview.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-application-resources-preview.spec.ts,
+      tests/visual/iam-application-resources-production.spec.ts,
+    ]

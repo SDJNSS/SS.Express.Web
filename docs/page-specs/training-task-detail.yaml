@@ -1,0 +1,316 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-task-detail,
+    name: 培训任务详情,
+    feature: training/operations-archive,
+    type: DetailPage,
+    patternKey: DetailPageTemplate,
+    revision: 2,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 2026-09-17 已批准变更,
+        purpose: 定义任务统计、人员下钻和员工概况,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 长期任务与执行轮次,
+        purpose: 定义无期限长期任务、返岗多轮执行和管理员完成边界,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-task-api,
+        ref: docs/api/training-management-api.md,
+        section: 任务与长期任务,
+        operation: 'POST /iam-admin/TrainingTask/Detail|Update + TrainingTaskEmployee/Query',
+        purpose: 定义任务详情聚合、长期任务内容版本、执行轮次、完成来源和服务端动作能力,
+      },
+      {
+        id: training-execution-mutation-api,
+        ref: docs/api/training-management-api.md,
+        section: 返岗培训与管理员完成,
+        operation: 'POST /iam-admin/TrainingTaskEmployee/ArrangeReturnToWork|AdminComplete',
+        purpose: 定义返岗幂等新轮次与指定轮次管理员完成,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: training-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: 运行时 Function 权限,
+        purpose: 约束隐藏 Page、编辑和课程考试详情能力,
+      },
+      {
+        id: training-execution-permission,
+        ref: docs/api/training-management-api.md,
+        section: 返岗培训与管理员完成,
+        purpose: 约束 return-to-work:arrange 与 task-employees:admin-complete 独立动作,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Dataset navigation,
+        purpose: 约束服务端分页、局部加载和详情下钻,
+      },
+    ]
+  references:
+    [
+      {
+        id: plan-detail,
+        ref: docs/page-specs/training-plan-detail.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 继承计划到任务的层级导航,
+      },
+    ]
+implementation:
+  canonicalEntry: src/features/training/operations-archive/components/TrainingTaskDetailPageView.vue
+  previewEntry: src/features/training/operations-archive/public.preview.ts
+  previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue
+  productionBinding: src/features/training/operations-archive/pages/TrainingTaskDetailPage.vue
+  productionRoute: /iam/training/plans/:planId/tasks/:taskId
+  routeSource: src/features/training/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: summary, role: summary, order: 2 },
+      { id: statistics, role: data, order: 3 },
+      { id: employees, role: data, order: 4 },
+      { id: detail, role: detail, order: 5 },
+      { id: form, role: form, order: 6 },
+      { id: confirmation, role: feedback, order: 7 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用标准页面边界 },
+      {
+        id: course-table,
+        componentKey: shared.data-table,
+        regionId: statistics,
+        purpose: 展示真实课程学习人数和完成率,
+      },
+      {
+        id: exam-table,
+        componentKey: shared.data-table,
+        regionId: statistics,
+        purpose: 展示真实考试提交与通过统计,
+      },
+      {
+        id: employee-table,
+        componentKey: shared.data-table,
+        regionId: employees,
+        purpose: 按执行轮次展示参与员工、分配与完成来源,
+      },
+      {
+        id: personnel-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 独立分页展示聚合指标人员明细,
+      },
+      {
+        id: task-form,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 编辑普通或长期任务配置,
+      },
+      {
+        id: return-to-work-dialog,
+        componentKey: shared.form-dialog,
+        regionId: form,
+        purpose: 搜索当前 Tenant 员工并创建返岗新轮次,
+      },
+      {
+        id: admin-complete-dialog,
+        componentKey: shared.form-dialog,
+        regionId: confirmation,
+        purpose: 确认员工任务轮次风险并填写管理员完成原因,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 课程考试真实聚合、长期任务状态和多轮员工执行完整展示,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: employees,
+      observableResult: 主列表、下钻和候选独立加载且旧 Tenant 响应失效,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: employees,
+      observableResult: 长期任务零员工时仍展示无完成期限、接收状态与合法安排入口,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: retryable-error,
+      scopeRef: page,
+      observableResult: 候选下钻或写操作失败仅影响局部，管理员完成原因与 request_id 保留供安全重试,
+      ruleRef: training-standing-prd,
+    },
+  ]
+interactions:
+  [
+    {
+      id: filter-employees,
+      trigger: 按姓名培训课程考试状态查询,
+      targetRef: employees,
+      observableResult: 服务端返回当前页、总数及各执行轮次，前端不按员工合并,
+      ruleRef: training-task-api,
+    },
+    {
+      id: drilldown-personnel,
+      trigger: 点击课程或考试人数,
+      targetRef: detail,
+      observableResult: 按相同指标上下文独立查询并分页,
+      ruleRef: training-task-api,
+    },
+    {
+      id: inspect-content,
+      trigger: 点击课程或考试名称,
+      targetRef: detail,
+      observableResult: 有权限时局部加载只读详情，无权限时仅展示文本,
+      ruleRef: training-permission,
+    },
+    {
+      id: arrange-return-to-work,
+      trigger: 选择当前 Tenant 员工并确认返岗培训,
+      targetRef: employees,
+      observableResult: 使用新 request_id 创建独立 execution_no；同一请求失败重试不重复创建且历史轮次保留,
+      ruleRef: training-execution-mutation-api,
+    },
+    {
+      id: admin-complete-execution,
+      trigger: 对 can_admin_complete 的未完成轮次点击一键完成并填写原因,
+      targetRef: confirmation,
+      observableResult: 确认员工任务轮次并提示不生成学习考试或自动复岗；成功刷新员工统计详情，失败保留原因和幂等键,
+      ruleRef: training-execution-permission,
+    },
+    {
+      id: edit-long-running-task,
+      trigger: 编辑已开放长期任务内容,
+      targetRef: form,
+      observableResult: 新内容版本只影响后续轮次，当前及历史轮次继续展示固化版本,
+      ruleRef: training-task-api,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [task-detail, long-running-task, execution-actions],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [task-detail],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [long-running-task],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [execution-actions],
+    },
+  ]
+exceptions: []
+issues:
+  {
+    blockers:
+      [
+        {
+          id: standing-plan-preview-reapproval,
+          description: Contract revision 2 已使原 revision 1 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+          affectedScopes: [production-binding, production-regression],
+          owner: 产品评审,
+          resolutionTarget: 批准 revision 2 候选并固化三视口基线,
+        },
+        {
+          id: task-employee-updated-at,
+          description: AdminComplete 请求要求 updated_at 乐观锁，但当前 TrainingTaskEmployeeResponse 未返回该字段；前端不得自行生成时间戳,
+          affectedScopes: [production-binding, production-regression],
+          owner: IAM 后端,
+          resolutionTarget: 在 TrainingTaskEmployee/Query 的每条执行记录返回 updated_at ISO 8601 时间戳,
+        },
+      ],
+    deferred:
+      [
+        {
+          id: task-start-failure-reason,
+          description: 后端任务详情尚未返回最近自动启动失败原因，当前仅在已到开始时间且仍为 NOT_STARTED 时提供重试启动,
+          affectedScopes: [production-binding],
+        },
+      ],
+    outOfScope:
+      [
+        {
+          id: manual-result-edit,
+          description: 除正式 AdminComplete 外，不提供人工修改课程进度、学习时长、考试成绩、通过结果或逾期结果；批量管理员完成同样不在范围,
+          affectedScopes: [preview-interaction, production-binding],
+        },
+      ],
+  }
+acceptance:
+  [
+    {
+      id: task-detail,
+      sourceRef: training-operations-prd,
+      observableResult: 完成率口径、课程考试统计、人员独立下钻和员工筛选分页均可核对,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: long-running-task,
+      sourceRef: training-standing-prd,
+      observableResult: 长期任务显示无完成期限且无逾期标签，零员工可开放，100% 完成不等于停止接收新人,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: execution-actions,
+      sourceRef: training-standing-prd,
+      observableResult: 多轮执行独立展示；返岗安排创建新轮次；管理员完成受 Function 与 can_admin_complete 双重控制并保留真实课程考试结果,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

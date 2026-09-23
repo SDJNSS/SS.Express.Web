@@ -1,0 +1,229 @@
+{
+  "$schema": "./schemas/registry.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageContract": {
+    "currentVersion": "0.1",
+    "schema": "standards/schemas/page-contract.v0.1.schema.json",
+    "legacySpecs": ["docs/page-specs/platform-dashboard.yaml"]
+  },
+  "designTokens": {
+    "ownership": "runtime-canonical",
+    "runtimeSource": "src/shared/styles/tokens.scss",
+    "designContext": "DESIGN.md",
+    "mappings": {
+      "colors.primary": "--color-primary",
+      "colors.primary-hover": "--color-primary-hover",
+      "colors.primary-light": "--color-primary-light",
+      "colors.success": "--color-success",
+      "colors.warning": "--color-warning",
+      "colors.danger": "--color-danger",
+      "colors.info": "--color-info",
+      "colors.text-primary": "--text-primary",
+      "colors.text-regular": "--text-regular",
+      "colors.text-secondary": "--text-secondary",
+      "colors.text-disabled": "--text-disabled",
+      "colors.background-page": "--background-page",
+      "colors.background-card": "--background-card",
+      "colors.background-muted": "--background-muted",
+      "colors.background-sidebar": "--background-sidebar",
+      "colors.border-default": "--border-default",
+      "colors.border-light": "--border-light",
+      "colors.border-focus": "--border-focus",
+      "typography.sans.fontFamily": "--font-family",
+      "typography.helper.fontSize": "--font-size-xs",
+      "typography.compact.fontSize": "--font-size-sm",
+      "typography.body.fontSize": "--font-size-base",
+      "typography.emphasis.fontSize": "--font-size-md",
+      "typography.section-title.fontSize": "--font-size-lg",
+      "typography.page-title.fontSize": "--font-size-xl",
+      "typography.metric.fontSize": "--font-size-metric",
+      "rounded.small": "--radius-small",
+      "rounded.DEFAULT": "--radius-default",
+      "rounded.large": "--radius-large",
+      "spacing.1": "--spacing-1",
+      "spacing.2": "--spacing-2",
+      "spacing.3": "--spacing-3",
+      "spacing.4": "--spacing-4",
+      "spacing.5": "--spacing-5",
+      "spacing.6": "--spacing-6",
+      "spacing.8": "--spacing-8",
+      "spacing.10": "--spacing-10",
+      "spacing.12": "--spacing-12"
+    }
+  },
+  "viewports": [
+    { "id": "desktop-1366", "label": "1366×768", "width": 1366, "height": 768 },
+    { "id": "desktop-1440", "label": "1440×900", "width": 1440, "height": 900 },
+    { "id": "desktop-1920", "label": "1920×1080", "width": 1920, "height": 1080 }
+  ],
+  "previewHost": {
+    "baseUrl": "http://127.0.0.1:4174",
+    "queryParameter": "preview",
+    "captureParameter": "capture=1",
+    "publicEntryPattern": "src/features/{subsystem}/{feature}/public.preview.ts",
+    "approvalScope": "page-content"
+  },
+  "layouts": {
+    "AppLayout": {
+      "canonicalImplementation": "src/app/layouts/AppLayout.vue",
+      "owner": "app/layout",
+      "verificationEntry": "standards"
+    },
+    "StandaloneAuthLayout": {
+      "canonicalImplementation": "src/shared/components/page-templates/AuthPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards"
+    }
+  },
+  "patterns": {
+    "ListPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/ListPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["ListPage"],
+      "shellMode": "content"
+    },
+    "DetailPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/DetailPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["DetailPage"],
+      "shellMode": "content"
+    },
+    "FormPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/FormPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["FormPage"],
+      "shellMode": "content"
+    },
+    "DashboardPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/DashboardPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["DashboardPage"],
+      "shellMode": "content"
+    },
+    "WorkspacePageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/WorkspacePageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["WorkspacePage"],
+      "shellMode": "content"
+    },
+    "WizardPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/WizardPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["WizardPage"],
+      "shellMode": "content"
+    },
+    "AuthPageTemplate": {
+      "canonicalImplementation": "src/shared/components/page-templates/AuthPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "standards",
+      "pageTypes": ["AuthPage"],
+      "shellMode": "standalone"
+    }
+  },
+  "components": {
+    "shared.app-shell": {
+      "canonicalImplementation": "src/shared/components/AppShell.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.app-page": {
+      "canonicalImplementation": "src/shared/components/AppPage.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.auth-page-template": {
+      "canonicalImplementation": "src/shared/components/page-templates/AuthPageTemplate.vue",
+      "owner": "shared/page-patterns",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.auth-brand": {
+      "canonicalImplementation": "src/shared/components/AuthBrand.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.page-header": {
+      "canonicalImplementation": "src/shared/components/PageHeader.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.search-panel": {
+      "canonicalImplementation": "src/shared/components/SearchPanel.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.data-table": {
+      "canonicalImplementation": "src/shared/components/DataTable.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.table-cell-text": {
+      "canonicalImplementation": "src/shared/components/TableCellText.vue",
+      "owner": "shared/components",
+      "verificationEntry": "governance-tests"
+    },
+    "shared.app-pagination": {
+      "canonicalImplementation": "src/shared/components/AppPagination.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.table-toolbar": {
+      "canonicalImplementation": "src/shared/components/TableToolbar.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.empty-state": {
+      "canonicalImplementation": "src/shared/components/EmptyState.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.loading-state": {
+      "canonicalImplementation": "src/shared/components/LoadingState.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.form-dialog": {
+      "canonicalImplementation": "src/shared/components/FormDialog.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.form-drawer": {
+      "canonicalImplementation": "src/shared/components/FormDrawer.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.detail-drawer": {
+      "canonicalImplementation": "src/shared/components/DetailDrawer.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.confirm-action": {
+      "canonicalImplementation": "src/shared/components/ConfirmAction.vue",
+      "owner": "shared/components",
+      "verificationEntry": "ui-typecheck"
+    },
+    "shared.notification": {
+      "canonicalImplementation": "src/shared/services/notification.ts",
+      "owner": "shared/services",
+      "verificationEntry": "ui-typecheck"
+    }
+  },
+  "verificationEntries": {
+    "standards": "standards:check",
+    "design": "design:check",
+    "page-contract": "page-contract:check",
+    "ui-typecheck": "ui:typecheck",
+    "governance-tests": "test:governance",
+    "visual": "test:visual"
+  },
+  "approvalStore": {
+    "directory": "UIDesign/approvals",
+    "schema": "standards/schemas/approval-record.v1.schema.json",
+    "digestAlgorithm": "sha256-canonical-json-v1"
+  }
+}

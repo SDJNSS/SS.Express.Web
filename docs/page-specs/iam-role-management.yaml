@@ -1,0 +1,246 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: iam-role-management,
+    name: 角色管理,
+    feature: iam/access-control,
+    type: ListPage,
+    patternKey: ListPageTemplate,
+    revision: 6,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: access-prd,
+        ref: docs/prd/iam/role-resource-data-permission.md,
+        section: 角色管理,
+        purpose: 定义角色查询、创建、编辑和启停流程,
+      }
+  api:
+    - {
+        id: role-api,
+        ref: docs/api/iam-access-control-api.md,
+        section: 角色管理,
+        operation: POST /iam-admin/RolePermission/QueryRoles; CreateRole; UpdateRole; ChangeRoleStatus; QueryFunctionPermissions; SaveFunctionPermissions; QueryDataPermissions; SaveDataPermission; /iam-admin/MemberRole/Query; Assign; Revoke,
+        purpose: 定义角色分页、字段、版本、状态及角色上下文权限工作区,
+      }
+  permissions:
+    - {
+        id: role-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: IAM 权限治理页面权限约束,
+        purpose: 约束目标 Tenant、系统角色、集团控制角色及隐藏 Page 的 Function 权限门禁,
+      }
+  ux:
+    - {
+        id: list-ux,
+        ref: UX-CONTRACT.md,
+        section: Dataset navigation and Flow ledger,
+        purpose: 约束服务端分页、CRUD、确认和失败恢复,
+      }
+  references:
+    - {
+        id: approved-tenant-sibling,
+        ref: docs/page-specs/iam-tenant-management.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 复用已批准 IAM 列表、宽表、详情和表单抽屉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/access-control/components/RoleManagementPageView.vue
+  previewEntry: src/features/iam/access-control/public.preview.ts
+  previewBinding: src/features/iam/access-control/preview/AccessControlPreviewPage.vue
+  productionBinding: src/features/iam/access-control/pages/RoleManagementPage.vue
+  productionRoute: /iam/roles
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: search, role: search, order: 2 },
+      { id: data, role: data, order: 3 },
+      { id: detail, role: detail, order: 4 },
+      { id: form, role: form, order: 5 },
+      { id: workspaces, role: detail, order: 6 },
+    ]
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供目标 Tenant 和角色筛选,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示服务端分页角色列表,
+      }
+    - {
+        id: detail-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 展示角色完整信息，并在具备 iam:roles:function-permissions:view 时提供功能权限入口,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 创建和编辑自定义角色；编辑态在具备 iam:roles:function-permissions:view 时提供功能权限入口,
+      }
+    - {
+        id: role-workspaces,
+        componentKey: feature.iam.access-control.function-permission-workspace,
+        regionId: workspaces,
+        purpose: 在角色管理 Menu 内承载角色功能权限与角色成员；数据权限入口暂时搁置,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 角色类型、状态、有效性、集团控制与可维护性分别呈现,
+      ruleRef: access-prd,
+    }
+  - { id: loading, scopeRef: data, observableResult: 列表保留结构并显示加载状态, ruleRef: list-ux }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无角色时显示空状态并保留创建入口,
+      ruleRef: list-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 保留 Tenant 与筛选并提供重试,
+      ruleRef: list-ux,
+    }
+  - {
+      id: read-only,
+      scopeRef: detail,
+      observableResult: 系统角色和不可维护角色不显示有效维护入口,
+      ruleRef: role-permission,
+    }
+  - {
+      id: function-permission-unavailable,
+      scopeRef: workspaces,
+      observableResult: 缺少 iam:roles:function-permissions:view 或 Function 尚未成功加载时，列表、详情和编辑抽屉均不显示功能权限入口，直接访问隐藏路由进入 403 且不查询权限树,
+      ruleRef: role-permission,
+    }
+interactions:
+  - {
+      id: query-roles,
+      trigger: 提交 Tenant、关键词、类型或状态,
+      targetRef: data,
+      observableResult: 页码归一并刷新结果,
+      ruleRef: access-prd,
+    }
+  - {
+      id: create-role,
+      trigger: 点击新建自定义角色,
+      targetRef: form,
+      observableResult: 不采集或提交角色编码，由服务端生成；展示其余 CreateRole 字段和不复制权限说明,
+      ruleRef: access-prd,
+    }
+  - {
+      id: edit-role,
+      trigger: 点击编辑,
+      targetRef: form,
+      observableResult: 角色编码只读且 UpdateRole 不再提交 role_code；可编辑 Tenant、类型、状态、名称、说明、备注和排序；具备 iam:roles:function-permissions:view 时可从编辑抽屉进入功能权限页,
+      ruleRef: access-prd,
+    }
+  - {
+      id: change-role-status,
+      trigger: 点击启用或停用,
+      targetRef: form,
+      observableResult: 明确保留权限与分配关系,
+      ruleRef: access-prd,
+    }
+  - {
+      id: open-role-workspace,
+      trigger: 点击角色列表、详情或编辑抽屉中的功能权限，或点击角色成员,
+      targetRef: workspaces,
+      observableResult: 功能权限入口与隐藏路由统一由 iam:roles:function-permissions:view 控制；授权后保持选定角色上下文进入工作区，返回后恢复角色列表,
+      ruleRef: role-permission,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [role-workflow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [role-workflow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [role-workflow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [role-workflow],
+    }
+exceptions: []
+issues:
+  {
+    blockers: [],
+    deferred: [],
+    outOfScope:
+      [
+        {
+          id: role-delete,
+          description: 本期不提供角色删除、复制、模板或继承,
+          affectedScopes: [preview-visual, preview-interaction],
+        },
+        {
+          id: role-data-permission-entry-shelved,
+          description: 角色数据权限入口按当前产品决定暂时隐藏，既有实现保留待后续恢复,
+          affectedScopes: [preview-visual, preview-interaction, production-binding],
+        },
+      ],
+  }
+acceptance:
+  - {
+      id: role-workflow,
+      sourceRef: access-prd,
+      observableResult: 角色列表操作每行最多三个、无数据权限入口；列表、详情和编辑抽屉在授权时均可进入功能权限页，角色编码由服务端生成且创建/更新不提交 role_code，其他字段与状态影响均可观察,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: function-permission-entry-gating,
+      sourceRef: role-permission,
+      observableResult: 三个功能权限入口与 /iam/roles/function-permissions 路由均检查 iam:roles:function-permissions:view；不得使用 Page 编码 iam:roles:function-permissions 作为运行时门禁,
+      affectedScopes: [production-binding, production-regression],
+      interactionRef: open-role-workspace,
+      testRef: tests/visual/iam-access-control-production.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: list-ux,
+      observableResult: Preview 无真实 API、认证、Store 或生产路由依赖,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests:
+      [
+        tests/visual/iam-access-control-previews.spec.ts,
+        tests/visual/iam-access-control-production.spec.ts,
+      ],
+  }

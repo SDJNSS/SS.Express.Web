@@ -1,0 +1,224 @@
+schemaVersion: '0.1'
+page:
+  id: training-question-bank
+  name: 题库管理
+  feature: training/content-exam
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 2
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: training-prd,
+        ref: docs/prd/training/training-resources-exam-rules.md,
+        section: M03 题库管理,
+        purpose: 定义题目查询、题型结构、答案解析、编辑与状态流转,
+      }
+  api:
+    - {
+        id: training-content-api,
+        ref: docs/api/training-content-exam-api.md,
+        section: 写操作模型,
+        operation: 'POST /iam-admin/TrainingQuestion/Query|Detail|Create|Update|ChangeStatus',
+        purpose: 定义正式页面查询与写操作模型,
+      }
+  permissions:
+    - {
+        id: training-content-permissions,
+        ref: docs/api/training-content-exam-api.md,
+        section: 待登记的权限点,
+        purpose: 声明前端功能权限与后端独立登记边界,
+      }
+    - {
+        id: iam-runtime-permission,
+        ref: docs/api/iam-admin-api.md,
+        section: Permission CurrentFunctions,
+        purpose: 定义正式运行时功能权限发现机制,
+      }
+  ux:
+    - {
+        id: list-ux,
+        ref: UX-CONTRACT.md,
+        section: List and CRUD behavior,
+        purpose: 约束分页、敏感信息、确认与失败恢复,
+      }
+  references:
+    - {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用物流平台高密度管理端视觉语言,
+      }
+implementation:
+  canonicalEntry: src/features/training/content-exam/components/QuestionBankPageView.vue
+  previewEntry: src/features/training/content-exam/public.preview.ts
+  previewBinding: src/features/training/content-exam/preview/TrainingContentPreviewPage.vue
+  productionBinding: src/features/training/content-exam/pages/QuestionBankPage.vue
+  productionRoute: /iam/training/questions
+  routeSource: src/features/training/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: search, role: search, order: 2 }
+    - { id: data, role: data, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: form, role: form, order: 5 }
+    - { id: feedback, role: feedback, order: 6 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供题库筛选与重置,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示服务端分页题目列表,
+      }
+    - {
+        id: detail-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 展示完整题目、答案、解析与审计信息,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 承载题型、选项和答案编辑,
+      }
+    - {
+        id: confirm-dialog,
+        componentKey: shared.form-dialog,
+        regionId: feedback,
+        purpose: 确认题型切换与状态操作,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 展示题库筛选、宽表、敏感详情与结构化编辑,
+      ruleRef: training-prd,
+    }
+  - { id: loading, scopeRef: data, observableResult: 保留列表结构并显示加载状态, ruleRef: list-ux }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无题目或无匹配结果时显示稳定空状态,
+      ruleRef: list-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 加载失败时保留筛选并提供重试,
+      ruleRef: list-ux,
+    }
+interactions:
+  - {
+      id: query-questions,
+      trigger: 填写题干题型状态并点击查询,
+      targetRef: data,
+      observableResult: 原型刷新 Fixture，正式页执行服务端查询且页码回到第一页,
+      ruleRef: training-prd,
+    }
+  - {
+      id: edit-question,
+      trigger: 点击新建或编辑题目,
+      targetRef: form,
+      observableResult: 展示题型对应的最小选项与正确答案校验,
+      ruleRef: training-prd,
+    }
+  - {
+      id: switch-question-type,
+      trigger: 在存在选项时切换题型,
+      targetRef: feedback,
+      observableResult: 先确认再重置不兼容选项,
+      ruleRef: training-prd,
+    }
+  - {
+      id: change-question-status,
+      trigger: 点击启用或停用,
+      targetRef: feedback,
+      observableResult: 展示对新试卷与历史快照的影响,
+      ruleRef: training-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/content-exam/preview/trainingContent.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [question-workflow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/training/content-exam/preview/trainingContent.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [question-workflow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/training/content-exam/preview/trainingContent.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [question-workflow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/training/content-exam/preview/trainingContent.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [question-workflow],
+    }
+exceptions: []
+issues:
+  blockers:
+    - {
+        id: resource-registration-pending,
+        description: 后端菜单与 Function 资源由用户另行安排登记，本次只完成页面开发,
+        affectedScopes: [production-regression],
+        owner: IAM 资源初始化,
+        resolutionTarget: 按接口说明登记并授权后进行真实联调,
+      }
+  deferred: []
+  outOfScope:
+    - {
+        id: employee-answer-exposure,
+        description: 正确答案与解析不得进入普通员工页面或其接口模型,
+        affectedScopes: [production-binding, production-regression],
+      }
+acceptance:
+  - {
+      id: production-api-binding,
+      sourceRef: training-content-api,
+      observableResult: 正式页面按接口执行查询详情写入并保留失败上下文,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/training-content-production.spec.ts,
+    }
+  - {
+      id: question-workflow,
+      sourceRef: training-prd,
+      observableResult: 题库列表、详情、三类题型编辑校验、题型切换确认和状态影响均可观察,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/training-content-exam-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: list-ux,
+      observableResult: Candidate 仅使用静态 Fixture，不发起业务请求,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/training-content-exam-previews.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/training-content-exam-previews.spec.ts,
+      tests/visual/training-content-production.spec.ts,
+    ]

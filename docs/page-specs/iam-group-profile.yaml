@@ -1,0 +1,153 @@
+schemaVersion: '0.1'
+page:
+  id: iam-group-profile
+  name: 集团信息
+  feature: iam/foundation
+  type: DetailPage
+  patternKey: DetailPageTemplate
+  revision: 4
+sources:
+  inputMode: prd-only
+  prd:
+    - id: group-prd
+      ref: docs/prd/iam/organization-identity-tenant-foundation.md
+      section: M01 集团信息
+      purpose: 定义集团信息查看、更新、只读字段、权限与冲突恢复
+  api:
+    - id: group-api
+      ref: docs/api/iam-admin-api.md
+      section: 16-18 Group Info/PublicInfo/Update
+      operation: POST /iam-admin/Group/Info; POST /iam-admin/Group/Update
+      purpose: 定义集团档案字段、版本与更新结果
+  permissions:
+    - id: group-permission
+      ref: docs/prd/iam/organization-identity-tenant-foundation.md
+      section: M01 权限与安全要求
+      purpose: 集团超级管理员可编辑，其他身份无此入口
+  ux:
+    - id: detail-ux
+      ref: UX-CONTRACT.md
+      section: Detail and CRUD behavior
+      purpose: 约束详情加载、编辑、反馈与版本冲突
+  references:
+    - id: project-design
+      ref: DESIGN.md
+      origin: project
+      kind: document
+      purpose: 复用平台密度、色彩与层级语言
+implementation:
+  canonicalEntry: src/features/iam/foundation/components/GroupProfilePageView.vue
+  previewEntry: src/features/iam/foundation/public.preview.ts
+  previewBinding: src/features/iam/foundation/preview/FoundationPreviewPage.vue
+  productionBinding: src/features/iam/foundation/pages/GroupProfilePage.vue
+  productionRoute: /iam/group
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: summary, role: summary, order: 2 }
+    - { id: detail, role: detail, order: 3 }
+    - { id: feedback, role: feedback, order: 4 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 展示页面标题和编辑入口,
+      }
+    - {
+        id: loading-state,
+        componentKey: shared.loading-state,
+        regionId: feedback,
+        purpose: 展示稳定加载状态,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 集团 Logo、摘要、两列基础信息和两列联系区域设置完整可见且长文本自动换行,
+      ruleRef: group-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: detail,
+      observableResult: 详情区域保留几何并显示加载状态,
+      ruleRef: detail-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: detail,
+      observableResult: 未配置集团信息时显示明确空状态,
+      ruleRef: detail-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: feedback,
+      observableResult: 加载失败显示持久错误和重试动作,
+      ruleRef: detail-ux,
+    }
+interactions:
+  - id: edit-group
+    trigger: 点击编辑集团信息
+    targetRef: detail
+    observableResult: 展示完整可编辑字段与 Logo 本地选择预览；集团编码和平台名称只读，Update 请求不回传 group_code
+    ruleRef: group-prd
+  - id: retry-group
+    trigger: 加载失败后点击重新加载
+    targetRef: feedback
+    observableResult: 本地候选恢复为 ready 且不产生业务请求
+    ruleRef: detail-ux
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [group-layout, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [group-layout],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [group-layout],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [group-layout],
+    }
+exceptions: []
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - { id: no-mobile, description: 当前仅验证三个标准桌面视口, affectedScopes: [preview-visual] }
+acceptance:
+  - {
+      id: group-layout,
+      sourceRef: group-prd,
+      observableResult: Logo 可展示和编辑，集团编码只读且不进入 Update 请求，基础信息与联系区域均固定为两列且长文本换行，三个桌面视口无横向溢出,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: detail-ux,
+      observableResult: Preview 仅使用静态 Fixture，不接 API、认证、Store 或生产路由,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests: [tests/visual/iam-foundation-previews.spec.ts]

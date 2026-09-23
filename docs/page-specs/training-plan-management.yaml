@@ -1,0 +1,247 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-plan-management,
+    name: 培训计划,
+    feature: training/operations-archive,
+    type: ListPage,
+    patternKey: ListPageTemplate,
+    revision: 3,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 页面范围,
+        purpose: 定义计划列表及计划到任务的层级入口,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 培训计划,
+        purpose: 定义年度与常设计划并存、长期有效和零员工发布规则,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-plan-api,
+        ref: docs/api/training-management-api.md,
+        section: 计划与计划员工,
+        operation: 'POST /iam-admin/TrainingPlan/Query|Create|Update|Publish|Delete',
+        purpose: 定义 ANNUAL/STANDING 查询、条件字段、乐观并发和写操作契约,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: training-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: 运行时 Function 权限,
+        purpose: 约束计划查看和写操作入口,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Dataset navigation,
+        purpose: 约束服务端筛选分页和紧凑行操作,
+      },
+    ]
+  references:
+    [
+      {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用物流平台管理端视觉语言,
+      },
+    ]
+implementation:
+  canonicalEntry: src/features/training/operations-archive/components/TrainingPlanPageView.vue
+  previewEntry: src/features/training/operations-archive/public.preview.ts
+  previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue
+  productionBinding: src/features/training/operations-archive/pages/TrainingPlanManagementPage.vue
+  productionRoute: /iam/training/plans
+  routeSource: src/features/training/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: search, role: search, order: 2 },
+      { id: data, role: data, order: 3 },
+      { id: form, role: form, order: 4 },
+      { id: feedback, role: feedback, order: 5 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用标准页面边界 },
+      {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提交计划类型、年度、名称和状态服务端筛选,
+      },
+      {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 并存展示年度/常设计划与进入详情的入口,
+      },
+      {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 按计划类型条件化创建和编辑字段,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 年度与常设计划并存，常设计划显示长期有效并提供权限允许的操作,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: data,
+      observableResult: 查询期间保留页面结构并防重复提交,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无结果且保留有权限的创建入口,
+      ruleRef: project-ux,
+    },
+    {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 保留筛选并可重试,
+      ruleRef: project-ux,
+    },
+  ]
+interactions:
+  [
+    {
+      id: query-plan,
+      trigger: 提交筛选或翻页,
+      targetRef: data,
+      observableResult: 使用当前 Tenant 服务端查询；全部类型默认同时省略 plan_type 与 plan_year，用户显式选择年度时才传 plan_year,
+      ruleRef: training-plan-api,
+    },
+    {
+      id: open-plan,
+      trigger: 点击计划名称或任务列表,
+      targetRef: data,
+      observableResult: 进入该计划隐藏详情页,
+      ruleRef: training-operations-prd,
+    },
+    {
+      id: mutate-plan,
+      trigger: 创建或编辑计划,
+      targetRef: form,
+      observableResult: 年度计划提交年度结束时间频率，常设计划清空这些字段并展示长期有效,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: publish-standing-plan,
+      trigger: 发布零员工常设计划,
+      targetRef: feedback,
+      observableResult: 按服务端规则成功发布并刷新，前端不套用年度计划员工校验,
+      ruleRef: training-plan-api,
+    },
+    {
+      id: delete-plan,
+      trigger: 删除符合条件的草稿计划,
+      targetRef: feedback,
+      observableResult: 权限校验并在服务端成功后刷新,
+      ruleRef: training-permission,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [plan-list, standing-plan-form],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [plan-list],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [plan-list],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [plan-list],
+    },
+  ]
+exceptions: []
+issues:
+  {
+    blockers:
+      [
+        {
+          id: standing-plan-preview-reapproval,
+          description: Contract revision 3 已使原 revision 2 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+          affectedScopes: [production-binding, production-regression],
+          owner: 产品评审,
+          resolutionTarget: 批准 revision 3 候选并固化三视口基线,
+        },
+      ],
+    deferred: [],
+    outOfScope:
+      [
+        {
+          id: standalone-task-list,
+          description: 独立任务列表已退役，任务仅从所属计划详情进入,
+          affectedScopes: [preview-interaction, production-binding],
+        },
+      ],
+  }
+acceptance:
+  [
+    {
+      id: plan-list,
+      sourceRef: training-operations-prd,
+      observableResult: 查询创建编辑发布删除和计划详情入口可用且 Tenant 隔离,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: standing-plan-form,
+      sourceRef: training-standing-prd,
+      observableResult: 年度与常设计划并存；常设计划不填年度结束时间频率、显示长期有效且可在零员工时发布,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

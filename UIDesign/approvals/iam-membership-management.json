@@ -1,0 +1,37 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-membership-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-membership-management.yaml",
+    "revision": 4,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "33ed51dbbd57f4cd6ff65d2004ad663c8074215b6b96f41ddb46918ee8b9bff5"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-06T22:06:53+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面 approved。"
+  },
+  "scope": { "id": "page-content", "exceptionRefs": [] },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-membership-management/desktop-1366.png",
+      "sha256": "12cc3355066a032133d8be26897eb5efa7e7aace94b688fae7c02e65638ecd8a"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-membership-management/desktop-1440.png",
+      "sha256": "3361dff08d2c6d35561508ae0dcf50e6c44135629ef7e583ddaf33f6d1cc025c"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-membership-management/desktop-1920.png",
+      "sha256": "1f16209d0fd336c6fb92db9eb4f4121908593e1bcc61d31ef3eefce6b9abd929"
+    }
+  ],
+  "readyText": "用户与成员"
+}

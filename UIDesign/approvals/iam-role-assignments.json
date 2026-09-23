@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-role-assignments",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-role-assignments.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "9d9db0dea3dec0922fa20d4804935dde204134450c9d6212ad5fa73280069760"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-08T14:52:53+08:00",
+    "evidence": "用户在当前会话明确确认：系统与资源、角色管理、功能权限、数据权限、角色分配全部 approved，并要求按最新后端接口完成对接。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-role-assignments/desktop-1366.png",
+      "sha256": "8ff6e0096f95be00dd18d6e906755c830808d76cb7644929456b2f19ccc64315"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-role-assignments/desktop-1440.png",
+      "sha256": "689e3a93583d0c80fff1c1754cb93e158ae8cd434ed1b7faa28d034490d72429"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-role-assignments/desktop-1920.png",
+      "sha256": "270fbc6619ec5cd8588d8b8b98cf0a846ba186a4d20c63d801925f909a8ad41a"
+    }
+  ],
+  "readyText": "角色成员"
+}

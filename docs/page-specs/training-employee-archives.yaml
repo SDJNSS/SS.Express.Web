@@ -1,0 +1,246 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-employee-archives,
+    name: 员工培训档案,
+    feature: training/operations-archive,
+    type: ListPage,
+    patternKey: ListPageTemplate,
+    revision: 3,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 员工培训档案,
+        purpose: 定义档案列表任务课程考试答题与导出,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 档案、统计与导出,
+        purpose: 定义多次返岗轮次、管理员完成审计和执行次数口径,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-archive-api,
+        ref: docs/api/training-management-api.md,
+        section: 概览、档案、统计与导出,
+        operation: 'POST /iam-admin/TrainingArchive/* + TrainingExport/ExportEmployeeArchives|ExportExamMaterials',
+        purpose: 定义多轮档案、执行筛选、内容快照、管理员完成审计和导出,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: iam-runtime-permission,
+        ref: docs/api/iam-admin-api.md,
+        section: Permission CurrentFunctions,
+        purpose: 定义查询导出和敏感答案权限机制,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Data display and async behavior,
+        purpose: 约束只读档案敏感信息和导出状态,
+      },
+    ]
+  references:
+    [
+      {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用物流平台管理端视觉语言,
+      },
+    ]
+implementation:
+  {
+    canonicalEntry: src/features/training/operations-archive/components/EmployeeTrainingArchivePageView.vue,
+    previewEntry: src/features/training/operations-archive/public.preview.ts,
+    previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue,
+    productionBinding: src/features/training/operations-archive/pages/EmployeeTrainingArchivePage.vue,
+    productionRoute: /iam/training/employee-archives,
+    routeSource: src/features/training/routes.ts,
+  }
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: search, role: search, order: 2 },
+      { id: data, role: data, order: 3 },
+      { id: detail, role: detail, order: 4 },
+      { id: sensitive, role: detail, order: 5 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用标准页面边界 },
+      {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供员工、轮次、分配来源、完成来源和参加时间服务端筛选,
+      },
+      {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 区分去重员工数与执行次数并展示员工汇总档案,
+      },
+      {
+        id: detail-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 按独立轮次展示任务课程考试历史和管理员完成审计,
+      },
+      {
+        id: answer-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: sensitive,
+        purpose: 权限隔离的历史答题快照,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 展示档案汇总、多轮任务、课程考试和管理员完成详情,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: data,
+      observableResult: 列表和详情独立加载，Tenant 切换使旧结果失效,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无档案时显示明确空状态且保留筛选,
+      ruleRef: project-ux,
+    },
+    {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 保留筛选和已加载分区并可局部重试,
+      ruleRef: project-ux,
+    },
+  ]
+interactions:
+  [
+    {
+      id: filter-archive-executions,
+      trigger: 按加入时间轮次分配来源或完成来源查询,
+      targetRef: data,
+      observableResult: 服务端返回员工汇总及对应执行范围，页面不做客户端二次过滤,
+      ruleRef: training-archive-api,
+    },
+    {
+      id: view-archive,
+      trigger: 点击员工,
+      targetRef: detail,
+      observableResult: 同一员工的多次返岗按 execution_no 独立展示，并显示内容版本与管理员完成审计,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: view-answer,
+      trigger: 点击已提交考试查看答题,
+      targetRef: sensitive,
+      observableResult: 标识执行轮次和历史内容快照并隔离标准答案解析,
+      ruleRef: training-operations-prd,
+    },
+    {
+      id: export-archive,
+      trigger: 点击导出,
+      targetRef: detail,
+      observableResult: 确认当前服务端筛选范围，导出保留轮次、分配来源、完成来源与管理员审计,
+      ruleRef: training-standing-prd,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [archive-complete, archive-multiple-executions],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [archive-complete],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [archive-complete],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [archive-complete],
+    },
+  ]
+exceptions: []
+issues:
+  blockers:
+    [
+      {
+        id: standing-plan-preview-reapproval,
+        description: Contract revision 3 已使原 revision 2 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+        affectedScopes: [production-binding, production-regression],
+        owner: 产品评审,
+        resolutionTarget: 批准 revision 3 候选并固化三视口基线,
+      },
+    ]
+  deferred: []
+  outOfScope:
+    [
+      {
+        id: employee-client,
+        description: 员工客户端不在本期范围,
+        affectedScopes: [preview-visual, production-binding],
+      },
+    ]
+acceptance:
+  [
+    {
+      id: archive-complete,
+      sourceRef: training-operations-prd,
+      observableResult: 档案列表任务课程考试历史答案快照与导出范围均可观察,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: archive-multiple-executions,
+      sourceRef: training-standing-prd,
+      observableResult: 同一员工多次返岗独立可追溯；页面区分执行次数与去重员工数，管理员完成审计可见且无期限轮次不显示逾期,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

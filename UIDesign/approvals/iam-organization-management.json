@@ -1,0 +1,37 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-organization-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-organization-management.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "1f4f83126afeabdd8c1815650b6f38abb8886a8d284ef08ad0eb0665a0c257ef"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-06T22:06:53+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面 approved。"
+  },
+  "scope": { "id": "page-content", "exceptionRefs": [] },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-organization-management/desktop-1366.png",
+      "sha256": "630d5feed4aa7e512eec022e99f4568d54d594d5581629cc7e15c7d808bac7d0"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-organization-management/desktop-1440.png",
+      "sha256": "d71062129872448ed038b63240db188fa3e472e7d99d1f656917b574eaa7bc45"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-organization-management/desktop-1920.png",
+      "sha256": "b0d95e3d29d96bc93ca314dbb2c67259af835b7103e771c73c4d813782d38555"
+    }
+  ],
+  "readyText": "组织管理"
+}

@@ -1,0 +1,296 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-plan-detail,
+    name: 培训计划详情,
+    feature: training/operations-archive,
+    type: DetailPage,
+    patternKey: DetailPageTemplate,
+    revision: 2,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 2026-09-17 已批准变更,
+        purpose: 定义计划详情任务列表与员工范围维护,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 计划详情与入职自动纳入,
+        purpose: 定义常设计划长期任务、自动纳入规则、停止接收与失败作业重试,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-plan-detail-api,
+        ref: docs/api/training-management-api.md,
+        section: 计划与计划员工,
+        operation: 'POST /iam-admin/TrainingPlan/Detail + TrainingTask/Query + TrainingPlanEmployee/*',
+        purpose: 定义计划详情任务和员工服务端数据,
+      },
+      {
+        id: training-long-task-api,
+        ref: docs/api/training-management-api.md,
+        section: 任务与长期任务,
+        operation: 'POST /iam-admin/TrainingTask/Create|Update|Start',
+        purpose: 定义 TEMPORARY 长期任务、内容版本与零员工开放规则,
+      },
+      {
+        id: training-onboarding-api,
+        ref: docs/api/training-management-api.md,
+        section: 入职培训自动纳入,
+        operation: 'POST /iam-admin/TrainingAutoEnrollment/QueryRule|SaveRule|QueryJobs|RetryJob',
+        purpose: 定义当前 Tenant 入职规则、作业与并发字段,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: training-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: 运行时 Function 权限,
+        purpose: 约束隐藏 Page 与页面动作,
+      },
+      {
+        id: training-onboarding-permission,
+        ref: docs/api/training-management-api.md,
+        section: 入职培训自动纳入,
+        purpose: 约束 onboarding:view、onboarding:update 和 onboarding:retry 独立动作,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Overlays and feedback,
+        purpose: 约束幂等提交确认与失败保留输入,
+      },
+    ]
+  references:
+    [
+      {
+        id: plan-list,
+        ref: docs/page-specs/training-plan-management.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 继承计划视觉和导航关系,
+      },
+    ]
+implementation:
+  canonicalEntry: src/features/training/operations-archive/components/TrainingPlanDetailPageView.vue
+  previewEntry: src/features/training/operations-archive/public.preview.ts
+  previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue
+  productionBinding: src/features/training/operations-archive/pages/TrainingPlanDetailPage.vue
+  productionRoute: /iam/training/plans/:planId
+  routeSource: src/features/training/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: summary, role: summary, order: 2 },
+      { id: onboarding, role: form, order: 3 },
+      { id: tabs, role: navigation, order: 4 },
+      { id: data, role: data, order: 5 },
+      { id: form, role: form, order: 6 },
+      { id: feedback, role: feedback, order: 7 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用标准页面边界 },
+      {
+        id: onboarding-form,
+        componentKey: shared.form-drawer,
+        regionId: onboarding,
+        purpose: 配置入职自动纳入目标和启停状态,
+      },
+      {
+        id: onboarding-job-table,
+        componentKey: shared.data-table,
+        regionId: onboarding,
+        purpose: 展示自动纳入作业及可重试失败,
+      },
+      {
+        id: task-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示本计划普通与长期任务,
+      },
+      {
+        id: employee-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示当前和历史员工关系,
+      },
+      {
+        id: task-form,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 创建月度季度普通临时或常设长期任务,
+      },
+      {
+        id: employee-form,
+        componentKey: shared.form-dialog,
+        regionId: form,
+        purpose: 选择 Tenant 内用户加入计划,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 计划详情、长期任务、员工与入职自动纳入规则可核对,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: data,
+      observableResult: 任务、员工、规则和作业独立加载且旧 Tenant 响应失效,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: data,
+      observableResult: 任务或员工为空时仍允许常设计划合法配置与开放长期任务,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 局部失败不破坏已加载详情，保存与作业重试保留上下文,
+      ruleRef: project-ux,
+    },
+  ]
+interactions:
+  [
+    {
+      id: create-task,
+      trigger: 点击新建任务并提交,
+      targetRef: form,
+      observableResult: 周期任务显式选择周期；常设长期任务提交 TEMPORARY、is_long_running=true 且不提交截止时间，失败重试复用 request_id,
+      ruleRef: training-long-task-api,
+    },
+    {
+      id: open-task,
+      trigger: 点击任务名称,
+      targetRef: data,
+      observableResult: 进入任务隐藏详情页,
+      ruleRef: training-operations-prd,
+    },
+    {
+      id: manage-employees,
+      trigger: 加入退出或恢复员工,
+      targetRef: data,
+      observableResult: 使用 user.id 并按服务端版本更新，前端不在成员创建后串联自动培训,
+      ruleRef: training-plan-detail-api,
+    },
+    {
+      id: save-onboarding-rule,
+      trigger: 选择常设计划长期任务并保存或启用,
+      targetRef: onboarding,
+      observableResult: 原样回传 updated_at，并提示只接收启用基线后新生效员工且不补录已有员工,
+      ruleRef: training-onboarding-api,
+    },
+    {
+      id: stop-onboarding,
+      trigger: 点击停止接收新人并确认,
+      targetRef: onboarding,
+      observableResult: 使用 SaveRule 停用规则，既有执行与历史不被删除,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: retry-onboarding-job,
+      trigger: 对失败作业点击重试,
+      targetRef: onboarding,
+      observableResult: 按独立 retry 权限提交 id 和 updated_at，失败保留作业上下文,
+      ruleRef: training-onboarding-permission,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [plan-detail, standing-plan-detail, onboarding-rule],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [plan-detail],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [standing-plan-detail],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [onboarding-rule],
+    },
+  ]
+exceptions: []
+issues:
+  {
+    blockers:
+      [
+        {
+          id: standing-plan-preview-reapproval,
+          description: Contract revision 2 已使原 revision 1 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+          affectedScopes: [production-binding, production-regression],
+          owner: 产品评审,
+          resolutionTarget: 批准 revision 2 候选并固化三视口基线,
+        },
+      ],
+    deferred: [],
+    outOfScope: [],
+  }
+acceptance:
+  [
+    {
+      id: plan-detail,
+      sourceRef: training-operations-prd,
+      observableResult: 计划详情、服务端分页任务、员工范围、周期规则和幂等重试完整可用,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: standing-plan-detail,
+      sourceRef: training-standing-prd,
+      observableResult: 常设计划显示长期有效，可在零员工时配置并开放无截止时间长期任务，新内容版本不覆盖历史轮次,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: onboarding-rule,
+      sourceRef: training-standing-prd,
+      observableResult: 入职规则目标、启停、生效基线与作业可见；停止接收不删除既有执行，失败作业仅按独立权限重试,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

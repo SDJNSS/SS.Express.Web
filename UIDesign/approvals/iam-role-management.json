@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-role-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-role-management.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "3383db83107a14ae333db2178a957281a7e40dbbdade3452c403e1ebf2113b1d"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-08T14:52:53+08:00",
+    "evidence": "用户在当前会话明确确认：系统与资源、角色管理、功能权限、数据权限、角色分配全部 approved，并要求按最新后端接口完成对接。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-role-management/desktop-1366.png",
+      "sha256": "1e1132fb8a242a251a7d057e1a66fe829a136acfa473dd83507fb0dbd4d46655"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-role-management/desktop-1440.png",
+      "sha256": "09cf6a9a66db3da5316917904d4f4a032249ded7caba262e5c5f6f3bd513ee13"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-role-management/desktop-1920.png",
+      "sha256": "0cebb08c9156733928518c0b69ece83be88ec62211ebad8cba1134f3d925bdac"
+    }
+  ],
+  "readyText": "角色管理"
+}

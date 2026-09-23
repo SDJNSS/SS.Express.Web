@@ -1,0 +1,196 @@
+schemaVersion: '0.1'
+page:
+  id: iam-tenant-management
+  name: Tenant 管理
+  feature: iam/foundation
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 5
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: tenant-prd,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M02 Tenant 管理,
+        purpose: 定义 Tenant 查询、创建、编辑与停启用完整流程,
+      }
+  api:
+    - {
+        id: tenant-api,
+        ref: docs/api/iam-admin-api.md,
+        section: 60-63 Tenant endpoints,
+        operation: POST /iam-admin/Tenant/Query; Create; Update; ChangeStatus,
+        purpose: 定义列表分页、创建事务、更新与状态操作,
+      }
+  permissions:
+    - {
+        id: tenant-permission,
+        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
+        section: M02 权限与安全要求,
+        purpose: 区分集团管理员、Tenant 管理员和普通用户能力,
+      }
+  ux:
+    - {
+        id: list-ux,
+        ref: UX-CONTRACT.md,
+        section: List and CRUD behavior,
+        purpose: 约束分页、状态、抽屉、确认与失败恢复,
+      }
+  references:
+    - {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用平台 ListPage 视觉与密度,
+      }
+implementation:
+  canonicalEntry: src/features/iam/foundation/components/TenantManagementPageView.vue
+  previewEntry: src/features/iam/foundation/public.preview.ts
+  previewBinding: src/features/iam/foundation/preview/FoundationPreviewPage.vue
+  productionBinding: src/features/iam/foundation/pages/TenantManagementPage.vue
+  productionRoute: /iam/tenants
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: search, role: search, order: 2 }
+    - { id: data, role: data, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: form, role: form, order: 5 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供标准查询与重置,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示服务端分页 Tenant 列表,
+      }
+    - { id: pagination, componentKey: shared.app-pagination, regionId: data, purpose: 展示统一分页 }
+    - {
+        id: detail-drawer,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 展示 Tenant 详情,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 承载编辑与分步创建,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: Tenant 列表、详情和表单不展示独立企业名称；域名与子域名使用中文标签，其余接口业务字段按用途展示,
+      ruleRef: tenant-prd,
+    }
+  - { id: loading, scopeRef: data, observableResult: 列表保留结构并显示加载状态, ruleRef: list-ux }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无 Tenant 或无匹配结果时显示空状态,
+      ruleRef: list-ux,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 列表失败显示重试入口且不清空筛选,
+      ruleRef: list-ux,
+    }
+interactions:
+  - {
+      id: query-tenants,
+      trigger: 输入关键词或状态并点击查询,
+      targetRef: data,
+      observableResult: 本地 Fixture 过滤且页码回到第一页,
+      ruleRef: tenant-prd,
+    }
+  - {
+      id: create-tenant,
+      trigger: 点击创建 Tenant 并完成三步流程,
+      targetRef: form,
+      observableResult: 新建不采集 Tenant 编码并由服务端生成；清空业务样本值，按步骤校验必填项，确认区展示当前真实表单并支持返回修改与失败重试，company_name 取 tenant_name 且不采集密码,
+      ruleRef: tenant-prd,
+    }
+  - {
+      id: change-tenant-status,
+      trigger: 点击停用或启用,
+      targetRef: detail,
+      observableResult: 展示作用范围和服务端保护校验说明,
+      ruleRef: tenant-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [tenant-workflow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [tenant-workflow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [tenant-workflow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/foundation/preview/foundation.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [tenant-workflow],
+    }
+exceptions: []
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - {
+        id: hidden-infrastructure-fields,
+        description: isolation_mode、db_key、schema_name 继续作为后端内部字段，不进入业务页面；domain 与 subdomain 按本次用户决策纳入业务详情和表单,
+        affectedScopes: [preview-visual, production-binding],
+      }
+acceptance:
+  - {
+      id: tenant-form-consistency,
+      sourceRef: tenant-prd,
+      observableResult: 每次创建从空白业务资料开始且不展示、采集或提交 tenant_code；编码由服务端生成、编辑态只读；确认和请求与实际输入一致；创建与更新的 company_name 等于 tenant_name；无独立企业名称且域名标签中文化,
+      affectedScopes: [preview-visual, preview-interaction, production-binding],
+      stateRef: ready,
+      testRef: tests/visual/iam-tenant-forms.spec.ts,
+    }
+  - {
+      id: tenant-workflow,
+      sourceRef: tenant-prd,
+      observableResult: Tenant 平级宽表、完整业务详情、Update 字段、Create 字段与首名管理员嵌套字段和停启用影响均可观察,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: list-ux,
+      observableResult: Preview 仅使用静态 Fixture，不发起业务请求,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-foundation-previews.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [tests/visual/iam-foundation-previews.spec.ts, tests/visual/iam-tenant-forms.spec.ts]

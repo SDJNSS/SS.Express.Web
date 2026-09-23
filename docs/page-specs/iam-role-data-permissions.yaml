@@ -1,0 +1,200 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: iam-role-data-permissions,
+    name: 角色数据权限,
+    feature: iam/access-control,
+    type: ListPage,
+    patternKey: ListPageTemplate,
+    revision: 3,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: access-prd,
+        ref: docs/prd/iam/role-resource-data-permission.md,
+        section: 数据权限,
+        purpose: 定义数据域目录、角色域配置和安全默认,
+      }
+  api:
+    - {
+        id: data-api,
+        ref: docs/api/iam-access-control-api.md,
+        section: 数据权限,
+        operation: POST /iam-admin/RolePermission/QueryDataDomains; QueryDataPermissions; SaveDataPermission,
+        purpose: 定义数据域、角色范围、CUSTOM 目标和清除,
+      }
+  permissions:
+    - {
+        id: data-permission,
+        ref: docs/permissions/iam-access-control.md,
+        section: IAM 权限治理页面权限约束,
+        purpose: GROUP 和 CUSTOM 仅集团超级管理员可维护,
+      }
+  ux:
+    - {
+        id: data-ux,
+        ref: UX-CONTRACT.md,
+        section: Permission and Async,
+        purpose: 约束数据权限安全反馈、确认和失败恢复,
+      }
+  references:
+    - {
+        id: approved-list-sibling,
+        ref: docs/page-specs/iam-tenant-management.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 复用已批准 IAM 宽表、筛选和抽屉,
+      }
+implementation:
+  canonicalEntry: src/features/iam/access-control/components/RoleDataPermissionPageView.vue
+  previewEntry: src/features/iam/access-control/public.preview.ts
+  previewBinding: src/features/iam/access-control/preview/AccessControlPreviewPage.vue
+  productionBinding: src/features/iam/access-control/pages/RoleDataPermissionPage.vue
+  productionRoute: /iam/roles/data-permissions
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: role, role: summary, order: 2 },
+      { id: search, role: search, order: 3 },
+      { id: data, role: data, order: 4 },
+      { id: form, role: form, order: 5 },
+    ]
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 筛选系统和数据域,
+      }
+    - {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: data,
+        purpose: 展示角色配置或只读数据域目录,
+      }
+    - {
+        id: form-drawer,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 配置一个数据域的单一范围,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 域、范围、配置状态、目标 Tenant、有效性和异常均可观察,
+      ruleRef: access-prd,
+    }
+  - { id: loading, scopeRef: data, observableResult: 表框稳定且不展示旧范围, ruleRef: data-ux }
+  - {
+      id: empty,
+      scopeRef: data,
+      observableResult: 无相关数据域时说明当前功能权限无需配置范围,
+      ruleRef: access-prd,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: data,
+      observableResult: 加载失败不使用默认范围并提供重试,
+      ruleRef: data-ux,
+    }
+  - {
+      id: scope-empty,
+      scopeRef: data,
+      observableResult: 未配置明确显示无数据访问权,
+      ruleRef: access-prd,
+    }
+interactions:
+  - {
+      id: inspect-domain-catalog,
+      trigger: 切换到数据域目录,
+      targetRef: data,
+      observableResult: 查看支持范围、SELF 解释、关联资源和异常,
+      ruleRef: access-prd,
+    }
+  - {
+      id: configure-domain,
+      trigger: 点击配置并选择范围,
+      targetRef: form,
+      observableResult: 仅显示域支持且操作者允许的范围并校验 CUSTOM,
+      ruleRef: access-prd,
+    }
+  - {
+      id: clear-domain,
+      trigger: 点击清除并确认,
+      targetRef: form,
+      observableResult: 明确清除后无数据访问权且不回退 Tenant,
+      ruleRef: access-prd,
+    }
+mockScenarios:
+  - {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [data-workflow, preview-isolated],
+    }
+  - {
+      id: loading-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [data-workflow],
+    }
+  - {
+      id: empty-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [data-workflow],
+    }
+  - {
+      id: error-state,
+      fixtureRef: src/features/iam/access-control/preview/accessControl.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [data-workflow],
+    }
+exceptions: []
+issues:
+  {
+    blockers: [],
+    deferred: [],
+    outOfScope:
+      [
+        {
+          id: custom-organization-scope,
+          description: 本期 CUSTOM 只选择 Tenant 不选择组织、岗位或记录,
+          affectedScopes: [preview-visual, preview-interaction],
+        },
+      ],
+  }
+acceptance:
+  - {
+      id: data-workflow,
+      sourceRef: access-prd,
+      observableResult: 角色数据域、只读域目录、范围编辑、CUSTOM 与安全清除完整可观察,
+      affectedScopes: [preview-visual, preview-interaction],
+      stateRef: ready,
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+  - {
+      id: preview-isolated,
+      sourceRef: data-ux,
+      observableResult: Preview 不发起权限或 Tenant 查询请求,
+      affectedScopes: [preview-interaction],
+      testRef: tests/visual/iam-access-control-previews.spec.ts,
+    }
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests:
+      [
+        tests/visual/iam-access-control-previews.spec.ts,
+        tests/visual/iam-access-control-production.spec.ts,
+      ],
+  }

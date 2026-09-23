@@ -1,0 +1,37 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-position-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-position-management.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "05ce96f846ed6047a9d70d4ea09d9df2d114b366a7be1e28990abf95b0b48d97"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-06T22:06:53+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面 approved。"
+  },
+  "scope": { "id": "page-content", "exceptionRefs": [] },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-position-management/desktop-1366.png",
+      "sha256": "2ddf8e50d243c6614129b37843365053d4670bae437de463b92167ba430f2902"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-position-management/desktop-1440.png",
+      "sha256": "9c600775441157b667909c76b9c4a4966db128bdd7c3e1fe808368f4da7901f6"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-position-management/desktop-1920.png",
+      "sha256": "4854248c280e6e77d78d7c13246ef70857b6db1133f27f050ca25207e120af59"
+    }
+  ],
+  "readyText": "岗位管理"
+}

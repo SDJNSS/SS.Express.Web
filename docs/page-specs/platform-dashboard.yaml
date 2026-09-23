@@ -1,0 +1,33 @@
+page:
+  id: platform-dashboard
+  name: PlatformDashboard
+  feature: platform/dashboard
+  type: DashboardPage
+route: /platform/dashboard
+prototype:
+  id: platform-dashboard
+  requiredStatus: approved
+  manifest: UIDesign/approved-prototypes.json
+permission:
+  view: dms:dashboard:view
+layout:
+  shell: AppLayout
+  density: standard
+actions:
+  page: [create-transport-order]
+content:
+  metrics: [todayOrders, inTransit, pendingDispatch, alerts]
+  sections: [routeOverview, priorities, latestTasks, vehicleDistribution]
+interaction:
+  - switch-subsystem
+  - open-task-detail
+  - refresh-dashboard
+states: [loading, ready, empty, error]
+acceptance:
+  - 1920x1080 主布局完整
+  - 1440x900 标准桌面布局完整
+  - 1366x768 无横向溢出
+  - 指标、图表和任务数据可见
+visual:
+  viewports: [1366x768, 1440x900, 1920x1080]
+  baseline: UIDesign/baselines/platform-dashboard

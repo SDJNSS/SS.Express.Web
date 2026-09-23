@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-application-resources",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-application-resources.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "81793a308af0229ed0e7dffbbdb70626c4289991149d9a102aa4f7b0abc5bb52"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-08T23:47:35+08:00",
+    "evidence": "用户在当前会话明确确认应用与权限资源页面 approved，并同意按最新后端接口完成对接；后端暂无删除前授权影响查询，当前按完整目录计算结构影响并要求精确编码确认。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": ["structural-delete-impact"]
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-application-resources/desktop-1366.png",
+      "sha256": "d1d625a44e488d5695c8dd97f3eff5b3be39eaa1ab7ac89e4ec18f4e23e37c3a"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-application-resources/desktop-1440.png",
+      "sha256": "cfef6a491eb76e59ff5ae070f9c4bf396970112e104d5e6cf8596cd53528437b"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-application-resources/desktop-1920.png",
+      "sha256": "01edabba6a1b7d6267121431d137e5fb33432992a68a891928b9360c45990d32"
+    }
+  ],
+  "readyText": "应用与权限资源"
+}

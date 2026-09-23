@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.ui-design.tsbuildinfo",
+    "resolveJsonModule": true,
+    "baseUrl": "..",
+    "paths": {
+      "@ui/*": ["UIDesign/src/*"],
+      "@shared/*": ["src/shared/*"],
+      "@feature-preview/*": ["src/features/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.d.ts"]
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ss.express.local/schemas/registry.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "pageContract",
+    "designTokens",
+    "viewports",
+    "previewHost",
+    "layouts",
+    "patterns",
+    "components",
+    "verificationEntries",
+    "approvalStore"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": "1.0" },
+    "pageContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentVersion", "schema", "legacySpecs"],
+      "properties": {
+        "currentVersion": { "const": "0.1" },
+        "schema": { "$ref": "#/$defs/projectPath" },
+        "legacySpecs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/projectPath" }
+        }
+      }
+    },
+    "designTokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownership", "runtimeSource", "designContext", "mappings"],
+      "properties": {
+        "ownership": { "const": "runtime-canonical" },
+        "runtimeSource": { "$ref": "#/$defs/projectPath" },
+        "designContext": { "$ref": "#/$defs/projectPath" },
+        "mappings": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^--[a-z0-9-]+$" }
+        }
+      }
+    },
+    "viewports": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "width", "height"],
+        "properties": {
+          "id": { "$ref": "#/$defs/key" },
+          "label": { "type": "string", "minLength": 1 },
+          "width": { "type": "integer", "minimum": 320 },
+          "height": { "type": "integer", "minimum": 320 }
+        }
+      }
+    },
+    "previewHost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseUrl",
+        "queryParameter",
+        "captureParameter",
+        "publicEntryPattern",
+        "approvalScope"
+      ],
+      "properties": {
+        "baseUrl": { "type": "string", "pattern": "^http://127\\.0\\.0\\.1:[0-9]+$" },
+        "queryParameter": { "const": "preview" },
+        "captureParameter": { "const": "capture=1" },
+        "publicEntryPattern": { "const": "src/features/{subsystem}/{feature}/public.preview.ts" },
+        "approvalScope": { "const": "page-content" }
+      }
+    },
+    "layouts": { "$ref": "#/$defs/implementationMap" },
+    "patterns": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canonicalImplementation",
+          "owner",
+          "verificationEntry",
+          "pageTypes",
+          "shellMode"
+        ],
+        "properties": {
+          "canonicalImplementation": { "$ref": "#/$defs/projectPath" },
+          "owner": { "type": "string", "minLength": 1 },
+          "verificationEntry": { "$ref": "#/$defs/key" },
+          "pageTypes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/pascalKey" }
+          },
+          "shellMode": { "enum": ["content", "standalone"] }
+        }
+      }
+    },
+    "components": { "$ref": "#/$defs/implementationMap" },
+    "verificationEntries": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "pattern": "^[a-z][a-z0-9:-]*$" }
+    },
+    "approvalStore": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["directory", "schema", "digestAlgorithm"],
+          "properties": {
+            "directory": { "$ref": "#/$defs/projectPath" },
+            "schema": { "$ref": "#/$defs/projectPath" },
+            "digestAlgorithm": { "const": "sha256-canonical-json-v1" }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "pascalKey": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+    "projectPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$"
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalImplementation", "owner", "verificationEntry"],
+      "properties": {
+        "canonicalImplementation": { "$ref": "#/$defs/projectPath" },
+        "owner": { "type": "string", "minLength": 1 },
+        "verificationEntry": { "$ref": "#/$defs/key" }
+      }
+    },
+    "implementationMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/implementation" }
+    }
+  }
+}

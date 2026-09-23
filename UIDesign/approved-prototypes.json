@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "viewports": [
+    { "id": "desktop-1366", "label": "1366×768", "width": 1366, "height": 768 },
+    { "id": "desktop-1440", "label": "1440×900", "width": 1440, "height": 900 },
+    { "id": "desktop-1920", "label": "1920×1080", "width": 1920, "height": 1080 }
+  ],
+  "prototypes": [
+    {
+      "id": "platform-dashboard",
+      "name": "物流运营总览",
+      "subsystem": "platform",
+      "feature": "dashboard",
+      "pageType": "DashboardPage",
+      "status": "approved",
+      "pageSpec": "docs/page-specs/platform-dashboard.yaml",
+      "productionRoute": "/platform/dashboard",
+      "routeSource": "src/features/platform/routes.ts",
+      "productionPage": "src/features/platform/dashboard/pages/PlatformDashboardPage.vue",
+      "prototypeComponent": "UIDesign/src/prototypes/platform/dashboard/PrototypePage.vue",
+      "pattern": "DashboardPageTemplate",
+      "approvedReference": "docs/design/concepts/platform-dashboard.png",
+      "baselineDirectory": "UIDesign/baselines/platform-dashboard",
+      "readyText": "今日运输单",
+      "approvedAt": "2026-09-03",
+      "updatedAt": "2026-09-03"
+    }
+  ]
+}

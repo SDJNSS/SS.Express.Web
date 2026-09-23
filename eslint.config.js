@@ -1,43 +1,77 @@
 import js from '@eslint/js'
-import typescript from '@typescript-eslint/eslint-plugin'
-import typescriptParser from '@typescript-eslint/parser'
-import vue from 'eslint-plugin-vue'
-import prettier from 'eslint-config-prettier'
+import eslintConfigPrettier from 'eslint-config-prettier'
+import pluginVue from 'eslint-plugin-vue'
+import tseslint from 'typescript-eslint'
 
-export default [
-  js.configs.recommended,
+export default tseslint.config(
   {
-    files: ['**/*.{js,ts,vue}'],
+    ignores: [
+      'dist/**',
+      'dist-ui/**',
+      'node_modules/**',
+      'docs/**',
+      'playwright-report/**',
+      'test-results/**',
+    ],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  ...pluginVue.configs['flat/recommended'],
+  {
+    files: ['**/*.{ts,vue}'],
     languageOptions: {
-      parser: typescriptParser,
       parserOptions: {
+        parser: tseslint.parser,
         ecmaVersion: 'latest',
         sourceType: 'module',
-        extraFileExtensions: ['.vue']
+        extraFileExtensions: ['.vue'],
       },
-      globals: {
-        document: 'readonly',
-        navigator: 'readonly',
-        window: 'readonly',
-        console: 'readonly',
-        process: 'readonly'
-      }
-    },
-    plugins: {
-      '@typescript-eslint': typescript,
-      vue
     },
     rules: {
-      ...typescript.configs.recommended.rules,
-      ...vue.configs['vue3-recommended'].rules,
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
-      ],
+      'no-undef': 'off',
       'vue/multi-word-component-names': 'off',
-      'vue/require-default-prop': 'off'
-    }
+      'vue/attributes-order': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
   },
-  prettier
-]
+  {
+    files: ['src/**/*.{ts,vue}', 'UIDesign/src/**/*.{ts,vue}'],
+    ignores: ['src/shared/services/notification.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'element-plus',
+              importNames: ['ElMessage'],
+              message:
+                '仅 src/shared/services/notification.ts 可直接使用 ElMessage；请改用 @shared/services/notification',
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                'element-plus/es/components/message',
+                'element-plus/es/components/message/**',
+                'element-plus/lib/components/message',
+                'element-plus/lib/components/message/**',
+              ],
+              message: '禁止绕过共享 Notification Owner 深层导入 Element Plus Message',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  eslintConfigPrettier,
+)

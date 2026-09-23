@@ -1,0 +1,226 @@
+schemaVersion: '0.1'
+page:
+  {
+    id: training-operations-overview,
+    name: 培训概览,
+    feature: training/operations-archive,
+    type: DashboardPage,
+    patternKey: DashboardPageTemplate,
+    revision: 3,
+  }
+sources:
+  inputMode: prd-only
+  prd:
+    [
+      {
+        id: training-operations-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 培训概览,
+        purpose: 定义核心指标、状态分布、趋势与逾期下钻,
+      },
+      {
+        id: training-standing-prd,
+        ref: docs/prd/training/training-standing-plan.md,
+        section: 档案、统计与导出,
+        purpose: 定义多轮执行、管理员完成和长期任务统计口径,
+      },
+    ]
+  api:
+    [
+      {
+        id: training-overview-api,
+        ref: docs/api/training-management-api.md,
+        section: 概览、档案、统计与导出,
+        operation: 'POST /iam-admin/TrainingOverview/Overview|Trends|Incomplete',
+        purpose: 定义同一统计范围、执行次数与去重员工数、完成来源和长期任务逾期边界,
+      },
+    ]
+  permissions:
+    [
+      {
+        id: iam-runtime-permission,
+        ref: docs/api/iam-admin-api.md,
+        section: Permission CurrentFunctions,
+        purpose: 定义正式运行时功能权限发现机制,
+      },
+    ]
+  ux:
+    [
+      {
+        id: project-ux,
+        ref: UX-CONTRACT.md,
+        section: Data display and async behavior,
+        purpose: 约束统计口径、异步状态和失败恢复,
+      },
+    ]
+  references:
+    [
+      {
+        id: project-design,
+        ref: DESIGN.md,
+        origin: project,
+        kind: document,
+        purpose: 复用物流平台管理端视觉语言,
+      },
+    ]
+implementation:
+  {
+    canonicalEntry: src/features/training/operations-archive/components/TrainingOverviewPageView.vue,
+    previewEntry: src/features/training/operations-archive/public.preview.ts,
+    previewBinding: src/features/training/operations-archive/preview/TrainingOperationsPreviewPage.vue,
+    productionBinding: src/features/training/operations-archive/pages/TrainingOperationsOverviewPage.vue,
+    productionRoute: /iam/training/overview,
+    routeSource: src/features/training/routes.ts,
+  }
+composition:
+  layoutKey: AppLayout
+  regions:
+    [
+      { id: header, role: header, order: 1 },
+      { id: search, role: search, order: 2 },
+      { id: metrics, role: summary, order: 3 },
+      { id: charts, role: data, order: 4 },
+      { id: drilldown, role: detail, order: 5 },
+    ]
+  components:
+    [
+      { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区 },
+      {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 提供统计范围筛选,
+      },
+      {
+        id: metric-region,
+        componentKey: shared.app-page,
+        regionId: metrics,
+        purpose: 展示分子分母可核对的指标区域,
+      },
+      {
+        id: data-table,
+        componentKey: shared.data-table,
+        regionId: drilldown,
+        purpose: 展示未完成和逾期清单,
+      },
+    ]
+states:
+  [
+    {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 展示指标、执行与员工口径、状态分布、趋势及下钻清单,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: loading,
+      scopeRef: drilldown,
+      observableResult: 保留结构并展示加载状态,
+      ruleRef: project-ux,
+    },
+    {
+      id: empty,
+      scopeRef: drilldown,
+      observableResult: 显示无结果状态且不伪造零值,
+      ruleRef: project-ux,
+    },
+    {
+      id: retryable-error,
+      scopeRef: drilldown,
+      observableResult: 保留筛选并提供重新加载,
+      ruleRef: project-ux,
+    },
+  ]
+interactions:
+  [
+    {
+      id: filter-overview,
+      trigger: 修改时间计划任务并查询,
+      targetRef: metrics,
+      observableResult: 所有指标与图表按服务端同一范围刷新，默认查询不提交 plan_year 从而包含常设计划,
+      ruleRef: training-standing-prd,
+    },
+    {
+      id: drilldown-overdue,
+      trigger: 点击逾期或未完成指标,
+      targetRef: drilldown,
+      observableResult: 展示同口径只读清单且长期任务不出现虚假逾期,
+      ruleRef: training-standing-prd,
+    },
+  ]
+mockScenarios:
+  [
+    {
+      id: ready-default,
+      isDefault: true,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: ready,
+      acceptanceRefs: [overview-complete, overview-standing-executions],
+    },
+    {
+      id: loading-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: loading,
+      acceptanceRefs: [overview-complete],
+    },
+    {
+      id: empty-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: empty,
+      acceptanceRefs: [overview-complete],
+    },
+    {
+      id: error-state,
+      fixtureRef: src/features/training/operations-archive/preview/trainingOperations.fixture.ts,
+      stateRef: retryable-error,
+      acceptanceRefs: [overview-complete],
+    },
+  ]
+exceptions: []
+issues:
+  blockers:
+    [
+      {
+        id: standing-plan-preview-reapproval,
+        description: Contract revision 3 已使原 revision 2 的人工审批与基线失配；新 Candidate Preview 经人工批准并更新 Approval Record 前不得进入新版 Production Binding 或回归基线,
+        affectedScopes: [production-binding, production-regression],
+        owner: 产品评审,
+        resolutionTarget: 批准 revision 3 候选并固化三视口基线,
+      },
+    ]
+  deferred: []
+  outOfScope:
+    [
+      {
+        id: employee-client,
+        description: 员工客户端不在本期范围,
+        affectedScopes: [preview-visual, production-binding],
+      },
+    ]
+acceptance:
+  [
+    {
+      id: overview-complete,
+      sourceRef: training-operations-prd,
+      observableResult: 指标、分子分母、状态分布、趋势和逾期下钻可核对且只读,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+    {
+      id: overview-standing-executions,
+      sourceRef: training-standing-prd,
+      observableResult: 页面明确区分执行次数与去重员工数，管理员完成只计入培训完成且长期任务不进入逾期口径,
+      affectedScopes:
+        [preview-visual, preview-interaction, production-binding, production-regression],
+      stateRef: ready,
+      testRef: tests/visual/training-operations-archive-previews.spec.ts,
+    },
+  ]
+verification:
+  {
+    viewports: [desktop-1366, desktop-1440, desktop-1920],
+    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+  }

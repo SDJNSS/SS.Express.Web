@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-group-profile",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-group-profile.yaml",
+    "revision": 3,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "18ab27d7f169b4c55715e1a82b527b60dd537c5a32f2b5d0e28ea475427ff966"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-06T22:06:53+08:00",
+    "evidence": "用户在当前会话明确确认：所有页面 approved。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-group-profile/desktop-1366.png",
+      "sha256": "cb87dad3fbdd4d13ace009229b7927f5f3db63b220d788273f65ef15f27e0fa3"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-group-profile/desktop-1440.png",
+      "sha256": "42ecd1bc35e12e5ac934405213ac3cab95547a425398d1ad278565484c2242d6"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-group-profile/desktop-1920.png",
+      "sha256": "ab189bbdea698a3334ae407e640a19d53944413a9ef144d74d038c2014c90508"
+    }
+  ],
+  "readyText": "集团信息"
+}

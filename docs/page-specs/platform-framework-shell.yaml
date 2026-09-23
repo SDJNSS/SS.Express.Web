@@ -1,0 +1,267 @@
+schemaVersion: '0.1'
+page:
+  id: platform-framework-shell
+  name: 物流平台统一框架页
+  feature: platform/framework
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 3
+sources:
+  inputMode: prd-with-reference
+  prd:
+    - id: framework-shell-prd
+      ref: docs/prd/platform/framework-shell.md
+      section: 本次范围
+      purpose: 记录用户确认的候选范围、非目标和验收要求
+  api:
+    - id: current-modules-api
+      ref: docs/api/iam-shell-context.md
+      section: 当前用户可访问模块
+      purpose: 驱动顶部授权模块入口
+    - id: current-module-menus-api
+      ref: docs/api/iam-shell-context.md
+      section: 当前模块菜单
+      purpose: 驱动当前模块左侧菜单树
+    - id: current-user-api
+      ref: docs/api/iam-shell-context.md
+      section: 查询当前用户资料
+      purpose: 驱动侧栏用户头像和名称；当前 Tenant 名称来自认证会话
+  permissions:
+    - id: shell-module-permission
+      ref: docs/permissions/platform-framework-shell.md
+      section: 平台框架权限规则
+      purpose: 约束顶部模块与左侧菜单的唯一授权来源
+  ux:
+    - id: platform-ux
+      ref: UX-CONTRACT.md
+      section: Navigation and responsive behavior
+      purpose: 约束 App Shell、列表状态、键盘语义和三视口行为
+  references:
+    - id: user-framework-reference
+      ref: docs/design/references/tms-framework-shell.png
+      origin: user
+      kind: image
+      purpose: 仅用于左侧分组导航、顶部上下文和宽屏框架层级参考
+    - id: approved-list-sibling
+      ref: docs/design/concepts/vms-vehicle-list.png
+      origin: project
+      kind: approved-page
+      purpose: 复用当前项目浅色 ListPage 的密度与视觉层级
+implementation:
+  canonicalEntry: src/features/platform/framework/components/PlatformFrameworkPageView.vue
+  previewEntry: src/features/platform/framework/public.preview.ts
+  previewBinding: src/features/platform/framework/preview/PlatformFrameworkPreviewPage.vue
+  productionBinding: src/app/layouts/AppLayout.vue
+  productionRoute: /platform/dashboard
+  routeSource: src/features/platform/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: shell-navigation, role: navigation, order: 1 }
+    - { id: page-header, role: header, order: 2 }
+    - { id: filters, role: search, order: 3 }
+    - { id: result-actions, role: actions, order: 4 }
+    - { id: results, role: data, order: 5 }
+    - { id: result-feedback, role: feedback, order: 6 }
+  components:
+    - id: app-shell
+      componentKey: shared.app-shell
+      regionId: shell-navigation
+      purpose: 复用唯一平台壳层并验证 TMS 分组导航
+    - id: app-page
+      componentKey: shared.app-page
+      regionId: page-header
+      purpose: 提供统一页面工作面和滚动边界
+    - id: page-header
+      componentKey: shared.page-header
+      regionId: page-header
+      purpose: 作为标题、说明和动作的代码 Owner；生产壳层由面包屑展示标题并承载动作，无壳层 Preview 自行展示完整页头
+    - id: search-panel
+      componentKey: shared.search-panel
+      regionId: filters
+      purpose: 提供标准查询与重置入口
+    - id: table-toolbar
+      componentKey: shared.table-toolbar
+      regionId: result-actions
+      purpose: 展示结果范围和刷新入口
+    - id: task-table
+      componentKey: shared.data-table
+      regionId: results
+      purpose: 展示静态运输任务候选数据
+    - id: pagination
+      componentKey: shared.app-pagination
+      regionId: results
+      purpose: 验证标准分页区域和稳定几何
+    - id: empty-state
+      componentKey: shared.empty-state
+      regionId: result-feedback
+      purpose: 复用列表无结果状态
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 完整壳层、筛选、运输任务表格和分页可见
+    ruleRef: platform-ux
+  - id: loading
+    scopeRef: results
+    observableResult: 结果区域保留几何并显示稳定加载态
+    ruleRef: platform-ux
+  - id: empty
+    scopeRef: results
+    observableResult: 无匹配数据时展示共享空状态并保留筛选条件
+    ruleRef: platform-ux
+  - id: retryable-error
+    scopeRef: results
+    observableResult: 展示持久错误说明和重新加载动作
+    ruleRef: platform-ux
+  - id: shell-loading
+    scopeRef: shell-navigation
+    observableResult: 加载模块或菜单时侧栏展示稳定加载反馈且不展示静态授权数据
+    ruleRef: platform-ux
+  - id: shell-empty
+    scopeRef: shell-navigation
+    observableResult: 无授权模块或菜单时展示持久空状态
+    ruleRef: platform-ux
+  - id: shell-error
+    scopeRef: shell-navigation
+    observableResult: 权限加载失败时展示持久错误和重新加载入口
+    ruleRef: platform-ux
+  - id: compressed-height
+    scopeRef: page
+    observableResult: 浏览器高度动态缩短时 AppPage 自动提供纵向滚动且内容仍完整可达
+    ruleRef: platform-ux
+interactions:
+  - id: toggle-sidebar
+    trigger: 点击侧栏右侧中部的左右箭头
+    targetRef: shell-navigation
+    observableResult: 展开态显示左箭头、收起态显示右箭头，侧栏宽度和可访问名称同步变化
+    ruleRef: platform-ux
+  - id: toggle-dispatch-navigation
+    trigger: 点击调度中心分组按钮
+    targetRef: shell-navigation
+    observableResult: 子菜单展开状态和 aria-expanded 同步变化
+    ruleRef: platform-ux
+  - id: filter-preview-tasks
+    trigger: 提交任务筛选条件
+    targetRef: results
+    observableResult: 本地 Fixture 被过滤、页码归一到第一页且不产生网络请求
+    ruleRef: platform-ux
+  - id: retry-preview-state
+    trigger: 在失败状态点击重新加载
+    targetRef: result-feedback
+    observableResult: 候选恢复 ready 状态并保留框架布局
+    ruleRef: platform-ux
+  - id: open-sidebar-user-menu
+    trigger: 点击侧栏底部用户区域
+    targetRef: shell-navigation
+    observableResult: 侧栏展开态以头像、用户名和当前 Tenant 名称展示会话身份；菜单在侧栏旁打开且账户动作可见
+    ruleRef: platform-ux
+  - id: switch-authorized-module
+    trigger: 点击顶部授权模块入口
+    targetRef: shell-navigation
+    observableResult: 路由进入目标模块首页并加载目标 app_code 对应的菜单
+    ruleRef: shell-module-permission
+  - id: retry-shell-context
+    trigger: 权限加载失败后点击重新加载
+    targetRef: shell-navigation
+    observableResult: 重新请求模块或当前模块菜单并恢复可用导航
+    ruleRef: shell-module-permission
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/platform/framework/preview/frameworkShell.fixture.ts
+    stateRef: ready
+    acceptanceRefs: [shell-complete, shell-controls-updated, list-pattern-visible, preview-isolated]
+  - id: loading-state
+    fixtureRef: src/features/platform/framework/preview/frameworkShell.fixture.ts
+    stateRef: loading
+    acceptanceRefs: [state-matrix-visible]
+  - id: empty-state
+    fixtureRef: src/features/platform/framework/preview/frameworkShell.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [state-matrix-visible]
+  - id: retryable-error-state
+    fixtureRef: src/features/platform/framework/preview/frameworkShell.fixture.ts
+    stateRef: retryable-error
+    acceptanceRefs: [state-matrix-visible]
+exceptions:
+  - id: full-shell-preview
+    standardRef: standards/page-contract.md#Canonical-Page-与-Preview
+    scopeRef: shell-navigation
+    reason: 用户明确要求评审框架页；Preview Binding 因此复用共享 AppShell 展示完整壳层，但 Canonical Page View 仍只包含可进入生产 AppLayout 的页面内容
+  - id: app-layout-production-owner
+    standardRef: docs/architecture.md#边界规则
+    scopeRef: shell-navigation
+    reason: 平台框架横跨全部认证后业务路由，唯一生产 Owner 是 AppLayout；代表路由只用于验证装配，不创建伪业务页面
+issues:
+  blockers: []
+  deferred: []
+  outOfScope:
+    - id: no-mobile-or-dark-theme
+      description: 当前项目只承诺三个桌面视口和 Light Theme
+      affectedScopes: [preview-visual, production-regression]
+acceptance:
+  - id: shell-complete
+    sourceRef: framework-shell-prd
+    observableResult: 完整 App Shell、分组导航、顶部工具区、以最后一级 h1 表示当前页面的面包屑、右侧页面动作区、内容区和页脚可见
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-shell.spec.ts
+  - id: list-pattern-visible
+    sourceRef: framework-shell-prd
+    observableResult: 内容严格按 ListPageTemplate 的 Header、Search、Toolbar、Table、Pagination 排列
+    affectedScopes: [preview-visual]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-shell.spec.ts
+  - id: shell-controls-updated
+    sourceRef: framework-shell-prd
+    observableResult: 中部左右箭头、半透明子系统分割线及侧栏底部左头像、右侧用户名与 Tenant 名称符合统一壳层要求
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-shell.spec.ts
+  - id: preview-isolated
+    sourceRef: framework-shell-prd
+    observableResult: Preview 使用静态 Fixture，不接生产 API、认证、Store 或路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/platform-framework-shell.spec.ts
+  - id: state-matrix-visible
+    sourceRef: framework-shell-prd
+    observableResult: ready、loading、empty、retryable-error 均可复现并保持结果区域稳定
+    affectedScopes: [preview-visual, preview-interaction]
+    testRef: tests/visual/platform-framework-shell.spec.ts
+  - id: authorized-modules-bound
+    sourceRef: current-modules-api
+    observableResult: 顶部只展示 CurrentModules 返回的授权模块并使用已知本地路由与图标回退
+    affectedScopes: [production-binding, production-regression]
+    stateRef: shell-loading
+    testRef: tests/visual/platform-framework-production.spec.ts
+  - id: current-menu-bound
+    sourceRef: current-module-menus-api
+    observableResult: 左侧导航随当前 app_code 加载并在模块切换后更新
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-production.spec.ts
+  - id: current-user-bound
+    sourceRef: current-user-api
+    observableResult: 侧栏用户区域展示精确匹配登录账号的头像与名称，并展示认证会话中的当前 Tenant 名称
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-production.spec.ts
+  - id: shell-permission-enforced
+    sourceRef: shell-module-permission
+    observableResult: 静态配置不授予模块或菜单权限，所有框架请求携带 Bearer Token
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/platform-framework-production.spec.ts
+  - id: short-viewport-scroll-fallback
+    sourceRef: platform-ux
+    observableResult: 所有生产 AppPage 在注入超高内容或浏览器高度缩短时均可纵向滚动，Feature 页面根不截断内容且 app-shell__content 不竞争滚动
+    affectedScopes: [production-binding, production-regression]
+    stateRef: compressed-height
+    testRef: tests/visual/app-shell-content-contract.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    - tests/visual/platform-framework-shell.spec.ts
+    - tests/visual/platform-framework-production.spec.ts
+    - tests/visual/app-shell-content-contract.spec.ts

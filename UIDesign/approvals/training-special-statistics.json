@@ -1,0 +1,40 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "training-special-statistics",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/training-special-statistics.yaml",
+    "revision": 2,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "56e315059dafd541b8b21fcdc26a8d710273d6a49d70eb3bee69bc9286b2ad38"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-17T18:48:17+08:00",
+    "evidence": "用户已完成培训考试模块第二组页面 review，并在当前会话明确悉予允行，授权完成开发、联调与验收；最终候选已通过三视口视觉复核和生产路由冒烟测试。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/training-special-statistics/desktop-1366.png",
+      "sha256": "3c338ab7beeac6bfc1cdb63b1db87157a4d6bece1ba942bc59aca88d7e3a40f0"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/training-special-statistics/desktop-1440.png",
+      "sha256": "b5f70615e4687e190a3823575d801931306b4cc3a21c426939c24ad80b0ad687"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/training-special-statistics/desktop-1920.png",
+      "sha256": "0df56529fe95f840b4db56c492481f41e8374e25e0056461d257fd5e92801302"
+    }
+  ],
+  "readyText": "专项统计"
+}
