@@ -1,0 +1,2 @@
+# Historical source must not be discovered as active pages by ordinary rg scans.
+archive/

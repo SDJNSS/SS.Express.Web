@@ -6,7 +6,7 @@ page:
     feature: iam/access-control,
     type: ListPage,
     patternKey: ListPageTemplate,
-    revision: 5,
+    revision: 7,
   }
 sources:
   inputMode: prd-only
@@ -39,6 +39,12 @@ sources:
         section: Dataset navigation and Flow ledger,
         purpose: 约束当前页选择、批量确认、失败保留和分页,
       }
+    - {
+        id: current-tenant-policy,
+        ref: docs/coordination/iam-current-tenant-scope.md,
+        section: 当前租户业务边界,
+        purpose: 角色候选、成员候选、关系查询及写操作仅作用于当前租户,
+      }
   references:
     - {
         id: approved-membership-sibling,
@@ -70,7 +76,7 @@ composition:
         id: search-panel,
         componentKey: shared.search-panel,
         regionId: search,
-        purpose: 提供 Tenant、角色、关键字与有效性筛选,
+        purpose: 提供当前租户内的角色、关键字与有效性筛选，不另设租户选择框,
       }
     - {
         id: data-table,
@@ -113,10 +119,10 @@ states:
 interactions:
   - {
       id: query-role-members,
-      trigger: 选择 Tenant 和角色并查询,
+      trigger: 在当前租户内选择角色并查询,
       targetRef: data,
-      observableResult: MemberRole/Query 只提交 role_id 不提交 tenant_user_id，切换角色清空旧结果后加载权威列表,
-      ruleRef: access-prd,
+      observableResult: MemberRole/Query 只提交当前租户角色的 role_id，不提交 tenant_user_id；切换角色清空旧结果后加载权威列表,
+      ruleRef: current-tenant-policy,
     }
   - {
       id: add-role-member,
@@ -182,6 +188,13 @@ issues:
       ],
   }
 acceptance:
+  - {
+      id: compact-row-actions,
+      sourceRef: bulk-ux,
+      observableResult: 保留既有业务操作，操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
   - {
       id: assignment-workflow,
       sourceRef: access-prd,

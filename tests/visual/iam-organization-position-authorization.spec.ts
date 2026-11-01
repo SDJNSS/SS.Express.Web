@@ -178,7 +178,7 @@ test('non-admin member with position Functions can query details and maintain po
   await expect(page.getByText('集团信息', { exact: true })).toHaveCount(0)
   expect(queries.every((query) => query.tenant_id === 1)).toBe(true)
 
-  await page.getByRole('button', { name: '详情', exact: true }).click()
+  await page.getByRole('button', { name: '委派岗位', exact: true }).click()
   const detail = page.getByRole('dialog', { name: '委派岗位 · 岗位详情', exact: true })
   await expect(detail).toContainText('非管理员 Function 授权测试')
   await detail.getByRole('button', { name: '关闭此对话框', exact: true }).click()

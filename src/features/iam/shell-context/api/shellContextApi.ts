@@ -1,4 +1,5 @@
 import { defineApiPath } from '@shared/api/apiPath'
+import { getStoredAuthSession } from '@shared/api/authSession'
 import { serviceApiPath } from '@shared/api/backendServices'
 import { requestApi } from '@shared/api/httpClient'
 
@@ -6,17 +7,24 @@ import type {
   IamCurrentAppMenusRequest,
   IamCurrentAppMenusResponse,
   IamCurrentAppsResponse,
-  IamCurrentFunctionsRequest,
-  IamCurrentFunctionsResponse,
-  IamQueryUsersRequest,
-  IamQueryUsersResponse,
+  IamCurrentPageResourcesRequest,
+  IamCurrentPageResourcesResponse,
+  IamCurrentProfileResponse,
 } from '../types/shellContext'
 
+export { getStoredAuthSession }
+
 const endpoints = Object.freeze({
-  currentApps: serviceApiPath('iam', defineApiPath('/Permission/CurrentApps')),
-  currentAppMenus: serviceApiPath('iam', defineApiPath('/Permission/CurrentAppMenus')),
-  currentFunctions: serviceApiPath('iam', defineApiPath('/Permission/CurrentFunctions')),
-  queryUsers: serviceApiPath('iam', defineApiPath('/Membership/QueryUsers')),
+  currentApps: serviceApiPath('iam', defineApiPath('/CurrentPermissionResource/CurrentApps')),
+  currentAppMenus: serviceApiPath(
+    'iam',
+    defineApiPath('/CurrentPermissionResource/CurrentAppMenus'),
+  ),
+  currentPageResources: serviceApiPath(
+    'iam',
+    defineApiPath('/CurrentPermissionResource/CurrentPageResources'),
+  ),
+  currentProfile: serviceApiPath('iam', defineApiPath('/Auth/CurrentProfile')),
 })
 
 const iamPostHeaders = Object.freeze({
@@ -30,6 +38,7 @@ const iamJsonHeaders = Object.freeze({
 
 export function getCurrentApps(): Promise<IamCurrentAppsResponse> {
   return requestApi<IamCurrentAppsResponse, Record<string, never>>({
+    tenantScoped: true,
     method: 'POST',
     url: endpoints.currentApps,
     data: {},
@@ -40,6 +49,7 @@ export function getCurrentApps(): Promise<IamCurrentAppsResponse> {
 export function getCurrentAppMenus(appId: number): Promise<IamCurrentAppMenusResponse> {
   const request: IamCurrentAppMenusRequest = { app_id: appId }
   return requestApi<IamCurrentAppMenusResponse, IamCurrentAppMenusRequest>({
+    tenantScoped: true,
     method: 'POST',
     url: endpoints.currentAppMenus,
     data: request,
@@ -47,21 +57,23 @@ export function getCurrentAppMenus(appId: number): Promise<IamCurrentAppMenusRes
   })
 }
 
-export function getCurrentFunctions(menuId: number): Promise<IamCurrentFunctionsResponse> {
-  const request: IamCurrentFunctionsRequest = { menu_id: menuId }
-  return requestApi<IamCurrentFunctionsResponse, IamCurrentFunctionsRequest>({
+export function getCurrentPageResources(
+  pageResourceCode: string,
+): Promise<IamCurrentPageResourcesResponse> {
+  const request: IamCurrentPageResourcesRequest = { page_resource_code: pageResourceCode }
+  return requestApi<IamCurrentPageResourcesResponse, IamCurrentPageResourcesRequest>({
+    tenantScoped: true,
     method: 'POST',
-    url: endpoints.currentFunctions,
+    url: endpoints.currentPageResources,
     data: request,
     headers: iamPostHeaders,
   })
 }
 
-export function queryUsers(request: IamQueryUsersRequest): Promise<IamQueryUsersResponse> {
-  return requestApi<IamQueryUsersResponse, IamQueryUsersRequest>({
+export function getCurrentProfile(): Promise<IamCurrentProfileResponse> {
+  return requestApi<IamCurrentProfileResponse>({
     method: 'POST',
-    url: endpoints.queryUsers,
-    data: request,
-    headers: iamPostHeaders,
+    url: endpoints.currentProfile,
+    headers: iamJsonHeaders,
   })
 }

@@ -6,7 +6,7 @@ page:
     feature: training/operations-archive,
     type: ListPage,
     patternKey: ListPageTemplate,
-    revision: 3,
+    revision: 4,
   }
 sources:
   inputMode: prd-only
@@ -220,6 +220,13 @@ issues:
     ]
 acceptance:
   [
+    {
+      id: compact-row-actions,
+      sourceRef: project-ux,
+      observableResult: 点击员工名称打开档案，不保留重复查看档案按钮或空操作列,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    },
     {
       id: archive-complete,
       sourceRef: training-operations-prd,

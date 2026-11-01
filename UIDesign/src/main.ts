@@ -4,12 +4,14 @@ import 'element-plus/dist/index.css'
 
 import App from './App.vue'
 import { registerLocalIcons } from '@shared/icons/registerIcons'
+import { resourceElementDirective } from '@shared/services/resourceElement'
 import './styles/index.scss'
 
 const app = createApp(App)
 
 registerLocalIcons()
 app.use(ElementPlus)
+app.directive('resource-element', resourceElementDirective)
 // Isolated previews demonstrate approved interaction states without production authorization data.
 app.directive('permission', {
   mounted(element: HTMLElement) {

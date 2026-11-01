@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { useAuthenticatedSession } from './helpers/authenticatedSession'
+import { pageResourcesFixture, resourceCodeForRoute } from './helpers/pageResources'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { readFileSync } from 'node:fs'
 
 const stamp = '2026-09-17T09:10:11.1234567'
 const common = {
@@ -39,13 +43,11 @@ const paper = {
   total_score: 100,
   random_question_order: false,
   random_option_order: false,
-  single_choice_count: null,
-  single_choice_score: null,
-  multiple_choice_count: null,
-  multiple_choice_score: null,
-  true_false_count: null,
-  true_false_score: null,
-  fixed_questions: [
+  question_count: 1,
+  is_configuration_valid: true,
+  configuration_invalid_reason: '',
+  groups: [{ question_type: 'SINGLE_CHOICE', count: 1, total_score: 100, question_score: 100 }],
+  questions: [
     {
       id: 1,
       question_id: 10,
@@ -54,6 +56,7 @@ const paper = {
       question_status: 'DISABLED',
       question_score: 100,
       sort_order: 1,
+      question_updated_at: stamp,
     },
   ],
 }
@@ -126,7 +129,7 @@ async function prepare(
     id: 1201 + index,
     app_id: 2,
     parent_id: 1200,
-    resource_code: `IAM.TRAINING.${target.key}`,
+    resource_code: resourceCodeForRoute(`/iam/training/${target.key}`),
     resource_name: target.name,
     resource_type: 'menu',
     route_path: `/iam/training/${target.key}`,
@@ -138,52 +141,49 @@ async function prepare(
     sort_order: index,
     children: [],
   }))
-  await page.route('**/api/iam-admin/Permission/CurrentAppMenus', async (route) => {
+  await page.route('**/api/iam-admin/CurrentPermissionResource/CurrentAppMenus', async (route) => {
     if (route.request().postDataJSON().app_id !== 2) return route.fallback()
     await route.fulfill({
       contentType: 'application/json',
       body: success({
         app: { id: 2, app_code: 'IAM', app_name: 'IAM 身份中心', route_prefix: '/iam' },
+        authorization_version: '1',
         modules: [
           {
-            id: 1200,
-            app_id: 2,
-            resource_code: 'IAM.TRAINING',
-            resource_name: '培训中心',
-            resource_type: 'module',
-            route_path: '',
-            component: '',
-            permission_code: '',
-            icon: 'mdi:school-outline',
-            sort_order: 1,
-            status: 'active',
-            is_visible: true,
-            is_currently_effective: true,
+            resource: {
+              id: 1200,
+              app_id: 2,
+              resource_code: 'IAM.TRAINING',
+              resource_name: '培训中心',
+              resource_type: 'module',
+              route_path: '',
+              component: '',
+              permission_code: '',
+              icon: 'mdi:school-outline',
+              sort_order: 1,
+              status: 'active',
+              is_visible: true,
+              is_currently_effective: true,
+            },
             menus,
           },
         ],
       }),
     })
   })
-  await page.route('**/api/iam-admin/Permission/CurrentFunctions', async (route) => {
-    const menu = menus.find((item) => item.id === route.request().postDataJSON().menu_id)
-    if (!menu) return route.fallback()
-    await route.fulfill({
-      contentType: 'application/json',
-      body: success({
-        menu,
-        functions: permissions.map((permission, index) => ({
-          id: menu.id * 100 + index,
-          parent_id: menu.id,
-          resource_type: 'function',
-          permission_code: permission,
-          status: 'active',
-          is_currently_effective: true,
-        })),
-        permission_codes: permissions,
-      }),
-    })
-  })
+  await page.route(
+    '**/api/iam-admin/CurrentPermissionResource/CurrentPageResources',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: success(
+          pageResourcesFixture(route.request().postDataJSON().page_resource_code, {
+            readOnly: options.readOnly,
+          }),
+        ),
+      })
+    },
+  )
   await page.route('**/api/iam-admin/Training*/**', async (route) => {
     const endpoint = new URL(route.request().url()).pathname.split('/iam-admin/')[1]!
     const [controller, action] = endpoint.split('/')
@@ -248,6 +248,18 @@ async function prepare(
       }
     await route.fulfill({ contentType: 'application/json', body: success(data) })
   })
+  // Existing CRUD tests open course details too; never send their fake identity to a real DMS.
+  await page.route('**/api/dms/File/GetAccessUrl', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        is_success: false,
+        code: 400,
+        message: '此测试场景未配置视频文件',
+        data: null,
+      }),
+    }),
+  )
 }
 
 test('four production pages render with real DTO shapes at all standard viewports', async ({
@@ -277,6 +289,1009 @@ test('four production pages render with real DTO shapes at all standard viewport
     })
   }
   expect(errors).toEqual([])
+})
+
+// Generate a real, tiny offline clip with Chromium rather than mocking HTMLMediaElement.
+// This proves the player lifecycle, not real OSS/MP4 codec or storage configuration.
+let previewClip: Buffer | undefined
+const previewMime = process.env.DMS_VIDEO_TEST_FILE ? 'video/mp4' : 'video/webm'
+const previewName = process.env.DMS_VIDEO_TEST_FILE ? '安全培训视频.mp4' : '安全培训视频.webm'
+async function videoFixture(page: Page) {
+  if (previewClip) return previewClip
+  // Explicit local codec QA only; normal CI remains self-contained and generates its own clip.
+  if (process.env.DMS_VIDEO_TEST_FILE) {
+    previewClip = readFileSync(process.env.DMS_VIDEO_TEST_FILE)
+    return previewClip
+  }
+  const bytes = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 320
+    canvas.height = 180
+    const context = canvas.getContext('2d')!
+    const stream = canvas.captureStream(10)
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8' })
+    const chunks: Blob[] = []
+    recorder.ondataavailable = (event) => chunks.push(event.data)
+    const stopped = new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve()
+    })
+    recorder.start()
+    for (let frame = 0; frame < 20; frame++) {
+      context.fillStyle = '#17478d'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.fillStyle = '#ffffff'
+      context.font = '22px sans-serif'
+      context.fillText(`Course preview ${frame}`, 32, 90)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    recorder.stop()
+    await stopped
+    stream.getTracks().forEach((track) => track.stop())
+    return [...new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer())]
+  })
+  previewClip = Buffer.from(bytes)
+  return previewClip
+}
+
+async function prepareVideo(page: Page, calls: Call[], readOnly = true) {
+  await prepare(page, calls, { readOnly })
+  await page.goto('/iam/training/courses')
+  await page.getByRole('button', { name: course.course_name, exact: true }).waitFor()
+  const clip = await videoFixture(page)
+  const access: Record<string, unknown>[] = []
+  let denied = false
+  let lifetime = 3600_000
+  let metadata: Record<string, unknown> = {}
+  await page.route('https://course-video.test/**', async (route) => {
+    expect(route.request().headers().authorization).toBeUndefined()
+    const range = /bytes=(\d+)-(\d*)/.exec(route.request().headers().range ?? '')
+    const start = range ? Number(range[1]) : 0
+    const end = range?.[2] ? Math.min(Number(range[2]), clip.length - 1) : clip.length - 1
+    await route.fulfill({
+      status: range ? 206 : 200,
+      contentType: previewMime,
+      headers: {
+        'Accept-Ranges': 'bytes',
+        'Access-Control-Allow-Origin': '*',
+        ...(range ? { 'Content-Range': `bytes ${start}-${end}/${clip.length}` } : {}),
+      },
+      body: clip.subarray(start, end + 1),
+    })
+  })
+  await page.route('**/api/dms/File/GetAccessUrl', async (route) => {
+    access.push(route.request().postDataJSON())
+    const now = await page.evaluate(() => Date.now())
+    expect(route.request().headers().authorization).toBe('Bearer visual-test-access-token')
+    await route.fulfill({
+      contentType: 'application/json',
+      body: denied
+        ? JSON.stringify({ is_success: false, code: 403, message: '没有文件预览权限', data: null })
+        : success({
+            file_id: route.request().postDataJSON().file_id,
+            purpose: 'preview',
+            url: `https://course-video.test/lesson.${process.env.DMS_VIDEO_TEST_FILE ? 'mp4' : 'webm'}?lease=${access.length}`,
+            expires_at: new Date(now + lifetime).toISOString(),
+            original_name: previewName,
+            file_category: 'VIDEO',
+            content_type: previewMime,
+            file_size_bytes: clip.length,
+            ...metadata,
+          }),
+    })
+  })
+  const open = async () => {
+    await page.getByRole('button', { name: course.course_name, exact: true }).click()
+    const drawer = page.getByRole('dialog', {
+      name: `课程详情 · ${course.course_name}`,
+      exact: true,
+    })
+    await expect(drawer).toBeVisible()
+    return drawer
+  }
+  return {
+    access,
+    open,
+    deny: () => {
+      denied = true
+    },
+    lifetime: (value: number) => {
+      lifetime = value
+    },
+    metadata: (value: Record<string, unknown>) => {
+      metadata = value
+    },
+  }
+}
+
+test.describe('course editor video preview', () => {
+  async function uploadFixture(page: Page, durationMs = 2000, pauseValidation = false) {
+    let uploads = 0
+    let validations = 0
+    let finishValidation = () => {}
+    await page.route('**/api/dms/File/Upload', async (route) => {
+      uploads++
+      await route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          file_id: `editor-video-${uploads}`,
+          status: 'AVAILABLE',
+          original_name: 'replacement.mov',
+          file_category: 'VIDEO',
+          content_type: 'video/quicktime',
+          file_size_bytes: 5,
+          media_duration_ms: durationMs,
+          playback_status: 'ready',
+          playback_profile: 'browser-mp4-v1',
+          thumbnail_status: 'ready',
+        }),
+      })
+    })
+    await page.route('**/api/dms/File/ValidateVideo', async (route) => {
+      validations++
+      if (pauseValidation)
+        await new Promise<void>((resolve) => {
+          finishValidation = resolve
+        })
+      await route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          file_id: route.request().postDataJSON().file_id,
+          is_valid: true,
+          status: 'AVAILABLE',
+          file_category: 'VIDEO',
+          content_type: 'video/mp4',
+          media_duration_ms: durationMs,
+        }),
+      })
+    })
+    return {
+      uploads: () => uploads,
+      validations: () => validations,
+      finish: () => finishValidation(),
+    }
+  }
+  async function openEditor(page: Page) {
+    await page
+      .locator('.el-table__row')
+      .first()
+      .getByRole('button', { name: '编辑', exact: true })
+      .click()
+    const drawer = page.getByRole('dialog', {
+      name: `编辑课程 · ${course.course_name}`,
+      exact: true,
+    })
+    await expect(drawer).toBeVisible()
+    return drawer
+  }
+  const replacement = {
+    name: 'replacement.mov',
+    mimeType: 'video/quicktime',
+    buffer: Buffer.from('unprocessed original'),
+  }
+
+  test('plays existing editor video, replaces only after upload validation and saves the stable ID', async ({
+    page,
+  }, info) => {
+    const calls: Call[] = []
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    const fixture = await prepareVideo(page, calls, false)
+    await expect(page).toHaveURL(/\/iam\/training\/courses(?:\?|$)/)
+    await expect(page).toHaveTitle('课程管理 · 多式联运智慧调度平台')
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0)
+    const upload = await uploadFixture(page, 2000, true)
+    const poster = 'https://editor-poster.test/preview.svg'
+    await page.route('https://editor-poster.test/**', (route) =>
+      route.fulfill({
+        contentType: 'image/svg+xml',
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#17478d"/><text x="60" y="90" fill="white" font-size="24">上传后的视频</text></svg>',
+      }),
+    )
+    fixture.metadata({
+      playback_status: 'ready',
+      thumbnail_status: 'ready',
+      thumbnail_url: poster,
+      thumbnail_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+    })
+    const drawer = await openEditor(page)
+    const old = await drawer.locator('video').elementHandle()
+    await drawer.getByRole('button', { name: `播放视频：${course.course_name}` }).click()
+    await expect
+      .poll(() => old!.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0)
+    await drawer.locator('input[type=file]').setInputFiles(replacement)
+    await expect.poll(upload.validations).toBe(1)
+    expect(await old!.evaluate((v: HTMLVideoElement) => v.paused && !v.hasAttribute('src'))).toBe(
+      true,
+    )
+    await expect(drawer.locator('video')).toHaveCount(0)
+    await expect(drawer.getByRole('button', { name: '保存修改', exact: true })).toBeDisabled()
+    expect(fixture.access.map((r) => r.file_id)).toEqual([course.video_file_id])
+    upload.finish()
+    await expect(drawer.locator('video')).toHaveAttribute('poster', poster)
+    await expect(
+      drawer.getByRole('button', { name: `播放视频：${course.course_name}` }),
+    ).toBeVisible()
+    expect(await drawer.locator('video').evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+    await expect(drawer.locator('.course-video-preview')).toHaveAttribute(
+      'data-resource-element',
+      'iam.training.courses.editVideoPreview',
+    )
+    await drawer.getByRole('button', { name: `播放视频：${course.course_name}` }).click()
+    await expect
+      .poll(() => drawer.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0)
+    await drawer.locator('video').evaluate((v: HTMLVideoElement) => v.pause())
+    await page.screenshot({
+      path: info.outputPath(`editor-preview-${info.project.name}.png`),
+      animations: 'disabled',
+    })
+    const viewport = page.viewportSize()!
+    await page.setViewportSize({ ...viewport, height: 600 })
+    const planned = drawer.getByLabel('计划学习时长（秒）', { exact: true })
+    await planned.scrollIntoViewIfNeeded()
+    await expect(planned).toBeVisible()
+    const fieldBounds = await planned.boundingBox()
+    const footerBounds = await drawer.locator('.el-drawer__footer').boundingBox()
+    expect(fieldBounds!.y + fieldBounds!.height).toBeLessThanOrEqual(footerBounds!.y)
+    expect(fixture.access.map((r) => r.file_id)).toEqual([course.video_file_id, 'editor-video-1'])
+    const detached = await drawer.locator('video').elementHandle()
+    await drawer.getByRole('button', { name: '保存修改', exact: true }).click()
+    await expect(drawer).not.toBeVisible()
+    expect(
+      await detached!.evaluate((v) => !v.hasAttribute('src') && !v.hasAttribute('poster')),
+    ).toBe(true)
+    expect(calls.find((r) => r.endpoint === 'TrainingCourse/Update')?.body).toMatchObject({
+      video_file_id: 'editor-video-1',
+      planned_learning_seconds: 2,
+      updated_at: stamp,
+    })
+    expect(JSON.stringify(calls)).not.toContain(poster)
+    expect(errors).toEqual([])
+    await old!.dispose()
+    await detached!.dispose()
+  })
+
+  test('new course preview is post-upload, preview denial is retryable without reuploading', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [], false)
+    const upload = await uploadFixture(page)
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.getByLabel('课程名称', { exact: true }).fill('预览新课程')
+    await drawer.getByLabel('培训类型', { exact: true }).fill('安全')
+    expect(fixture.access).toHaveLength(0)
+    await expect(drawer.locator('video')).toHaveCount(0)
+    fixture.deny()
+    await drawer.locator('input[type=file]').setInputFiles(replacement)
+    await expect(drawer.getByText('没有文件预览权限', { exact: true })).toBeVisible()
+    expect(upload.uploads()).toBe(1)
+    expect(fixture.access).toHaveLength(1)
+    await expect(drawer.getByRole('button', { name: '创建草稿', exact: true })).toBeEnabled()
+    await page.route('**/api/dms/File/GetAccessUrl', (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          file_id: 'editor-video-1',
+          purpose: 'preview',
+          url: 'https://course-video.test/lesson.webm?editor-retry',
+          expires_at: new Date(Date.now() + 3600_000).toISOString(),
+          content_type: previewMime,
+        }),
+      }),
+    )
+    await drawer.getByRole('button', { name: '重新加载视频' }).click()
+    await drawer.getByRole('button', { name: '播放视频：预览新课程' }).click()
+    await expect
+      .poll(() => drawer.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0)
+    expect(upload.uploads()).toBe(1)
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '继续编辑', exact: true }).click()
+    await expect(drawer).toBeVisible()
+    await expect(drawer.locator('video')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '放弃修改', exact: true }).click()
+    await expect(drawer).not.toBeVisible()
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    await expect(drawer.locator('video')).toHaveCount(0)
+  })
+
+  test('blocks files above 200MB without sending an upload', async ({ page }) => {
+    await prepareVideo(page, [], false)
+    const upload = await uploadFixture(page)
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.locator('input[type=file]').evaluate((input: HTMLInputElement) => {
+      const transfer = new DataTransfer()
+      transfer.items.add(
+        new File([new Uint8Array(200 * 1024 * 1024 + 1)], 'large.mp4', { type: 'video/mp4' }),
+      )
+      input.files = transfer.files
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await expect(drawer.getByText('单个文件不能超过 200MB', { exact: true })).toBeVisible()
+    expect(upload.uploads()).toBe(0)
+    await expect(drawer.locator('video')).toHaveCount(0)
+  })
+
+  test('checks metadata before upload and server duration after unsupported-original upload', async ({
+    page,
+  }) => {
+    await prepareVideo(page, [], false)
+    const upload = await uploadFixture(page, 600001)
+    // Metadata boundary fixture only, not evidence of actual decoding or browser codec support.
+    await page.evaluate(() => {
+      const original = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')!
+      Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+        ...original,
+        set(value: string) {
+          if (value.startsWith('blob:')) {
+            Object.defineProperty(this, 'duration', { configurable: true, value: 600.001 })
+            queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')))
+          } else original.set!.call(this, value)
+        },
+      })
+    })
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.locator('input[type=file]').setInputFiles(replacement)
+    await expect(drawer.getByText(/视频时长不能超过 10 分钟，请重新选择/)).toBeVisible()
+    expect(upload.uploads()).toBe(0)
+    await drawer.locator('.el-upload-list__item').hover()
+    await drawer.locator('.el-upload-list__item .el-icon--close').click()
+    // Reload restores native media methods; undecodable original takes the transparent fallback.
+    await page.reload()
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const fresh = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await fresh.getByLabel('课程名称', { exact: true }).fill('超时长课程')
+    await fresh.getByLabel('培训类型', { exact: true }).fill('安全')
+    await fresh.locator('input[type=file]').setInputFiles(replacement)
+    await expect(fresh.getByText(/浏览器无法读取原片时长/)).toBeVisible()
+    await expect(fresh.getByText(/视频时长不能超过 10 分钟，请移除并重新选择/)).toBeVisible()
+    expect(upload.uploads()).toBe(1)
+    expect(upload.validations()).toBe(1)
+    await expect(fresh.getByRole('button', { name: '创建草稿', exact: true })).toBeDisabled()
+    await expect(fresh.locator('video')).toHaveCount(0)
+  })
+
+  test('allows exactly ten minutes and releases the metadata blob before uploading', async ({
+    page,
+  }) => {
+    await prepare(page, [])
+    const upload = await uploadFixture(page, 600000)
+    await page.goto('/iam/training/courses')
+    await page.evaluate(() => {
+      const original = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')!
+      const revoke = URL.revokeObjectURL.bind(URL)
+      URL.revokeObjectURL = (value) => {
+        sessionStorage.setItem('duration-blob-released', value)
+        revoke(value)
+      }
+      // Isolated boundary fixture; the actual preview player is tested with real video elsewhere.
+      Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+        ...original,
+        set(value: string) {
+          if (value.startsWith('blob:')) {
+            Object.defineProperty(this, 'duration', { configurable: true, value: 600 })
+            queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')))
+          } else original.set!.call(this, value)
+        },
+      })
+    })
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.getByLabel('课程名称', { exact: true }).fill('十分钟课程')
+    await drawer.getByLabel('培训类型', { exact: true }).fill('安全')
+    await drawer.locator('input[type=file]').setInputFiles(replacement)
+    await expect.poll(upload.validations).toBe(1)
+    await expect(drawer.getByRole('button', { name: '创建草稿', exact: true })).toBeEnabled()
+    await expect(drawer.getByLabel('视频时长（秒）', { exact: true })).toHaveValue('600')
+    expect(await page.evaluate(() => sessionStorage.getItem('duration-blob-released'))).toMatch(
+      /^blob:/,
+    )
+    expect(upload.uploads()).toBe(1)
+  })
+
+  test('cancelling a pending metadata check releases it and never starts uploading', async ({
+    page,
+  }) => {
+    await prepare(page, [])
+    const upload = await uploadFixture(page)
+    await page.goto('/iam/training/courses')
+    await page.clock.install()
+    await page.evaluate(() => {
+      const original = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src')!
+      const revoke = URL.revokeObjectURL.bind(URL)
+      URL.revokeObjectURL = (value) => {
+        sessionStorage.setItem('duration-blob-released', value)
+        revoke(value)
+      }
+      Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+        ...original,
+        set(value: string) {
+          if (!value.startsWith('blob:')) original.set!.call(this, value)
+        },
+      })
+    })
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.locator('input[type=file]').setInputFiles(replacement)
+    await expect(drawer.getByText(/正在检查视频时长/)).toBeVisible()
+    await drawer.getByRole('button', { name: '取消上传', exact: true }).click()
+    await expect(drawer.getByText(/上传已取消/)).toBeVisible()
+    await page.clock.fastForward(11000)
+    expect(await page.evaluate(() => sessionStorage.getItem('duration-blob-released'))).toMatch(
+      /^blob:/,
+    )
+    expect(upload.uploads()).toBe(0)
+    await expect(drawer.getByRole('button', { name: '创建草稿', exact: true })).toBeDisabled()
+  })
+})
+
+test.describe('course detail video preview', () => {
+  const posterUrl = 'https://course-poster.test/poster.svg'
+  async function mockPoster(page: Page, failed = false) {
+    const requests: string[] = []
+    await page.route('https://course-poster.test/**', async (route) => {
+      requests.push(route.request().url())
+      expect(route.request().headers().authorization).toBeUndefined()
+      await route.fulfill({
+        status: failed ? 404 : 200,
+        contentType: process.env.DMS_POSTER_TEST_FILE ? 'image/jpeg' : 'image/svg+xml',
+        body: failed
+          ? ''
+          : process.env.DMS_POSTER_TEST_FILE
+            ? readFileSync(process.env.DMS_POSTER_TEST_FILE)
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#17478d"/><text x="80" y="90" fill="white" font-size="24">课程封面</text></svg>',
+      })
+    })
+    return requests
+  }
+
+  test('uses the signed thumbnail without autoplay or persisting either lease', async ({
+    page,
+  }, info) => {
+    const fixture = await prepareVideo(page, [])
+    const posters = await mockPoster(page)
+    fixture.metadata({
+      playback_status: 'ready',
+      playback_profile: 'browser-mp4-v1',
+      thumbnail_status: 'ready',
+      thumbnail_url: posterUrl,
+      thumbnail_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+    })
+    const drawer = await fixture.open()
+    const video = drawer.locator('video')
+    await expect(video).toHaveAttribute('poster', posterUrl)
+    await expect.poll(() => posters.length).toBeGreaterThan(0)
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.videoWidth))
+      .toBeGreaterThan(0)
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+    await expect(
+      drawer.getByRole('button', { name: `播放视频：${course.course_name}` }),
+    ).toBeVisible()
+    await expect(drawer.locator('.course-video-preview__media .el-loading-mask')).not.toBeVisible()
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState))
+      .toBeGreaterThanOrEqual(3)
+    await page.screenshot({
+      path: info.outputPath(`course-poster-${info.project.name}.png`),
+      animations: 'disabled',
+    })
+    await drawer.getByRole('button', { name: `播放视频：${course.course_name}` }).click()
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0)
+    await video.evaluate((v: HTMLVideoElement) => {
+      v.pause()
+      v.currentTime = 0.3
+    })
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeCloseTo(0.3, 1)
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+    await video.evaluate((v: HTMLVideoElement) => v.play())
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0.35)
+    const decoded = await video.evaluate((v: HTMLVideoElement) => ({
+      width: v.videoWidth,
+      height: v.videoHeight,
+      frames: v.getVideoPlaybackQuality().totalVideoFrames,
+      time: v.currentTime,
+      error: v.error?.code ?? null,
+    }))
+    expect(decoded.frames).toBeGreaterThan(0)
+    await info.attach('decoded-video', {
+      body: JSON.stringify(decoded),
+      contentType: 'application/json',
+    })
+    expect(await page.evaluate(() => JSON.stringify([localStorage, sessionStorage]))).not.toContain(
+      posterUrl,
+    )
+    const detached = await video.elementHandle()
+    await page.keyboard.press('Escape')
+    await expect(drawer).not.toBeVisible()
+    expect(
+      await detached!.evaluate((v) => !v.hasAttribute('poster') && !v.hasAttribute('src')),
+    ).toBe(true)
+    await detached!.dispose()
+  })
+
+  for (const failure of ['backend', 'image'] as const) {
+    test(`thumbnail ${failure} failure does not stop decoded video or trigger signing retries`, async ({
+      page,
+    }) => {
+      const fixture = await prepareVideo(page, [])
+      const posters = await mockPoster(page, true)
+      fixture.metadata({
+        playback_status: 'ready',
+        thumbnail_status: failure === 'backend' ? 'failed' : 'ready',
+        thumbnail_url: failure === 'backend' ? null : posterUrl,
+        thumbnail_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+      })
+      const drawer = await fixture.open()
+      if (failure === 'backend') {
+        await expect(drawer.getByText(/缩略图暂不可用/)).toBeVisible()
+        await expect(drawer.locator('video')).not.toHaveAttribute('poster')
+        expect(posters).toHaveLength(0)
+      }
+      await drawer.getByRole('button', { name: `播放视频：${course.course_name}` }).click()
+      await expect
+        .poll(() => drawer.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime))
+        .toBeGreaterThan(0)
+      await expect(drawer.getByRole('alert')).toHaveCount(0)
+      expect(fixture.access).toHaveLength(1)
+    })
+  }
+
+  test('expired and unsafe thumbnail URLs fall back locally without a signing loop', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    for (const value of [
+      { thumbnail_url: posterUrl, thumbnail_expires_at: new Date(Date.now() - 1000).toISOString() },
+      {
+        thumbnail_url: 'javascript:alert(1)',
+        thumbnail_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+      },
+      { thumbnail_url: posterUrl, thumbnail_expires_at: 'invalid' },
+    ]) {
+      fixture.metadata({ thumbnail_status: 'ready', ...value })
+      const drawer = await fixture.open()
+      await expect(drawer.getByText(/缩略图暂不可用/)).toBeVisible()
+      await expect(drawer.locator('video')).not.toHaveAttribute('poster')
+      await expect
+        .poll(() => drawer.locator('video').evaluate((v: HTMLVideoElement) => v.videoWidth))
+        .toBe(320)
+      await page.keyboard.press('Escape')
+    }
+    expect(fixture.access).toHaveLength(3)
+  })
+
+  test('renews the earlier thumbnail lease while preserving paused playback position', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    await mockPoster(page)
+    await page.clock.install()
+    fixture.metadata({
+      thumbnail_status: 'ready',
+      thumbnail_url: `${posterUrl}?lease=1`,
+      thumbnail_expires_at: new Date(Date.now() + 3000).toISOString(),
+    })
+    const drawer = await fixture.open()
+    const video = drawer.locator('video')
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.videoWidth)).toBe(320)
+    await video.evaluate((v: HTMLVideoElement) => {
+      v.currentTime = 0.4
+    })
+    fixture.metadata({
+      thumbnail_status: 'ready',
+      thumbnail_url: `${posterUrl}?lease=2`,
+      thumbnail_expires_at: new Date(Date.now() + 3600_000).toISOString(),
+    })
+    await page.clock.fastForward(3000)
+    await expect(video).toHaveAttribute('poster', `${posterUrl}?lease=2`)
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThanOrEqual(0.35)
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+    expect(fixture.access).toHaveLength(2)
+  })
+
+  test('labels historical unprocessed video without claiming conversion or inventing a poster', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    fixture.metadata({
+      playback_status: 'unprocessed',
+      thumbnail_status: null,
+      thumbnail_url: null,
+    })
+    const drawer = await fixture.open()
+    await expect(drawer.getByText(/历史视频尚未标准化/)).toBeVisible()
+    await expect(drawer.locator('video')).not.toHaveAttribute('poster')
+    await expect
+      .poll(() => drawer.locator('video').evaluate((v: HTMLVideoElement) => v.videoWidth))
+      .toBe(320)
+    expect(fixture.access).toHaveLength(1)
+  })
+
+  test('read-only viewer auto-loads a visible first frame without autoplay and releases media on close', async ({
+    page,
+  }, info) => {
+    const calls: Call[] = []
+    const errors: string[] = []
+    page.on('pageerror', (reason) => errors.push(reason.message))
+    const fixture = await prepareVideo(page, calls)
+    const drawer = await fixture.open()
+    const video = drawer.locator('video')
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState))
+      .toBeGreaterThanOrEqual(2)
+    expect(
+      await video.evaluate((element: HTMLVideoElement) => [
+        element.videoWidth,
+        element.videoHeight,
+      ]),
+    ).toEqual([320, 180])
+    expect(
+      await video.evaluate(
+        (element: HTMLVideoElement) => element.getVideoPlaybackQuality().totalVideoFrames,
+      ),
+    ).toBeGreaterThan(0)
+    await expect(drawer.getByText(previewName, { exact: false })).toBeVisible()
+    expect(fixture.access).toEqual([{ file_id: course.video_file_id, purpose: 'preview' }])
+    expect(await video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
+    await drawer
+      .getByRole('button', { name: `播放视频：${course.course_name}`, exact: true })
+      .focus()
+    await page.keyboard.press('Enter')
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime))
+      .toBeGreaterThan(0)
+    await expect(drawer.locator('.course-video-preview__placeholder')).toHaveCount(0)
+    const [mediaHeight, videoHeight] = await video.evaluate((element) => [
+      element.parentElement!.getBoundingClientRect().height,
+      element.getBoundingClientRect().height,
+    ])
+    expect(mediaHeight! - videoHeight!).toBeLessThanOrEqual(1)
+    await video.evaluate((element: HTMLVideoElement) => {
+      element.pause()
+      element.currentTime = 0.5
+    })
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime))
+      .toBeCloseTo(0.5, 1)
+    const mediaBox = await video.boundingBox()
+    const drawerBox = await drawer.boundingBox()
+    expect(mediaBox!.width).toBeLessThanOrEqual(drawerBox!.width)
+    await page.screenshot({
+      path: info.outputPath(`course-video-${info.project.name}.png`),
+      animations: 'disabled',
+    })
+    await page.setViewportSize({ width: page.viewportSize()!.width, height: 480 })
+    await drawer.locator('.el-descriptions').last().scrollIntoViewIfNeeded()
+    await expect(drawer.locator('.el-descriptions').last()).toBeInViewport()
+    const detachedVideo = await video.elementHandle()
+    await page.keyboard.press('Escape')
+    await expect(drawer).not.toBeVisible()
+    expect(
+      await detachedVideo!.evaluate(
+        (element) => (element as HTMLVideoElement).paused && !element.hasAttribute('src'),
+      ),
+    ).toBe(true)
+    await detachedVideo!.dispose()
+    await fixture.open()
+    await expect(page.locator('video')).toHaveCount(1)
+    await expect.poll(() => fixture.access.length).toBe(2)
+    expect(calls.every((call) => /\/(Query|Detail)$/.test(call.endpoint))).toBe(true)
+    expect(errors).toEqual([])
+  })
+
+  test('manual reload preserves playing intent, position, volume and speed', async ({ page }) => {
+    const fixture = await prepareVideo(page, [])
+    const drawer = await fixture.open()
+    const video = drawer.locator('video')
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState))
+      .toBeGreaterThanOrEqual(2)
+    await video.evaluate(async (element: HTMLVideoElement) => {
+      element.currentTime = 0.4
+      element.volume = 0.4
+      element.playbackRate = 0.5
+      await element.play()
+    })
+    await drawer.getByRole('button', { name: '重新加载视频', exact: true }).click()
+    await expect(video).toHaveAttribute('src', /lease=2/)
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.paused))
+      .toBe(false)
+    expect(
+      await video.evaluate((element: HTMLVideoElement) => element.currentTime),
+    ).toBeGreaterThanOrEqual(0.35)
+    expect(await video.evaluate((element: HTMLVideoElement) => element.volume)).toBeCloseTo(0.4)
+    expect(await video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(0.5)
+  })
+
+  test('lease renewal keeps paused position and denial stops playback without retry loops', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    fixture.lifetime(10_000)
+    await page.clock.install()
+    const drawer = await fixture.open()
+    const video = drawer.locator('video')
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.readyState))
+      .toBeGreaterThanOrEqual(1)
+    await video.evaluate((element: HTMLVideoElement) => {
+      element.currentTime = 0.7
+      element.volume = 0.3
+    })
+    await page.clock.fastForward(9_100)
+    await expect(video).toHaveAttribute('src', /lease=2/)
+    await expect
+      .poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime))
+      .toBeCloseTo(0.7, 1)
+    expect(await video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
+    fixture.deny()
+    await page.clock.fastForward(9_100)
+    await expect(drawer.getByRole('alert')).toHaveText('没有文件预览权限')
+    await expect(video).toHaveCount(0)
+    const count = fixture.access.length
+    await page.clock.fastForward(120_000)
+    expect(fixture.access).toHaveLength(count)
+  })
+
+  test('failed access is explicit, retryable and duplicate clicks do not send duplicate requests', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    let complete: (() => void) | undefined
+    let count = 0
+    await page.route('**/api/dms/File/GetAccessUrl', async (route) => {
+      count++
+      await new Promise<void>((resolve) => {
+        complete = resolve
+      })
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          is_success: false,
+          code: 400,
+          message: '该文件格式不支持直接预览',
+          data: null,
+        }),
+      })
+    })
+    const drawer = await fixture.open()
+    const load = drawer.getByRole('button', { name: '重新加载视频', exact: true })
+    await expect(load).toBeDisabled()
+    expect(count).toBe(1)
+    complete?.()
+    await expect(drawer.getByRole('alert')).toHaveText('该文件格式不支持直接预览')
+    await expect(drawer.locator('video')).toHaveCount(0)
+    await drawer.getByRole('button', { name: '重新加载视频', exact: true }).click()
+    await expect.poll(() => count).toBe(2)
+    complete?.()
+    await expect(drawer.getByRole('alert')).toBeVisible()
+  })
+
+  test('closing a pending preview cancels it and ignores a late result', async ({ page }) => {
+    const fixture = await prepareVideo(page, [])
+    let complete: (() => void) | undefined
+    let count = 0
+    await page.route('**/api/dms/File/GetAccessUrl', async (route) => {
+      count++
+      if (count > 1) return route.fallback()
+      await new Promise<void>((resolve) => {
+        complete = resolve
+      })
+      await route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          file_id: course.video_file_id,
+          purpose: 'preview',
+          url: 'https://course-video.test/late.webm',
+          expires_at: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      })
+    })
+    const drawer = await fixture.open()
+    await expect.poll(() => count).toBe(1)
+    await page.keyboard.press('Escape')
+    await expect(drawer).not.toBeVisible()
+    complete?.()
+    const reopened = await fixture.open()
+    await expect(reopened.getByRole('button', { name: '重新加载视频', exact: true })).toBeEnabled()
+    await expect(reopened.locator('video')).toHaveAttribute('src', /lesson.webm/)
+    expect(count).toBe(2)
+  })
+
+  test('unplayable media displays a decode error and never enters a signing retry loop', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    await page.route('https://course-video.test/**', (route) =>
+      route.fulfill({ contentType: 'video/webm', body: 'not a video' }),
+    )
+    await page.clock.install()
+    const drawer = await fixture.open()
+    await expect(drawer.getByRole('alert')).toContainText('格式或编码无法在浏览器中播放')
+    await expect(drawer.locator('video')).toHaveCount(0)
+    await page.clock.fastForward(120_000)
+    expect(fixture.access).toHaveLength(1)
+  })
+
+  test('missing course video is an explicit empty state without an access request', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    await page.route('**/api/iam-admin/TrainingCourse/Detail', (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: success({ ...course, video_file_id: '' }),
+      }),
+    )
+    const drawer = await fixture.open()
+    await expect(drawer.getByText('此课程尚未关联视频')).toBeVisible()
+    await expect(drawer.getByRole('button', { name: '重新加载视频', exact: true })).toHaveCount(0)
+    expect(fixture.access).toHaveLength(0)
+  })
+
+  test('audio-only media is stopped with a missing-video-frame explanation, not presented as playable video', async ({
+    page,
+  }) => {
+    const fixture = await prepareVideo(page, [])
+    // Real PCM WAV: the browser can decode audio but its video dimensions remain zero.
+    const pcm = Buffer.alloc(44 + 16_000)
+    pcm.write('RIFF', 0)
+    pcm.writeUInt32LE(pcm.length - 8, 4)
+    pcm.write('WAVEfmt ', 8)
+    pcm.writeUInt32LE(16, 16)
+    pcm.writeUInt16LE(1, 20)
+    pcm.writeUInt16LE(1, 22)
+    pcm.writeUInt32LE(8000, 24)
+    pcm.writeUInt32LE(16000, 28)
+    pcm.writeUInt16LE(2, 32)
+    pcm.writeUInt16LE(16, 34)
+    pcm.write('data', 36)
+    pcm.writeUInt32LE(pcm.length - 44, 40)
+    await page.route('https://course-video.test/**', (route) =>
+      route.fulfill({ contentType: 'audio/wav', body: pcm }),
+    )
+    const drawer = await fixture.open()
+    await expect(drawer.getByRole('alert')).toContainText('未检测到可显示的视频画面')
+    await expect(drawer.locator('video')).toHaveCount(0)
+    await expect(
+      drawer.getByRole('button', { name: `播放视频：${course.course_name}`, exact: true }),
+    ).toHaveCount(0)
+    expect(fixture.access).toHaveLength(1)
+  })
+})
+
+test('synchronous video upload waits through processing and validation before permitting course save', async ({
+  page,
+}, info) => {
+  const calls: Call[] = []
+  await prepare(page, calls)
+  let completeUpload: (() => void) | undefined
+  let completeValidation: (() => void) | undefined
+  let validations = 0
+  let uploads = 0
+  let authorization: string | undefined
+  const server = createServer((request, response) => {
+    if (request.method === 'OPTIONS') {
+      response.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization,content-type,x-request-id',
+        'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      })
+      response.end()
+      return
+    }
+    request.resume()
+    request.on('end', () => {
+      uploads++
+      authorization = request.headers.authorization
+      completeUpload = () => {
+        response.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        })
+        response.end(
+          success({
+            file_id: 'normalized-video',
+            upload_id: 'upload-video',
+            original_name: 'source.mov',
+            file_extension: '.mov',
+            file_category: 'VIDEO',
+            content_type: 'video/quicktime',
+            file_size_bytes: 64 * 1024,
+            status: 'AVAILABLE',
+            media_duration_ms: 2333,
+            playback_status: 'ready',
+            playback_profile: 'browser-mp4-v1',
+            thumbnail_status: 'failed',
+            video_width: 608,
+            video_height: 1080,
+            video_codec: 'h264',
+            audio_codec: null,
+          }),
+        )
+      }
+    })
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  try {
+    await page.route('**/api/dms/File/Upload', (route) =>
+      route.continue({ url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/upload` }),
+    )
+    await page.route('**/api/dms/File/ValidateVideo', async (route) => {
+      validations++
+      await new Promise<void>((resolve) => {
+        completeValidation = resolve
+      })
+      await route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          file_id: 'normalized-video',
+          is_valid: true,
+          status: 'AVAILABLE',
+          file_category: 'VIDEO',
+          content_type: 'video/quicktime',
+          media_duration_ms: 2333,
+        }),
+      })
+    })
+    await page.goto('/iam/training/courses')
+    await page.getByRole('button', { name: '新建课程', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: '新建课程', exact: true })
+    await drawer.getByLabel('课程名称', { exact: true }).fill('同步转换课程')
+    await drawer.getByLabel('培训类型', { exact: true }).fill('安全')
+    await drawer.locator('input[type=file]').setInputFiles({
+      name: 'source.mov',
+      mimeType: 'video/quicktime',
+      buffer: Buffer.alloc(64 * 1024, 1),
+    })
+    await expect.poll(() => uploads).toBe(1)
+    expect(authorization).toBe('Bearer visual-test-access-token')
+    await expect(drawer.getByText(/视频转换及保存中/)).toBeVisible()
+    const save = drawer.getByRole('button', { name: '创建草稿', exact: true })
+    await expect(save).toBeDisabled()
+    await expect(drawer.locator('.el-progress')).not.toContainText('100%')
+    await expect(drawer.locator('.el-progress')).not.toHaveAttribute('aria-valuenow')
+    expect(validations).toBe(0)
+    await page.screenshot({ path: info.outputPath(`video-processing-${info.project.name}.png`) })
+    completeUpload!()
+    await expect(drawer.getByText('正在校验视频', { exact: false })).toBeVisible()
+    await expect(save).toBeDisabled()
+    completeValidation!()
+    await expect(drawer.getByText(/缩略图生成失败，不影响使用/)).toBeVisible()
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect
+      .poll(
+        () => calls.find((call) => call.endpoint === 'TrainingCourse/Create')?.body.video_file_id,
+      )
+      .toBe('normalized-video')
+    const body = calls.find((call) => call.endpoint === 'TrainingCourse/Create')!.body
+    expect(body).not.toHaveProperty('video_duration_seconds')
+    expect(body.planned_learning_seconds).toBe(3)
+    expect(body).not.toHaveProperty('thumbnail_url')
+    expect(body).not.toHaveProperty('playback_status')
+    expect(uploads).toBe(1)
+    expect(validations).toBe(1)
+  } finally {
+    completeValidation?.()
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
 })
 
 test.describe('training content production interactions', () => {
@@ -325,10 +1340,16 @@ test.describe('training content production interactions', () => {
       })),
     )
     const paperBody = calls.findLast((call) => call.endpoint === 'TrainingPaper/Update')!.body
-    expect(paperBody.fixed_questions).toEqual([
-      { question_id: 10, question_score: 100, sort_order: 1 },
+    expect(paperBody.questions).toEqual([
+      {
+        question_id: 10,
+        question_score: 100,
+        sort_order: 1,
+        question_type: 'SINGLE_CHOICE',
+        question_updated_at: stamp,
+      },
     ])
-    expect(paperBody.single_choice_count).toBeNull()
+    expect(paperBody).not.toHaveProperty('single_choice_count')
   })
 
   test('server pagination, empty results and browser back restore committed filters', async ({
@@ -412,7 +1433,7 @@ test.describe('training content production interactions', () => {
       await expect(page.getByRole('button', { name, exact: true }).first()).toBeDisabled()
   })
 
-  test('random paper uses server totals and serializes zero-count scores as null', async ({
+  test('new random paper must explicitly preview before saving the concrete set', async ({
     page,
   }) => {
     const calls: Call[] = []
@@ -427,19 +1448,10 @@ test.describe('training content production interactions', () => {
     const row = drawer.locator('tbody tr').filter({ hasText: '单选题' })
     await expect(row.locator('td').nth(1)).toHaveText('7')
     await row.getByRole('spinbutton').nth(0).fill('5')
-    await row.getByRole('spinbutton').nth(1).fill('20')
-    await drawer.getByRole('button', { name: '创建草稿' }).click()
-    await expect(drawer).not.toBeVisible()
-    expect(calls.find((call) => call.endpoint === 'TrainingPaper/Create')?.body).toMatchObject({
-      paper_mode: 'RANDOM',
-      fixed_questions: [],
-      single_choice_count: 5,
-      single_choice_score: 20,
-      multiple_choice_count: 0,
-      multiple_choice_score: null,
-      true_false_count: 0,
-      true_false_score: null,
-    })
+    await row.getByRole('spinbutton').nth(1).fill('100')
+    await expect(drawer.getByRole('button', { name: '创建草稿' })).toBeDisabled()
+    await expect(drawer.getByRole('button', { name: '组卷预览' })).toBeEnabled()
+    expect(calls.some((call) => call.endpoint === 'TrainingPaper/Create')).toBe(false)
   })
 
   test('creates a course from DMS upload and validates the rounded duration before saving', async ({

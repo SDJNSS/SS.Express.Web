@@ -7,6 +7,7 @@ import {
   foundationErrorMessage,
   getFoundationSession,
   logoutFoundationSession,
+  publishTenantSwitch,
   switchFoundationTenant,
 } from '../api/foundationSession'
 import TenantContextPageView from '../components/TenantContextPageView.vue'
@@ -14,6 +15,7 @@ import type { FoundationPreviewState, TenantOption } from '../types/foundation'
 
 const router = useRouter()
 const stored = computed(() => getFoundationSession())
+const mode = computed<'select' | 'switch'>(() => stored.value?.currentTenantId ? 'switch' : 'select')
 const selectedId = ref<number>()
 const setAsDefault = ref(false)
 const state = ref<FoundationPreviewState>('ready')
@@ -33,15 +35,25 @@ async function switchTenant() {
   if (!selectedId.value) return
   state.value = 'loading'
   try {
+    const previous = getFoundationSession()
     await switchFoundationTenant(selectedId.value, setAsDefault.value)
-    await router.replace('/platform/dashboard')
+    if (previous) publishTenantSwitch(previous)
+    await router.replace('/platform/welcome')
   } catch (error) {
+    if (!getFoundationSession()) {
+      await router.replace('/login')
+      return
+    }
     state.value = 'retryable-error'
     notification.error(foundationErrorMessage(error, 'Tenant 切换失败'))
   }
 }
 
 async function logout() {
+  if (mode.value === 'switch') {
+    await router.replace('/platform/welcome')
+    return
+  }
   try {
     await logoutFoundationSession()
   } catch (error) {
@@ -59,6 +71,7 @@ async function logout() {
     :selected-id="selectedId"
     :state="options.length ? state : 'empty'"
     :account="stored?.account"
+    :mode="mode"
     @select="selectedId = $event"
     @submit="switchTenant"
     @cancel="logout"

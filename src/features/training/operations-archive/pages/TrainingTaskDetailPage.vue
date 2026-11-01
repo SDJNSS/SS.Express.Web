@@ -1,12 +1,24 @@
 <script setup lang="ts">
+import { taskDetailElements } from '../iam-resource.registry'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import DetailDrawer from '@shared/components/DetailDrawer.vue'
 import { useEffectivePermissions } from '@shared/composables/useEffectivePermissions'
 import { notification } from '@shared/services/notification'
-import { mapTaskCourse, mapTaskEmployee, mapTaskExam, mapTrainingTask } from '../adapters/trainingOperationsAdapter'
-import { currentTrainingTenantId, trainingApiErrorMessage, trainingOperationsApi, type TrainingCourseOptionDto, type TrainingExamOptionDto } from '../api/trainingOperationsApi'
+import {
+  mapTaskCourse,
+  mapTaskEmployee,
+  mapTaskExam,
+  mapTrainingTask,
+} from '../adapters/trainingOperationsAdapter'
+import {
+  currentTrainingTenantId,
+  trainingApiErrorMessage,
+  trainingOperationsApi,
+  type TrainingCourseOptionDto,
+  type TrainingExamOptionDto,
+} from '../api/trainingOperationsApi'
 import TrainingTaskDetailPageView from '../components/TrainingTaskDetailPageView.vue'
 import { TRAINING_PERMISSIONS } from '../trainingPermissions'
 import type {
@@ -37,7 +49,12 @@ const employeePageSize = ref(20)
 const drilldownTotal = ref(0)
 const drilldownPage = ref(1)
 const drilldownPageSize = ref(20)
-const employeeQuery = ref({ employeeName: '', trainingStatus: '', courseLearningStatus: '', examStatus: '' })
+const employeeQuery = ref({
+  employeeName: '',
+  trainingStatus: '',
+  courseLearningStatus: '',
+  examStatus: '',
+})
 const drilldownContext = ref<PersonnelDrilldownContext>()
 const detailVisible = ref(false)
 const detailKind = ref<'course' | 'exam'>('course')
@@ -55,13 +72,27 @@ const taskId = computed(() => Number(route.params.taskId))
 const planId = computed(() => Number(route.params.planId))
 const canViewCourseDetails = computed(() => hasPermission(TRAINING_PERMISSIONS.courses.view))
 const canViewExamDetails = computed(() => hasPermission(TRAINING_PERMISSIONS.exams.view))
-const canEditTask = computed(() => hasPermission(TRAINING_PERMISSIONS.tasks.update) && canViewCourseDetails.value && canViewExamDetails.value)
-const canViewTaskEmployees = computed(() => hasPermission(TRAINING_PERMISSIONS.tasks.queryEmployees))
+const canEditTask = computed(
+  () =>
+    hasPermission(TRAINING_PERMISSIONS.tasks.update) &&
+    canViewCourseDetails.value &&
+    canViewExamDetails.value,
+)
+const canViewTaskEmployees = computed(() =>
+  hasPermission(TRAINING_PERMISSIONS.tasks.queryEmployees),
+)
 
 const tenantId = currentTrainingTenantId
 const errorMessage = trainingApiErrorMessage
 
-async function queryEmployees(value: { employeeName: string; trainingStatus: string; courseLearningStatus: string; examStatus: string; pageIndex: number; pageSize: number }) {
+async function queryEmployees(value: {
+  employeeName: string
+  trainingStatus: string
+  courseLearningStatus: string
+  examStatus: string
+  pageIndex: number
+  pageSize: number
+}) {
   if (!canViewTaskEmployees.value) return
   employeeQuery.value = {
     employeeName: value.employeeName,
@@ -95,7 +126,12 @@ async function queryEmployees(value: { employeeName: string; trainingStatus: str
 }
 
 async function load() {
-  if (!Number.isFinite(taskId.value) || taskId.value <= 0 || !Number.isFinite(planId.value) || planId.value <= 0) {
+  if (
+    !Number.isFinite(taskId.value) ||
+    taskId.value <= 0 ||
+    !Number.isFinite(planId.value) ||
+    planId.value <= 0
+  ) {
     state.value = 'empty'
     return
   }
@@ -112,10 +148,21 @@ async function load() {
     task.value = mapTrainingTask(detail)
     courses.value = detail.courses.map(mapTaskCourse)
     exams.value = detail.exams.map(mapTaskExam)
-    courseOptions.value = detail.courses.map((item) => ({ id: item.course_id, label: `${item.course_name}${item.course_disabled ? ' · 已停用' : ''}` }))
-    examOptions.value = detail.exams.map((item) => ({ id: item.exam_id, label: `${item.exam_name}${item.exam_disabled ? ' · 已停用' : ''}` }))
+    courseOptions.value = detail.courses.map((item) => ({
+      id: item.course_id,
+      label: `${item.course_name}${item.course_disabled ? ' · 已停用' : ''}`,
+    }))
+    examOptions.value = detail.exams.map((item) => ({
+      id: item.exam_id,
+      label: `${item.exam_name}${item.exam_disabled ? ' · 已停用' : ''}`,
+    }))
     state.value = 'ready'
-    if (canViewTaskEmployees.value) await queryEmployees({ ...employeeQuery.value, pageIndex: 1, pageSize: employeePageSize.value })
+    if (canViewTaskEmployees.value)
+      await queryEmployees({
+        ...employeeQuery.value,
+        pageIndex: 1,
+        pageSize: employeePageSize.value,
+      })
   } catch (error) {
     if (sequence !== loadSequence || tenantAtStart !== tenantId()) return
     task.value = undefined
@@ -134,11 +181,26 @@ async function searchCourses(keyword: string) {
   const sequence = ++courseOptionSequence
   const tenantAtStart = tenantId()
   try {
-    const activeCourses = await trainingOperationsApi.queryCourses({ page_index: 1, page_size: 50, status: 'ACTIVE', ...(keyword.trim() ? { keyword: keyword.trim() } : {}) })
+    const activeCourses = await trainingOperationsApi.queryCourses({
+      page_index: 1,
+      page_size: 50,
+      status: 'ACTIVE',
+      ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
+    })
     if (sequence !== courseOptionSequence || tenantAtStart !== tenantId()) return
-    const currentCourses = courses.value.map((item) => ({ id: item.courseId, label: `${item.name}${item.status !== 'ACTIVE' ? ' · 已停用' : ''}` }))
-    courseOptions.value = [...activeCourses.items.map((item) => ({ id: item.id, label: `${item.course_name} · ${item.training_type}` })), ...currentCourses]
-      .filter((item, index, values) => values.findIndex((candidate) => candidate.id === item.id) === index)
+    const currentCourses = courses.value.map((item) => ({
+      id: item.courseId,
+      label: `${item.name}${item.status !== 'ACTIVE' ? ' · 已停用' : ''}`,
+    }))
+    courseOptions.value = [
+      ...activeCourses.items.map((item) => ({
+        id: item.id,
+        label: `${item.course_name} · ${item.training_type}`,
+      })),
+      ...currentCourses,
+    ].filter(
+      (item, index, values) => values.findIndex((candidate) => candidate.id === item.id) === index,
+    )
   } catch (error) {
     notification.error(errorMessage(error, '课程候选加载失败，当前任务详情仍可查看'))
   }
@@ -148,11 +210,23 @@ async function searchExams(keyword: string) {
   const sequence = ++examOptionSequence
   const tenantAtStart = tenantId()
   try {
-    const activeExams = await trainingOperationsApi.queryExams({ page_index: 1, page_size: 50, status: 'ACTIVE', ...(keyword.trim() ? { keyword: keyword.trim() } : {}) })
+    const activeExams = await trainingOperationsApi.queryExams({
+      page_index: 1,
+      page_size: 50,
+      status: 'ACTIVE',
+      ...(keyword.trim() ? { keyword: keyword.trim() } : {}),
+    })
     if (sequence !== examOptionSequence || tenantAtStart !== tenantId()) return
-    const currentExams = exams.value.map((item) => ({ id: item.examId, label: `${item.name}${item.status !== 'ACTIVE' ? ' · 已停用' : ''}` }))
-    examOptions.value = [...activeExams.items.map((item) => ({ id: item.id, label: item.exam_name })), ...currentExams]
-      .filter((item, index, values) => values.findIndex((candidate) => candidate.id === item.id) === index)
+    const currentExams = exams.value.map((item) => ({
+      id: item.examId,
+      label: `${item.name}${item.status !== 'ACTIVE' ? ' · 已停用' : ''}`,
+    }))
+    examOptions.value = [
+      ...activeExams.items.map((item) => ({ id: item.id, label: item.exam_name })),
+      ...currentExams,
+    ].filter(
+      (item, index, values) => values.findIndex((candidate) => candidate.id === item.id) === index,
+    )
   } catch (error) {
     notification.error(errorMessage(error, '考试候选加载失败，当前任务详情仍可查看'))
   }
@@ -186,7 +260,15 @@ async function drilldown(context: PersonnelDrilldownContext, pageIndex: number, 
   }
 }
 
-async function updateTask(value: { name: string; taskType: TrainingTaskRecord['taskType']; periodKey: string; startAt: string; endAt: string; courseIds: number[]; examId: number }) {
+async function updateTask(value: {
+  name: string
+  taskType: TrainingTaskRecord['taskType']
+  periodKey: string
+  startAt: string
+  endAt: string
+  courseIds: number[]
+  examId: number
+}) {
   if (!task.value?.updatedAt) return
   if (updateSubmitting.value) return
   updateSubmitting.value = true
@@ -200,7 +282,10 @@ async function updateTask(value: { name: string; taskType: TrainingTaskRecord['t
       start_at: value.startAt,
       deadline_at: value.endAt,
       exam_id: value.examId,
-      courses: value.courseIds.map((courseId, index) => ({ course_id: courseId, sort_order: index + 1 })),
+      courses: value.courseIds.map((courseId, index) => ({
+        course_id: courseId,
+        sort_order: index + 1,
+      })),
     })
     notification.success('培训任务已保存')
     await load()
@@ -218,7 +303,9 @@ async function startTask() {
     await trainingOperationsApi.startTask({ id: task.value.id, updated_at: task.value.updatedAt })
     notification.success('培训任务已启动')
     await load()
-  } catch (error) { notification.error(errorMessage(error, '启动培训任务失败')) }
+  } catch (error) {
+    notification.error(errorMessage(error, '启动培训任务失败'))
+  }
 }
 
 async function deleteTask() {
@@ -227,7 +314,9 @@ async function deleteTask() {
     await trainingOperationsApi.deleteTask({ id: task.value.id, updated_at: task.value.updatedAt })
     notification.success('培训任务已删除')
     await router.replace({ name: 'training-plan-detail', params: { planId: planId.value } })
-  } catch (error) { notification.error(errorMessage(error, '删除培训任务失败')) }
+  } catch (error) {
+    notification.error(errorMessage(error, '删除培训任务失败'))
+  }
 }
 
 async function openCourse(courseId: number) {
@@ -235,17 +324,23 @@ async function openCourse(courseId: number) {
     courseDetail.value = await trainingOperationsApi.getCourse(courseId)
     detailKind.value = 'course'
     detailVisible.value = true
-  } catch (error) { notification.error(errorMessage(error, '课程详情加载失败')) }
+  } catch (error) {
+    notification.error(errorMessage(error, '课程详情加载失败'))
+  }
 }
 async function openExam(examId: number) {
   try {
     examDetail.value = await trainingOperationsApi.getExam(examId)
     detailKind.value = 'exam'
     detailVisible.value = true
-  } catch (error) { notification.error(errorMessage(error, '考试详情加载失败')) }
+  } catch (error) {
+    notification.error(errorMessage(error, '考试详情加载失败'))
+  }
 }
 
-watch([planId, taskId], () => { void load() })
+watch([planId, taskId], () => {
+  void load()
+})
 onMounted(load)
 </script>
 
@@ -287,18 +382,31 @@ onMounted(load)
     @delete-task="deleteTask"
   />
 
-  <DetailDrawer v-model="detailVisible" :title="detailKind === 'course' ? '课程详情' : '考试详情'" :size="720">
+  <DetailDrawer
+    v-model="detailVisible"
+    :resource_element="
+      detailKind === 'course' ? taskDetailElements.courseDetail : taskDetailElements.examDetail
+    "
+    :title="detailKind === 'course' ? '课程详情' : '考试详情'"
+    :size="720"
+  >
     <el-descriptions v-if="detailKind === 'course' && courseDetail" :column="2" border>
       <el-descriptions-item label="课程名称">{{ courseDetail.course_name }}</el-descriptions-item>
       <el-descriptions-item label="课程类型">{{ courseDetail.training_type }}</el-descriptions-item>
-      <el-descriptions-item label="计划学习时长">{{ Math.round(courseDetail.planned_learning_seconds / 60) }} 分钟</el-descriptions-item>
+      <el-descriptions-item label="计划学习时长"
+        >{{ Math.round(courseDetail.planned_learning_seconds / 60) }} 分钟</el-descriptions-item
+      >
       <el-descriptions-item label="状态">{{ courseDetail.status }}</el-descriptions-item>
-      <el-descriptions-item label="课程简介" :span="2">{{ courseDetail.introduction || '暂无简介' }}</el-descriptions-item>
+      <el-descriptions-item label="课程简介" :span="2">{{
+        courseDetail.introduction || '暂无简介'
+      }}</el-descriptions-item>
     </el-descriptions>
     <el-descriptions v-else-if="examDetail" :column="2" border>
       <el-descriptions-item label="考试名称">{{ examDetail.exam_name }}</el-descriptions-item>
       <el-descriptions-item label="试卷">{{ examDetail.paper_name }}</el-descriptions-item>
-      <el-descriptions-item label="考试时长">{{ Math.round(examDetail.duration_seconds / 60) }} 分钟</el-descriptions-item>
+      <el-descriptions-item label="考试时长"
+        >{{ Math.round(examDetail.duration_seconds / 60) }} 分钟</el-descriptions-item
+      >
       <el-descriptions-item label="通过分数">{{ examDetail.pass_score }}</el-descriptions-item>
       <el-descriptions-item label="最大次数">{{ examDetail.max_attempts }}</el-descriptions-item>
       <el-descriptions-item label="状态">{{ examDetail.status }}</el-descriptions-item>

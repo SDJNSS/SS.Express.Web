@@ -51,8 +51,24 @@ jobs:
       - name: Build application and prototypes
         run: pnpm build && pnpm ui:build
 
+      - name: Verify production route boundaries
+        run: pnpm test:production-routing
+
       - name: Compare three viewport screenshots
         run: pnpm test:visual
+
+      - name: Upload offline IAM maintenance evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: iam-maintenance-evidence
+          path: |
+            artifacts/iam-maintenance.frontend.json
+            artifacts/iam-resource-elements.json
+            standards/schemas/iam-maintenance.frontend.schema.json
+            standards/iam/maintenance-migration.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

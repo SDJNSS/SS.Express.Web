@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "reason": "分阶段接入；以下是明确待迁移项，不是豁免、完整性证明或删除指令。新增入口必须登记，不能自动加入此列表。",
+  "pending_routes": [],
+  "auxiliary_routes": {
+    "/": "生产 AppShell 装配者；会话及后台通信仍纳入扫描，不生成额外业务 Menu。",
+    "/login": "公开认证入口；调用仍需登记，不能自动组成业务权限包。",
+    "/iam/select-tenant": "登录会话自服务入口；调用仍需登记。",
+    "/forbidden": "403 状态页面。",
+    "/authorization-service-error": "权限服务异常恢复页面；重试通信仍需审查。",
+    "/:pathMatch(.*)*": "404 状态页面。"
+  },
+  "placeholder_routes": [
+    "/platform/analytics",
+    "/platform/todos",
+    "/tms/dispatch",
+    "/tms/orders",
+    "/tms/trips",
+    "/vms/certificates",
+    "/vms/drivers",
+    "/vms/maintenance"
+  ]
+}

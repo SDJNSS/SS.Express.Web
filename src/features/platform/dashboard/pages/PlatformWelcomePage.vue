@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { welcomeElements } from '../iam-resource.registry'
 import { Icon } from '@iconify/vue'
 
 import AppPage from '@shared/components/AppPage.vue'
@@ -10,7 +11,7 @@ const { displayName } = getDashboardAccessContext()
 </script>
 
 <template>
-  <AppPage class="welcome-page">
+  <AppPage :resource_element="welcomeElements.page" class="welcome-page">
     <DetailPageTemplate scroll-mode="contained">
       <template #header>
         <PageHeader title="欢迎页" description="欢迎进入陆链统一物流平台" />

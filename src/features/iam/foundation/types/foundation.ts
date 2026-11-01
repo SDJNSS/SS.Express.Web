@@ -112,6 +112,7 @@ export interface MembershipRecord {
   avatarUrl: string
   avatarFileId?: string
   globalUserType: string
+  roles: string[]
   userStatus: EntityStatus
   memberStatus: EntityStatus
   effectiveness: 'EFFECTIVE' | 'FUTURE' | 'EXPIRED'
@@ -170,36 +171,6 @@ export interface TenantMembershipSummary {
   tenantIsDeleted: boolean
   effectiveRange: string
   timezone: string
-}
-
-export interface UserTenantAssignmentSnapshot {
-  userId: number
-  userVersion: VersionToken
-  memberships: TenantMembershipSummary[]
-}
-
-export interface TenantAssignmentOption {
-  id: number
-  code: string
-  name: string
-  status: EntityStatus
-}
-
-export interface UserTenantAssignmentTarget {
-  tenantId: number
-  isTenantAdmin: boolean
-  restore: boolean
-}
-
-export interface UserTenantAssignmentUpdateValue {
-  userId: number
-  userVersion: VersionToken
-  originalMemberships: Array<{
-    tenantUserId: number
-    memberVersion: VersionToken
-  }>
-  tenants: UserTenantAssignmentTarget[]
-  removeTenantUserIds: number[]
 }
 
 export interface TenantOption {
@@ -292,7 +263,8 @@ export interface MemberUpdateValue {
 
 export interface MembershipQueryValue {
   tenantIds: number[]
-  userId: string
+  memberCode: string
+  memberCodeFuzzy: boolean
   userName: string
   realName: string
   phone: string
@@ -300,7 +272,6 @@ export interface MembershipQueryValue {
   organizationId: number | undefined
   positionId: number | undefined
   roleId: number | undefined
-  userStatus: string
   memberStatus: string
 }
 
@@ -329,6 +300,8 @@ export interface MemberCreateValue {
 }
 
 export interface MemberRelationValue {
+  id?: number
+  version?: VersionToken
   targetId: number | undefined
   primary: boolean
   effectiveStart: string

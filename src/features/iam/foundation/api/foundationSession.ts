@@ -6,6 +6,10 @@ import {
 } from '@shared/api/authSession'
 import { ApiError } from '@shared/api/httpClient'
 import { createRequestId } from '@shared/api/requestIdentity'
+import { requireCurrentTenantId } from '@shared/api/tenantContext'
+import { clearCurrentPageResourceAccessCache } from '@features/iam/shell-context/public'
+export { currentTenantOption, requireCurrentTenantId } from '@shared/api/tenantContext'
+export { publishTenantSwitch } from '@shared/api/tenantSwitchSignal'
 
 import { foundationApi } from './foundationApi'
 
@@ -21,52 +25,17 @@ export interface FoundationQueryTenantOption {
 
 export async function queryFoundationTenantOptions(): Promise<FoundationQueryTenantOption[]> {
   const session = getStoredAuthSession()
-  if (!session?.currentTenantId || !session.account) {
-    throw new ApiError('当前会话缺少用户或租户信息，请重新登录', 'validation')
-  }
-  const response = await foundationApi.queryUsers({
-    tenant_ids: [session.currentTenantId],
-    user_name: session.account,
-    page_index: 1,
-    page_size: 1,
-  })
-  const current = getStoredAuthSession()
-  if (
-    current?.accessToken !== session.accessToken ||
-    current.currentTenantId !== session.currentTenantId
-  ) {
-    throw new ApiError('登录或租户上下文已变化，请重新加载', 'validation')
-  }
-  // QueryUsers 返回的 memberships 已受服务端 Function 租户范围约束；只取本人有效关系。
-  const self = response.items.find(
-    (item) =>
-      item.user.user_name === session.account &&
-      (!session.userId || String(item.user_id) === session.userId),
-  )
-  if (!self) throw new ApiError('未获取到当前用户的租户归属，请重试', 'validation')
-  const options = new Map<number, FoundationQueryTenantOption>()
-  for (const membership of self.memberships) {
-    if (
-      membership.user_id !== self.user_id ||
-      !membership.is_currently_effective ||
-      membership.tenant_is_deleted ||
-      membership.tenant_id <= 0
-    ) {
-      continue
-    }
-    options.set(membership.tenant_id, {
-      id: membership.tenant_id,
-      code: membership.tenant_code,
-      name: membership.tenant_name,
-    })
-  }
-  return [...options.values()]
+  if (!session) throw new ApiError('当前会话已失效，请重新登录', 'authentication')
+  // Switch candidates are issued by Auth, never inferred from business query results.
+  return (session.availableTenants ?? []).map((tenant) => ({
+    id: tenant.tenantId,
+    code: tenant.tenantCode,
+    name: tenant.tenantName,
+  }))
 }
 
 export function currentTenantId(): number {
-  const tenantId = getStoredAuthSession()?.currentTenantId
-  if (!tenantId) throw new ApiError('当前会话尚未选择 Tenant', 'validation')
-  return tenantId
+  return requireCurrentTenantId()
 }
 
 export function foundationErrorMessage(error: unknown, fallback: string): string {
@@ -79,18 +48,27 @@ export async function switchFoundationTenant(
 ): Promise<void> {
   const current = getStoredAuthSession()
   if (!current?.sessionVersion) throw new ApiError('当前会话缺少版本信息', 'validation')
+  if (!current.availableTenants?.some((tenant) => tenant.tenantId === tenantId)) {
+    throw new ApiError('请选择本人可进入的租户', 'validation')
+  }
   const response = await foundationApi.switchTenant({
     tenant_id: tenantId,
     set_as_default: setAsDefault,
     session_version: current.sessionVersion,
     request_id: createRequestId(),
   })
+  if (!response.token || response.current_tenant?.tenant_id !== tenantId) {
+    // The server may have switched already. Do not keep presenting the old context as valid.
+    clearStoredAuthSession()
+    throw new ApiError('切换响应缺少有效租户上下文，请重新登录', 'authentication')
+  }
   replaceStoredAuthSession({
     ...current,
     accessToken: response.token,
     loginState: response.login_state,
     sessionId: response.session_id,
     sessionVersion: response.session_version,
+    permissions: [],
     ...(response.current_tenant?.tenant_id
       ? { currentTenantId: response.current_tenant.tenant_id }
       : {}),
@@ -111,6 +89,7 @@ export async function switchFoundationTenant(
       isDefault: tenant.is_default,
     })),
   })
+  clearCurrentPageResourceAccessCache()
 }
 
 export async function logoutFoundationSession(): Promise<void> {

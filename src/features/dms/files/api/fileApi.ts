@@ -3,10 +3,12 @@ import { defineApiPath } from '@shared/api/apiPath'
 import { serviceApiPath } from '@shared/api/backendServices'
 import { ApiError, requestApi } from '@shared/api/httpClient'
 import { createRequestId } from '@shared/api/requestIdentity'
+import type { EntityId } from '@shared/types/entityId'
+import { positiveEntityId } from '@shared/utils/entityId'
 
 export interface DmsUploadRequest {
   file: File
-  source_app_id: number
+  source_app_id: EntityId
   source_app_code: string
   file_category?: string
   idempotency_key: string
@@ -29,7 +31,14 @@ export interface DmsUploadResponse {
   oss_version_id: string
   storage_class: string
   encryption_method: string
-  media_duration_ms: number
+  media_duration_ms: number | null
+  playback_status?: 'ready' | null
+  playback_profile?: string | null
+  thumbnail_status?: 'ready' | 'failed' | null
+  video_width?: number | null
+  video_height?: number | null
+  video_codec?: string | null
+  audio_codec?: string | null
   status: string
   uploaded_at: string
   idempotent: boolean
@@ -48,6 +57,11 @@ export interface DmsAccessResponse {
   file_category: string
   content_type: string
   file_size_bytes: number
+  playback_status?: 'ready' | 'unprocessed' | null
+  playback_profile?: string | null
+  thumbnail_status?: 'ready' | 'failed' | null
+  thumbnail_url?: string | null
+  thumbnail_expires_at?: string | null
 }
 
 export interface DmsVideoValidationResponse {
@@ -63,6 +77,7 @@ export interface DmsTransferOptions {
   signal?: AbortSignal
   // This is byte transfer progress, not a guarantee that server processing succeeded.
   onProgress?: (progress: { loaded: number; total?: number; percent?: number }) => void
+  onStage?: (stage: 'validating') => void
 }
 
 export const dmsFileApiPaths = Object.freeze({
@@ -80,18 +95,16 @@ async function upload(
   options: DmsTransferOptions = {},
 ): Promise<DmsUploadResponse> {
   if (!input.file.size) throw new ApiError('不能上传空文件', 'validation')
-  if (
-    !Number.isSafeInteger(input.source_app_id) ||
-    input.source_app_id <= 0 ||
-    !input.source_app_code.trim()
-  ) {
+  // CurrentApps returns Int64 strings; keep the multipart value lossless, including large IDs.
+  const sourceAppId = positiveEntityId(input.source_app_id)
+  if (!sourceAppId || !input.source_app_code.trim()) {
     throw new ApiError('请先选择有效的来源应用', 'validation')
   }
   if (!input.idempotency_key.trim()) throw new ApiError('上传任务缺少幂等键', 'validation')
 
   const body = new FormData()
   body.append('file', input.file, input.file.name)
-  body.append('source_app_id', String(input.source_app_id))
+  body.append('source_app_id', sourceAppId)
   body.append('source_app_code', input.source_app_code)
   body.append('idempotency_key', input.idempotency_key)
   if (input.file_category) body.append('file_category', input.file_category)
@@ -109,13 +122,22 @@ async function upload(
       options.onProgress?.({
         loaded,
         ...(total && total > 0
-          ? { total, percent: Math.min(100, Math.round((loaded / total) * 100)) }
+          ? { total, percent: Math.min(100, Math.floor((loaded / total) * 100)) }
           : {}),
       })
     },
   })
   if (!result?.file_id || result.status?.toUpperCase() !== 'AVAILABLE') {
     throw new ApiError('文件尚未上传完成或不可用，请重新查询上传结果', 'business')
+  }
+  // A populated status must confirm the synchronous playback output, never a pending job.
+  // Null remains valid for historical idempotent results and pre-upgrade deployments.
+  if (
+    input.file_category?.toUpperCase() === 'VIDEO' &&
+    result.playback_status != null &&
+    result.playback_status !== 'ready'
+  ) {
+    throw new ApiError('视频标准化尚未完成，不能保存为课程视频', 'business')
   }
   return result
 }
@@ -169,6 +191,7 @@ export function createDmsUploadTask(input: Omit<DmsUploadRequest, 'idempotency_k
     async run(options: DmsTransferOptions = {}): Promise<DmsUploadResponse> {
       uploaded ??= await upload(request, options)
       if (request.file_category?.toUpperCase() === 'VIDEO') {
+        options.onStage?.('validating')
         const video = await validateVideo(uploaded.file_id, options.signal)
         if (
           !video?.is_valid ||

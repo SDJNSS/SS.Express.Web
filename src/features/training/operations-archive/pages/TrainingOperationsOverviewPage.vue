@@ -192,7 +192,6 @@ async function retry(section?: OverviewSection) {
 }
 
 onMounted(() => {
-  document.title = '培训概览 · 陆链控制台'
   void Promise.all([loadOptions(), retry()])
 })
 </script>

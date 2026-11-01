@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { positionsElements } from '../iam-resource.registry'
+import { resourceElementAttributes } from '@shared/services/resourceElement'
 import { computed, reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -66,14 +68,14 @@ const form = reactive<PositionFormValue>({
 })
 
 const columns: DataTableColumn[] = [
-  { prop: 'code', label: '岗位编码', minWidth: 170, fixed: 'left', slot: 'code' },
-  { prop: 'name', label: '岗位名称', minWidth: 180 },
+  { prop: 'code', label: '岗位编码', minWidth: 170, fixed: 'left' },
+  { prop: 'name', label: '岗位名称', minWidth: 180, slot: 'name' },
   { prop: 'type', label: '岗位类型', minWidth: 128 },
   { label: '状态', width: 96, slot: 'status' },
   { prop: 'activeMemberCount', label: '有效成员', width: 112, align: 'right', slot: 'members' },
   { prop: 'sortOrder', label: '排序值', width: 92, align: 'right' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 168 },
-  { label: '操作', width: 176, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -165,7 +167,7 @@ async function confirmStatusChange() {
 </script>
 
 <template>
-  <AppPage class="position-page">
+  <AppPage :resource_element="positionsElements.page" class="position-page">
     <ListPageTemplate>
       <template #header>
         <PageHeader
@@ -175,10 +177,16 @@ async function confirmStatusChange() {
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="positionsElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="关键词">
             <el-input
               v-model="query.keyword"
+              v-resource-element="positionsElements.query"
               clearable
               placeholder="岗位编码、名称或类型"
               @keyup.enter="search"
@@ -195,6 +203,7 @@ async function confirmStatusChange() {
           </el-form-item>
           <template #footer-leading>
             <el-button
+              v-resource-element="positionsElements.create"
               v-permission="IAM_PERMISSIONS.positions.create"
               type="primary"
               @click="openForm('create')"
@@ -208,6 +217,7 @@ async function confirmStatusChange() {
 
       <template #toolbar>
         <TableToolbar
+          :resource_element="positionsElements.query"
           title="岗位列表"
           :total="visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -228,23 +238,30 @@ async function confirmStatusChange() {
         show-icon
       >
         <template #default
-          ><el-button link type="primary" @click="emit('retry')">重新加载</el-button></template
+          ><el-button
+            v-resource-element="positionsElements.query"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          ></template
         >
       </el-alert>
 
       <DataTable
+        :resource_element="positionsElements.detail"
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading'"
-        @row-click="openDetail(asPosition($event))"
       >
-        <template #code="{ row }">
+        <template #name="{ row }">
           <button
+            v-resource-element="positionsElements.detail"
             class="position-page__link"
             type="button"
             @click.stop="openDetail(asPosition(row))"
           >
-            {{ asPosition(row).code }}
+            {{ asPosition(row).name }}
           </button>
         </template>
         <template #status="{ row }">
@@ -260,10 +277,8 @@ async function confirmStatusChange() {
         </template>
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asPosition(row).name} 的操作`">
-            <el-button link type="primary" @click.stop="openDetail(asPosition(row))"
-              >详情</el-button
-            >
             <el-button
+              v-resource-element="positionsElements.edit"
               v-permission="IAM_PERMISSIONS.positions.update"
               link
               type="primary"
@@ -271,6 +286,7 @@ async function confirmStatusChange() {
               >编辑</el-button
             >
             <el-button
+              v-resource-element="positionsElements.status"
               v-permission="IAM_PERMISSIONS.positions.changeStatus"
               link
               :type="asPosition(row).status === 'ACTIVE' ? 'warning' : 'success'"
@@ -286,13 +302,18 @@ async function confirmStatusChange() {
         <AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="positionsElements.local"
           :total="visibleRecords.length"
           @change="emit('action', '岗位分页状态已更新')"
         />
       </template>
     </ListPageTemplate>
 
-    <DetailDrawer v-model="detailVisible" :title="`${selected?.name ?? ''} · 岗位详情`">
+    <DetailDrawer
+      v-model="detailVisible"
+      :resource_element="positionsElements.detail"
+      :title="`${selected?.name ?? ''} · 岗位详情`"
+    >
       <div v-if="selected" class="position-detail">
         <div class="position-detail__summary">
           <div class="position-detail__icon">
@@ -330,6 +351,7 @@ async function confirmStatusChange() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? positionsElements.create : positionsElements.edit"
       :title="formMode === 'create' ? '新建岗位' : `编辑 ${selected.name}`"
       :confirm-button-text="formMode === 'create' ? '创建岗位' : '保存岗位'"
       :submitting="submitting"
@@ -368,6 +390,7 @@ async function confirmStatusChange() {
     </FormDrawer>
 
     <el-dialog
+      v-bind="resourceElementAttributes(positionsElements.status)"
       v-model="statusVisible"
       :title="`${selected.status === 'ACTIVE' ? '停用' : '启用'}岗位`"
       width="540"
@@ -387,8 +410,11 @@ async function confirmStatusChange() {
         }}
       </p>
       <template #footer>
-        <el-button @click="statusVisible = false">取消</el-button>
+        <el-button v-resource-element="positionsElements.local" @click="statusVisible = false"
+          >取消</el-button
+        >
         <el-button
+          v-resource-element="positionsElements.status"
           v-permission="IAM_PERMISSIONS.positions.changeStatus"
           :type="selected.status === 'ACTIVE' ? 'warning' : 'success'"
           :disabled="selected.status === 'ACTIVE' && selected.activeMemberCount > 0"

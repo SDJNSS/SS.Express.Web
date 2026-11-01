@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { overviewElements } from '../iam-resource.registry'
 import SubsystemWorkspace, {
   type WorkspaceMetric,
   type WorkspaceModule,
@@ -40,6 +41,7 @@ const modules: WorkspaceModule[] = [
 
 <template>
   <SubsystemWorkspace
+    v-resource-element="overviewElements.page"
     title="IAM 身份中心"
     description="统一管理平台用户、组织、角色与访问权限"
     :metrics="metrics"

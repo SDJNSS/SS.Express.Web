@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { taskDetailElements } from '../iam-resource.registry'
 import { computed, reactive, ref, watch } from 'vue'
 
 import AppPage from '@shared/components/AppPage.vue'
@@ -261,7 +262,7 @@ const baseEmployeeColumns: DataTableColumn[] = [
 const employeeColumns = computed<DataTableColumn[]>(() => [
   ...baseEmployeeColumns,
   ...(props.canAdminCompleteEmployee
-    ? [{ label: '操作', width: 120, fixed: 'right' as const, slot: 'actions' }]
+    ? [{ label: '操作', fixed: 'right' as const, slot: 'actions' }]
     : []),
 ])
 const effectiveTotal = computed(() => props.employeeTotal)
@@ -459,24 +460,28 @@ watch(
 </script>
 
 <template>
-  <AppPage class="training-operations-page">
+  <AppPage :resource_element="taskDetailElements.page" class="training-operations-page">
     <DetailPageTemplate scroll-mode="page">
       <template #header>
         <PageHeader title="培训任务详情" description="核对课程、考试与员工执行结果">
           <template #actions>
-            <el-button @click="emit('back')">返回培训计划</el-button>
+            <el-button v-resource-element="taskDetailElements.back" @click="emit('back')"
+              >返回培训计划</el-button
+            >
             <el-button
               v-if="
                 task &&
                 (!task.isLocked || (task.isLongRunning && canEditLongRunningTask)) &&
                 canEditTask
               "
+              v-resource-element="taskDetailElements.edit"
               v-permission="TRAINING_PERMISSIONS.tasks.update"
               @click="openEdit"
               >编辑任务</el-button
             >
             <el-button
               v-if="canRetryStart"
+              v-resource-element="taskDetailElements.start"
               v-permission="TRAINING_PERMISSIONS.tasks.start"
               type="primary"
               @click="openConfirm('start')"
@@ -484,6 +489,7 @@ watch(
             >
             <el-button
               v-if="task?.status === 'NOT_STARTED'"
+              v-resource-element="taskDetailElements.delete"
               v-permission="TRAINING_PERMISSIONS.tasks.delete"
               type="danger"
               plain
@@ -535,7 +541,13 @@ watch(
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="emit('retry')">重新加载</el-button></template
+          ><el-button
+            v-resource-element="taskDetailElements.page"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          ></template
         ></el-alert
       >
       <el-skeleton v-else-if="state === 'loading'" :rows="10" animated />
@@ -599,6 +611,7 @@ watch(
                 <template #name="{ row }"
                   ><button
                     v-if="canViewCourseDetails"
+                    v-resource-element="taskDetailElements.courseDetail"
                     class="training-operations-link"
                     type="button"
                     @click="emit('openCourse', asCourse(row).courseId)"
@@ -609,6 +622,7 @@ watch(
                 <template #notStarted="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -625,6 +639,7 @@ watch(
                 <template #learning="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -636,6 +651,7 @@ watch(
                 <template #completed="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -671,6 +687,7 @@ watch(
                 <template #name="{ row }"
                   ><button
                     v-if="canViewExamDetails"
+                    v-resource-element="taskDetailElements.examDetail"
                     class="training-operations-link"
                     type="button"
                     @click="emit('openExam', asExam(row).examId)"
@@ -681,6 +698,7 @@ watch(
                 <template #notStarted="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -692,6 +710,7 @@ watch(
                 <template #inProgress="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -703,6 +722,7 @@ watch(
                 <template #submitted="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="
@@ -715,6 +735,7 @@ watch(
                 <template #passed="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="examPeople(asExam(row), 'PASSED', '通过', asExam(row).passedCount)"
@@ -724,6 +745,7 @@ watch(
                 <template #failed="{ row }"
                   ><el-button
                     v-if="canViewEmployees"
+                    v-resource-element="taskDetailElements.personnel"
                     link
                     type="primary"
                     @click="examPeople(asExam(row), 'FAILED', '失败', asExam(row).failedCount)"
@@ -743,6 +765,7 @@ watch(
         >
           <div class="training-detail-layout">
             <SearchPanel
+              :resource_element="taskDetailElements.employees"
               :loading="personnelLoading"
               @search="queryEmployeeList"
               @reset="resetEmployeeList"
@@ -782,6 +805,7 @@ watch(
             </SearchPanel>
             <section class="training-surface">
               <TableToolbar
+                :resource_element="taskDetailElements.employees"
                 title="参加任务的员工"
                 :total="effectiveTotal"
                 :refreshing="personnelLoading"
@@ -794,6 +818,7 @@ watch(
                 >
                 <el-button
                   v-if="canOpenReturnToWork"
+                  v-resource-element="taskDetailElements.candidateOnly"
                   v-permission="TRAINING_PERMISSIONS.tasks.arrangeReturnToWork"
                   type="primary"
                   @click="openReturnToWork()"
@@ -865,6 +890,7 @@ watch(
                 <template #actions="{ row }">
                   <RowActionGrid :aria-label="`${asEmployee(row).name} 的执行操作`">
                     <el-button
+                      v-resource-element="taskDetailElements.candidateOnly"
                       v-permission="TRAINING_PERMISSIONS.tasks.adminCompleteEmployee"
                       link
                       type="primary"
@@ -883,6 +909,7 @@ watch(
               <AppPagination
                 v-model:page="page"
                 v-model:page-size="pageSize"
+                :resource_element="taskDetailElements.employees"
                 :total="effectiveTotal"
                 @change="changeEmployeePage"
               />
@@ -906,6 +933,7 @@ watch(
 
     <FormDrawer
       v-model="editVisible"
+      :resource_element="taskDetailElements.edit"
       title="编辑培训任务"
       :size="760"
       :submitting="updateSubmitting"
@@ -940,6 +968,7 @@ watch(
           <el-form-item class="training-form-grid__full" label="课程顺序" required
             ><el-select
               v-model="editForm.courseIds"
+              v-resource-element="taskDetailElements.courseOptions"
               multiple
               filterable
               remote
@@ -954,6 +983,7 @@ watch(
           <el-form-item class="training-form-grid__full" label="考试配置" required
             ><el-select
               v-model="editForm.examId"
+              v-resource-element="taskDetailElements.examOptions"
               filterable
               remote
               reserve-keyword
@@ -980,6 +1010,7 @@ watch(
 
     <FormDrawer
       v-model="returnToWorkVisible"
+      :resource_element="taskDetailElements.candidateOnly"
       title="安排返岗培训"
       :size="620"
       :submitting="returnToWorkSubmitting"
@@ -997,6 +1028,7 @@ watch(
         <el-form-item label="当前 Tenant 员工" required>
           <el-select
             v-model="returnToWorkForm.employeeId"
+            v-resource-element="taskDetailElements.candidateOnly"
             filterable
             remote
             reserve-keyword
@@ -1044,6 +1076,7 @@ watch(
 
     <FormDialog
       v-model="adminCompleteVisible"
+      :resource_element="taskDetailElements.candidateOnly"
       title="一键管理员完成"
       width="620"
       :submitting="adminCompleteSubmitting"
@@ -1094,6 +1127,9 @@ watch(
 
     <FormDialog
       v-model="confirmVisible"
+      :resource_element="
+        confirmAction === 'start' ? taskDetailElements.start : taskDetailElements.delete
+      "
       :title="confirmAction === 'start' ? '重试启动培训任务' : '删除培训任务'"
       :confirm-type="confirmAction === 'delete' ? 'danger' : 'primary'"
       :confirm-button-text="confirmAction === 'start' ? '确认重试' : '确认删除'"

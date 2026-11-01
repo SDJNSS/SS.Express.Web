@@ -1,0 +1,278 @@
+[
+  {
+    "file": "src/features/iam/access-control/adapters/accessControlAdapter.ts",
+    "sha256": "b08bd0edaf331a484c7482bc300feee11a14ae325cc8ed2b94fd18913f0da069"
+  },
+  {
+    "file": "src/features/iam/access-control/api/accessControlApi.ts",
+    "sha256": "36644bda75496dd60b080d8b9a30c16143727bddc676d856f5c1e76be933fb4c"
+  },
+  {
+    "file": "src/features/iam/access-control/api/accessControlSession.ts",
+    "sha256": "108976fec69c1720587802cce7f3fd28f7958c7c15ce22194fe36051a7035a1c"
+  },
+  {
+    "file": "src/features/iam/access-control/components/RoleAssignmentPageView.vue",
+    "sha256": "f478874a526bc92d4733a0f3b0ff95bb0eade4d65714c02de5e95805ec5257de"
+  },
+  {
+    "file": "src/features/iam/access-control/components/RoleManagementPageView.vue",
+    "sha256": "ea9d1f1016460615d0e0d6a7b6bb345aba97e6635e149df185d7bf32e3ffa8db"
+  },
+  {
+    "file": "src/features/iam/access-control/iam-resource.registry.ts",
+    "sha256": "73391dae0e10cccc52c001ab19614c53134041e931134f92264f30f92935fdcf"
+  },
+  {
+    "file": "src/features/iam/access-control/pages/RoleAssignmentPage.vue",
+    "sha256": "75dafd9aec2adba0479d70af304b3e6a151cea9f0fb4b2070e2cef8e9a85a86d"
+  },
+  {
+    "file": "src/features/iam/access-control/pages/RoleManagementPage.vue",
+    "sha256": "4228a474e2e4de99ff83f2a394debf6e1253f5cc9b6cbf8d0c190b6b1bf7bcbe"
+  },
+  {
+    "file": "src/features/iam/access-control/public.ts",
+    "sha256": "a1b659b3e802e20019d12450d7fac5f121d217ef787233eb01f39ffc5f88e581"
+  },
+  {
+    "file": "src/features/iam/access-control/types/accessControl.ts",
+    "sha256": "d1cf45fc0de575721ec1c481330c2d481547dcf027a8b4982edd4661d4362fae"
+  },
+  {
+    "file": "src/features/iam/overview/iam-resource.registry.ts",
+    "sha256": "5f00695203fc748fe55c071da1396c40a1b0bae1758e8a0e4742e774eccdf199"
+  },
+  {
+    "file": "src/features/iam/overview/pages/IamOverviewPage.vue",
+    "sha256": "186774a5dd3aa5ccdec6779480b6059ef4fe6d10cc4d6057d0351a22f1cd148f"
+  },
+  {
+    "file": "src/features/iam/routes.ts",
+    "sha256": "3407f7b08ae324ceb90370b391829d8c54f4350ce8ed65683a356ab8d43fafd9"
+  },
+  {
+    "file": "src/features/platform/dashboard/api/dashboardApi.ts",
+    "sha256": "7fd3733ef9d6f3a330053354f6c42b6ad081c3bd6ae58d6ef984bc008231304b"
+  },
+  {
+    "file": "src/features/platform/dashboard/components/RouteOverview.vue",
+    "sha256": "7eba47b9f95528827175070d923032532bcccdc611e3118f4b7004be9165e4b6"
+  },
+  {
+    "file": "src/features/platform/dashboard/composables/useDashboard.ts",
+    "sha256": "6d75dfd7770499e9d9497e3518f10b962ff9f8186f22cd34854c783ecd0e7f27"
+  },
+  {
+    "file": "src/features/platform/dashboard/iam-resource.registry.ts",
+    "sha256": "dd2acde1c24f20fd7b2932a82dd940ef39eba46065dcee7f2d5fe88469271f3f"
+  },
+  {
+    "file": "src/features/platform/dashboard/pages/PlatformDashboardPage.vue",
+    "sha256": "221df46bc8f1b20be99c0fd2c1e6eefcf732093f274ff2da445ecf6d0066dc39"
+  },
+  {
+    "file": "src/features/platform/dashboard/pages/PlatformWelcomePage.vue",
+    "sha256": "ed1c4898ca4b10659f00e443a7db2314522f96d5a14fd74e4c45903eaccc97a3"
+  },
+  {
+    "file": "src/features/platform/dashboard/types/dashboard.ts",
+    "sha256": "7cb0b51a4f9b044d092392c2e5cd5d2a68dfe66006225e1131e722f270cbe6ec"
+  },
+  {
+    "file": "src/features/platform/framework/components/PlatformFrameworkPageView.vue",
+    "sha256": "b46d3a7fff570f0f8d9a7d0b8790343a3d848a8c1c322cbe29de62bb1e8ad76e"
+  },
+  {
+    "file": "src/features/platform/framework/types/frameworkShell.ts",
+    "sha256": "b40a136d6a367d5ae4c3298cbc78e246df6b9621275e83448ffbfe875963571a"
+  },
+  {
+    "file": "src/features/platform/routes.ts",
+    "sha256": "e0bf5ac718939f3ab31c47a5663a816cc8f17959ce10a5a238583a382884679b"
+  },
+  {
+    "file": "src/features/tms/overview/iam-resource.registry.ts",
+    "sha256": "b3f82a32f4871ef9deaac30aa1fbeaa323189fd15fd3f02d754e3aba348966bc"
+  },
+  {
+    "file": "src/features/tms/overview/pages/TmsOverviewPage.vue",
+    "sha256": "71f52466a5d33df8e93a44ef44439029949ff09c5b4886166c16d396e7c40e6e"
+  },
+  {
+    "file": "src/features/tms/routes.ts",
+    "sha256": "beaf04cbc0d99e8c07f94d7ddd6e2543eb903bd41f4aa9dd909405cc5872addd"
+  },
+  {
+    "file": "src/features/training/content-exam/adapters/trainingContentAdapter.ts",
+    "sha256": "33b2482756c06e3d3fd70313a95a4e3a579dc55fcee70a921f769ad008a34d57"
+  },
+  {
+    "file": "src/features/training/content-exam/api/trainingContentApi.ts",
+    "sha256": "fa5cbfc93a6e39d2db7106d538c17d8177443e87026849bafef999afcf00f533"
+  },
+  {
+    "file": "src/features/training/content-exam/components/CourseManagementPageView.vue",
+    "sha256": "e6e0334d8a3b2d72d35713617c9d60faf44a044c7dc2491c052c7adc815dee77"
+  },
+  {
+    "file": "src/features/training/content-exam/components/ExamConfigurationPageView.vue",
+    "sha256": "814c5bed5835a3fd0349e7d064c3935a2bb65b72e35bf9d0ceeb89245571e2cf"
+  },
+  {
+    "file": "src/features/training/content-exam/components/PaperManagementPageView.vue",
+    "sha256": "dc7e8da2d62482c43ce457679f4f942ad0e4b634655e3a6b39a6a92fbd075055"
+  },
+  {
+    "file": "src/features/training/content-exam/components/QuestionBankPageView.vue",
+    "sha256": "bee62ebc9d69b0678c6aa2ec516f1be5d6896adfdb9c9719660c1448dc2172c3"
+  },
+  {
+    "file": "src/features/training/content-exam/composables/useContentPages.ts",
+    "sha256": "bcd29c7ed4f278b27790a03af78925570329b9dbb0fa23328ecf721c4a440e65"
+  },
+  {
+    "file": "src/features/training/content-exam/composables/useTrainingContent.ts",
+    "sha256": "f40a74366c8b2c31de91b78cb8cd88683ddd0c5dad25bf9a1cf5def7f1a3aa13"
+  },
+  {
+    "file": "src/features/training/content-exam/composables/useTrainingContentView.ts",
+    "sha256": "366cfcfbfed71a63c4bae1896ac62277c7d179b04eefa70133514e1bf9ce14a2"
+  },
+  {
+    "file": "src/features/training/content-exam/iam-resource.registry.ts",
+    "sha256": "0c2665029c4f26d0bd4a6a1fce7c047d91df92a0b6ebf24219ae392aaf778983"
+  },
+  {
+    "file": "src/features/training/content-exam/pages/CourseManagementPage.vue",
+    "sha256": "2a6215c26dbccfb302243b6b921d4c2a8c45c16ec615f78586305c8808a1c5db"
+  },
+  {
+    "file": "src/features/training/content-exam/pages/ExamConfigurationPage.vue",
+    "sha256": "1052cbc3f0a98b96a0ac01712258921d8c37dd36814eaee0ba23e8c1f5f0dd12"
+  },
+  {
+    "file": "src/features/training/content-exam/pages/PaperManagementPage.vue",
+    "sha256": "74f5561b7b34e681d225be1dd8c07934394061ebba84ab6dd652ff2e94da0b4a"
+  },
+  {
+    "file": "src/features/training/content-exam/pages/QuestionBankPage.vue",
+    "sha256": "23344e68812a36f9aec186e5c6f5fbc0c10e6b31ce9aad9aef24fa3e6a3a7588"
+  },
+  {
+    "file": "src/features/training/content-exam/trainingContentPermissions.ts",
+    "sha256": "e10e2a3a8751b33e9fa59a8ae463843b1ec6294c44ed92ce4149bfb0c590717c"
+  },
+  {
+    "file": "src/features/training/content-exam/types/trainingContent.ts",
+    "sha256": "2f90b8a6a7062d00b0b2c27abf83689137ff16720cfa97e25bf0f844347e2880"
+  },
+  {
+    "file": "src/features/training/content-exam/types/trainingContentContracts.ts",
+    "sha256": "212c0124d69e9d36d60edc681fa4c2e758ffd1409f15308656b5dc466b29004d"
+  },
+  {
+    "file": "src/features/training/content-exam/types/trainingContentRuntime.ts",
+    "sha256": "5a59f44a83763d79e9a6f02488b3e4a8a665622b97c22013525711f702759cd6"
+  },
+  {
+    "file": "src/features/training/operations-archive/adapters/trainingOperationsAdapter.ts",
+    "sha256": "ae39c6929d06d76798d03e6897efed059cd6732914ebe49b58065b8a5d9b5ef4"
+  },
+  {
+    "file": "src/features/training/operations-archive/api/trainingOperationsApi.ts",
+    "sha256": "65f77da58664937c4896890d61edc5fd3493a73d3cb6f80ad32750fdf37ea518"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/EmployeeTrainingArchivePageView.vue",
+    "sha256": "58326355a7ac0db177a93830933a5450ba8221689884e084b9e2d55c8ee1f16e"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingOverviewPageView.vue",
+    "sha256": "515f52a6ab26697df068c9932e1e55cc2f4b53ac292ebb0f553f3dd89b4c8c38"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingPersonnelDrawer.vue",
+    "sha256": "6077c55d2c3bc4e7b328dcbbc3edd64e8dbaa8e8f1ad5e64696d8b146639a8c9"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingPlanDetailPageView.vue",
+    "sha256": "cedb353cf89809cfae171fa07a0259b347dd2ced24cc04bb9c32e64d5eb246ed"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingPlanPageView.vue",
+    "sha256": "9ad43f0ef6365f3f0a1029c3fba09b69b33d97dc1ac68ecb22f7a18b7920fdae"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingStatisticsPageView.vue",
+    "sha256": "b796f11bd0eaaecedc1aa5c973c7d37401a0e3ec1e45b17a04c4b62ab934b0ef"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingTaskDetailPageView.vue",
+    "sha256": "1f7724079ba4c48e68d52cf6e3042fe9e3cd2753856d6aa931021549474b23e5"
+  },
+  {
+    "file": "src/features/training/operations-archive/components/TrainingTaskPageView.vue",
+    "sha256": "4482f13efd98fe9cf0620edc5d84f64880654cc765811d40b1fcdb30ccee6c2b"
+  },
+  {
+    "file": "src/features/training/operations-archive/iam-resource.registry.ts",
+    "sha256": "4813f254518de51fa312613b03836036861065a04b7d16563bd9be8df6772628"
+  },
+  {
+    "file": "src/features/training/operations-archive/operationsUi.ts",
+    "sha256": "0a8b2af706c9327583e541371f2d038eef8ad200dc6bf7a51d3802dd4a65f696"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/EmployeeTrainingArchivePage.vue",
+    "sha256": "d5496716cd044044a6bf5e24a6f94a53bfb0b9f71f60026b981c2989c8ba490a"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/TrainingOperationsOverviewPage.vue",
+    "sha256": "0df639487fe17ea96ac3c07f0cf54ebc8b25f09da940781eaa72e91c1e883ffe"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/TrainingPlanDetailPage.vue",
+    "sha256": "55c3c70e18e2d1064d9ee5d9c609384ee6985704413f6d3580fd90825117613a"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/TrainingPlanManagementPage.vue",
+    "sha256": "1dff5d8214d2ac4c4934bc4b9702720653e3afb954e252ad2136edc65d24ab81"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/TrainingStatisticsPage.vue",
+    "sha256": "9dc0b1e460d5fbeefd666ab5d44ee04c8d1d1cd131c21905dc650b4579503391"
+  },
+  {
+    "file": "src/features/training/operations-archive/pages/TrainingTaskDetailPage.vue",
+    "sha256": "24ab15b566c3fce22607e3b3ea2a9cee8f4e2720dcebd7bc869a20ee88b225d0"
+  },
+  {
+    "file": "src/features/training/operations-archive/trainingPermissions.ts",
+    "sha256": "d7d1439df38eaa0913b07200451113b9fc0a8df679dcb759df4b70cf70d1f3db"
+  },
+  {
+    "file": "src/features/training/operations-archive/types/trainingOperations.ts",
+    "sha256": "65522d24f3ab4dc89407473e376ce3ff30a961d5093ea717ee3d977cdf17c0d0"
+  },
+  {
+    "file": "src/features/training/operations-archive/types/trainingOperationsContracts.ts",
+    "sha256": "1c11f064f8b9b8fd47f6fb23f59cdb17f657136836ad5b77a29a8be8be1e127c"
+  },
+  {
+    "file": "src/features/training/routes.ts",
+    "sha256": "541a72b41106a76f46034f7ef9746c7e7bfd5ea3ab47eeadfdab14feeabbbcf1"
+  },
+  {
+    "file": "src/features/vms/overview/iam-resource.registry.ts",
+    "sha256": "bb8766a2612f99b67d65f7cd97bde427310df550ad2f89baff3efaa9cf48bd16"
+  },
+  {
+    "file": "src/features/vms/overview/pages/VmsOverviewPage.vue",
+    "sha256": "ba06de7a337246395fcbd0405f55b673be040ccd01afc6fa63b6217c6e24fce8"
+  },
+  {
+    "file": "src/features/vms/routes.ts",
+    "sha256": "ce09904b9445df431435dcfde20348702667c6601120675e3f9faa2a9bf78400"
+  }
+]

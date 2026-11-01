@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { tenantsElements } from '../iam-resource.registry'
+import { resourceElementAttributes } from '@shared/services/resourceElement'
 import { computed, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -193,8 +195,8 @@ const createReview = computed(() => [
 
 const columns: DataTableColumn[] = [
   { prop: 'id', label: 'ID', width: 72, fixed: 'left' },
-  { prop: 'code', label: 'Tenant 编码', minWidth: 136, fixed: 'left', slot: 'code' },
-  { prop: 'name', label: 'Tenant 名称', minWidth: 180 },
+  { prop: 'code', label: 'Tenant 编码', minWidth: 136, fixed: 'left' },
+  { prop: 'name', label: 'Tenant 名称', minWidth: 180, slot: 'name' },
   { prop: 'type', label: '类型', minWidth: 108 },
   { label: '联系人', minWidth: 174, slot: 'contact' },
   { prop: 'timezone', label: '时区', minWidth: 142 },
@@ -202,7 +204,7 @@ const columns: DataTableColumn[] = [
   { prop: 'sortOrder', label: '排序', width: 72, align: 'right' },
   { label: '状态', width: 88, slot: 'status' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 164 },
-  { label: '操作', width: 176, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -357,20 +359,32 @@ async function confirmStatusChange() {
 </script>
 
 <template>
-  <AppPage class="tenant-page">
+  <AppPage :resource_element="tenantsElements.page" class="tenant-page">
     <ListPageTemplate>
       <template #header>
         <PageHeader title="Tenant 管理" description="维护集团下的平级业务租户及首名管理员" />
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="tenantsElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="Tenant ID">
-            <el-input v-model="query.id" clearable placeholder="精确 ID" @keyup.enter="search" />
+            <el-input
+              v-model="query.id"
+              v-resource-element="tenantsElements.query"
+              clearable
+              placeholder="精确 ID"
+              @keyup.enter="search"
+            />
           </el-form-item>
           <el-form-item label="关键词">
             <el-input
               v-model="query.keyword"
+              v-resource-element="tenantsElements.query"
               clearable
               placeholder="编码、名称或联系人"
               @keyup.enter="search"
@@ -384,6 +398,7 @@ async function confirmStatusChange() {
           </el-form-item>
           <template #footer-leading>
             <el-button
+              v-resource-element="tenantsElements.create"
               v-permission="IAM_PERMISSIONS.tenants.create"
               type="primary"
               @click="openCreate"
@@ -397,6 +412,7 @@ async function confirmStatusChange() {
 
       <template #toolbar>
         <TableToolbar
+          :resource_element="tenantsElements.query"
           title="Tenant 列表"
           :total="visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -417,19 +433,30 @@ async function confirmStatusChange() {
         show-icon
       >
         <template #default>
-          <el-button link type="primary" @click="emit('retry')">重新加载</el-button>
+          <el-button
+            v-resource-element="tenantsElements.query"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          >
         </template>
       </el-alert>
 
       <DataTable
+        :resource_element="tenantsElements.detail"
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading'"
-        @row-click="openDetail(asTenant($event))"
       >
-        <template #code="{ row }">
-          <button class="tenant-page__link" type="button" @click.stop="openDetail(asTenant(row))">
-            {{ asTenant(row).code }}
+        <template #name="{ row }">
+          <button
+            v-resource-element="tenantsElements.detail"
+            class="tenant-page__link"
+            type="button"
+            @click.stop="openDetail(asTenant(row))"
+          >
+            {{ asTenant(row).name }}
           </button>
         </template>
         <template #contact="{ row }">
@@ -446,8 +473,8 @@ async function confirmStatusChange() {
         </template>
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asTenant(row).name} 的操作`">
-            <el-button link type="primary" @click.stop="openDetail(asTenant(row))">详情</el-button>
             <el-button
+              v-resource-element="tenantsElements.edit"
               v-permission="IAM_PERMISSIONS.tenants.update"
               link
               type="primary"
@@ -455,6 +482,7 @@ async function confirmStatusChange() {
               >编辑</el-button
             >
             <el-button
+              v-resource-element="tenantsElements.status"
               v-permission="IAM_PERMISSIONS.tenants.changeStatus"
               link
               :type="asTenant(row).status === 'ACTIVE' ? 'warning' : 'success'"
@@ -470,6 +498,7 @@ async function confirmStatusChange() {
         <AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="tenantsElements.local"
           :total="visibleRecords.length"
           @change="emit('action', 'Tenant 分页状态已更新')"
         />
@@ -478,6 +507,7 @@ async function confirmStatusChange() {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="tenantsElements.detail"
       :title="`${selected?.name ?? ''} · Tenant 详情`"
       size="min(880px, 86%)"
     >
@@ -554,6 +584,7 @@ async function confirmStatusChange() {
 
     <FormDrawer
       v-model="editVisible"
+      :resource_element="tenantsElements.edit"
       :title="`编辑 ${selected?.name ?? ''}`"
       size="min(920px, 88%)"
       confirm-button-text="保存 Tenant"
@@ -613,6 +644,7 @@ async function confirmStatusChange() {
           <ImageAssetField
             v-model:file-id="editForm.logoFileId"
             v-model:image-url="editForm.logoUrl"
+            :resource_element="tenantsElements.editLogo"
             :disabled="submitting"
             @blocked-change="editUploadBlocked = $event"
           />
@@ -625,6 +657,7 @@ async function confirmStatusChange() {
 
     <FormDrawer
       v-model="createVisible"
+      :resource_element="tenantsElements.create"
       title="创建 Tenant"
       size="min(960px, 90%)"
       :confirm-button-text="createStep === 2 ? '创建 Tenant' : '下一步'"
@@ -696,6 +729,7 @@ async function confirmStatusChange() {
             <ImageAssetField
               v-model:file-id="createForm.logoFileId"
               v-model:image-url="createForm.logoUrl"
+              :resource_element="tenantsElements.createLogo"
               :disabled="submitting"
               @blocked-change="createUploadBlocked = $event"
             />
@@ -755,6 +789,7 @@ async function confirmStatusChange() {
                 <ImageAssetField
                   v-model:file-id="adminForm.avatarFileId"
                   v-model:image-url="adminForm.avatarUrl"
+                  :resource_element="tenantsElements.adminAvatar"
                   :disabled="submitting"
                   @blocked-change="adminUploadBlocked = $event"
                 />
@@ -803,14 +838,21 @@ async function confirmStatusChange() {
         </div>
       </section>
       <template #footer="{ requestClose }">
-        <el-button :disabled="submitting" @click="requestClose">取消</el-button>
+        <el-button
+          v-resource-element="tenantsElements.local"
+          :disabled="submitting"
+          @click="requestClose"
+          >取消</el-button
+        >
         <el-button
           v-if="createStep > 0"
+          v-resource-element="tenantsElements.local"
           :disabled="submitting || createUploadBlocked || adminUploadBlocked"
           @click="createStep -= 1"
           >上一步</el-button
         >
         <el-button
+          v-resource-element="tenantsElements.create"
           type="primary"
           :loading="submitting"
           :disabled="submitting || createUploadBlocked || adminUploadBlocked"
@@ -822,6 +864,7 @@ async function confirmStatusChange() {
     </FormDrawer>
 
     <el-dialog
+      v-bind="resourceElementAttributes(tenantsElements.status)"
       v-model="confirmVisible"
       :title="`${selected?.status === 'ACTIVE' ? '停用' : '启用'} Tenant`"
       width="520"
@@ -834,8 +877,11 @@ async function confirmStatusChange() {
         }}
       </p>
       <template #footer>
-        <el-button @click="confirmVisible = false">取消</el-button>
+        <el-button v-resource-element="tenantsElements.local" @click="confirmVisible = false"
+          >取消</el-button
+        >
         <el-button
+          v-resource-element="tenantsElements.status"
           v-permission="IAM_PERMISSIONS.tenants.changeStatus"
           :type="selected?.status === 'ACTIVE' ? 'warning' : 'success'"
           :loading="submitting"

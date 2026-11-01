@@ -70,12 +70,7 @@ test.describe('Tenant forms use user input rather than sample data', () => {
     expect(requests).toHaveLength(0)
     await fillTenant(page, drawer)
     await drawer.getByRole('button', { name: '下一步', exact: true }).click()
-    for (const label of [
-      '完整登录账号',
-      '有效开始时间',
-      '有效结束时间',
-      '成员备注',
-    ]) {
+    for (const label of ['完整登录账号', '有效开始时间', '有效结束时间', '成员备注']) {
       await expect(drawer.getByLabel(label, { exact: true })).toHaveValue('')
     }
     await drawer.getByRole('button', { name: '下一步', exact: true }).click()
@@ -260,7 +255,7 @@ test.describe('Tenant forms use user input rather than sample data', () => {
     })
     await page.goto('/iam/tenants')
     await expect(page.getByRole('columnheader', { name: '企业名称', exact: true })).toHaveCount(0)
-    await page.getByRole('button', { name: '详情', exact: true }).first().click()
+    await page.locator('.el-table__body-wrapper .tenant-page__link').first().click()
     const detail = page.locator('.el-drawer:visible')
     await expect(detail.getByText('企业名称', { exact: true })).toHaveCount(0)
     await expect(detail.getByText('域名', { exact: true })).toBeVisible()

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { archivesElements } from '../iam-resource.registry'
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 import dayjs from 'dayjs'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -9,7 +11,6 @@ import DetailDrawer from '@shared/components/DetailDrawer.vue'
 import FormDialog from '@shared/components/FormDialog.vue'
 import ListPageTemplate from '@shared/components/page-templates/ListPageTemplate.vue'
 import PageHeader from '@shared/components/PageHeader.vue'
-import RowActionGrid from '@shared/components/RowActionGrid.vue'
 import SearchPanel from '@shared/components/SearchPanel.vue'
 import StatusTag from '@shared/components/StatusTag.vue'
 import TableToolbar from '@shared/components/TableToolbar.vue'
@@ -29,6 +30,7 @@ import {
   percentage,
   taskStatusLabel,
   taskStatusTone,
+  taskTypeLabel,
 } from '../operationsUi'
 import type {
   EmployeeArchiveRecord,
@@ -181,7 +183,7 @@ function sectionState(section: ArchiveSection) {
   return props.sectionStates[section] ?? (section === 'list' ? props.state : 'empty')
 }
 function normalizeTaskType(type: string): TrainingTaskType {
-  return type === 'QUARTERLY' || type === 'TEMPORARY' ? type : 'MONTHLY'
+  return type === 'QUARTERLY' || type === TRAINING_TASK_TYPES.OTHER ? type : 'MONTHLY'
 }
 function normalizeEmployeeStatus(status: string): TaskEmployeeRecord['status'] {
   const value = status.toUpperCase()
@@ -250,7 +252,6 @@ const columns: DataTableColumn[] = [
   { label: '最终通过', width: 154, slot: 'passed' },
   { prop: 'learningMinutes', label: '有效学习（分钟）', width: 140, align: 'right' },
   { prop: 'latestTrainingAt', label: '最近培训', minWidth: 160 },
-  { label: '操作', width: 128, fixed: 'right', slot: 'actions' },
 ]
 
 const detailTasks = computed(() => props.taskReport ?? props.detail?.tasks)
@@ -377,12 +378,15 @@ function employeeStatusForRecord(item: {
 </script>
 
 <template>
-  <AppPage class="training-operations-page">
+  <AppPage :resource_element="archivesElements.page" class="training-operations-page">
     <ListPageTemplate>
       <template #header
         ><PageHeader title="员工培训档案" description="按员工汇总任务、课程学习、考试历史与逾期结果"
           ><template #actions
-            ><el-button v-if="canExport" @click="exportVisible = true"
+            ><el-button
+              v-if="canExport"
+              v-resource-element="archivesElements.export"
+              @click="exportVisible = true"
               >导出档案</el-button
             ></template
           ></PageHeader
@@ -390,6 +394,7 @@ function employeeStatusForRecord(item: {
       >
       <template #search>
         <SearchPanel
+          :resource_element="archivesElements.query"
           collapsible
           :loading="sectionState('list') === 'loading'"
           @search="runQuery()"
@@ -413,7 +418,7 @@ function employeeStatusForRecord(item: {
             ><el-select v-model="query.taskType" clearable placeholder="全部类型"
               ><el-option label="月度" value="MONTHLY" /><el-option
                 label="季度"
-                value="QUARTERLY" /><el-option label="临时" value="TEMPORARY" /></el-select
+                value="QUARTERLY" /><el-option label="其他" :value="TRAINING_TASK_TYPES.OTHER" /></el-select
           ></el-form-item>
           <template #advanced>
             <el-form-item label="统计时间"
@@ -512,6 +517,7 @@ function employeeStatusForRecord(item: {
       </template>
       <template #toolbar
         ><TableToolbar
+          :resource_element="archivesElements.query"
           title="员工档案列表"
           :total="archiveReport?.total ?? rows.length"
           :refreshing="sectionState('list') === 'loading'"
@@ -531,7 +537,11 @@ function employeeStatusForRecord(item: {
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="emit('retry', 'list')"
+          ><el-button
+            v-resource-element="archivesElements.query"
+            link
+            type="primary"
+            @click="emit('retry', 'list')"
             >重新加载</el-button
           ></template
         ></el-alert
@@ -541,10 +551,10 @@ function employeeStatusForRecord(item: {
         :data="rows as unknown as Record<string, unknown>[]"
         :columns="columns"
         :loading="sectionState('list') === 'loading'"
-        @row-click="openDetail($event as unknown as ArchiveRow)"
       >
         <template #name="{ row }"
           ><button
+            v-resource-element="archivesElements.detail"
             class="training-operations-link"
             type="button"
             @click.stop="openDetail(row as unknown as ArchiveRow)"
@@ -576,16 +586,10 @@ function employeeStatusForRecord(item: {
             )
           }}</template
         >
-        <template #actions="{ row }"
-          ><RowActionGrid :aria-label="`${(row as unknown as ArchiveRow).name} 的操作`"
-            ><el-button link type="primary" @click.stop="openDetail(row as unknown as ArchiveRow)"
-              >查看档案</el-button
-            ></RowActionGrid
-          ></template
-        >
       </DataTable>
       <template #pagination
         ><AppPagination
+          :resource_element="archivesElements.query"
           :page="page"
           :page-size="pageSize"
           :total="archiveReport?.total ?? rows.length"
@@ -596,6 +600,7 @@ function employeeStatusForRecord(item: {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="archivesElements.detail"
       :title="`${selected?.name ?? '员工'} · 培训档案`"
       :size="1120"
     >
@@ -624,7 +629,11 @@ function employeeStatusForRecord(item: {
           :closable="false"
           show-icon
           ><template #default
-            ><el-button link type="primary" @click="emit('retry', 'detail')"
+            ><el-button
+              v-resource-element="archivesElements.detail"
+              link
+              type="primary"
+              @click="emit('retry', 'detail')"
               >重新加载</el-button
             ></template
           ></el-alert
@@ -694,7 +703,11 @@ function employeeStatusForRecord(item: {
                 :closable="false"
                 show-icon
                 ><template #default
-                  ><el-button link type="primary" @click="emit('retry', 'tasks')"
+                  ><el-button
+                    v-resource-element="archivesElements.tasks"
+                    link
+                    type="primary"
+                    @click="emit('retry', 'tasks')"
                     >重新加载</el-button
                   ></template
                 ></el-alert
@@ -715,6 +728,7 @@ function employeeStatusForRecord(item: {
                 ><el-table-column label="任务" min-width="220"
                   ><template #default="scope"
                     ><button
+                      v-resource-element="archivesElements.taskDetail"
                       type="button"
                       class="training-operations-link"
                       @click.stop="openTask(scope.row)"
@@ -736,9 +750,7 @@ function employeeStatusForRecord(item: {
                   }}</template></el-table-column
                 ><el-table-column label="类型" width="90"
                   ><template #default="scope">{{
-                    { MONTHLY: '月度', QUARTERLY: '季度', TEMPORARY: '临时' }[
-                      normalizeTaskType(scope.row.task_type)
-                    ]
+                    taskTypeLabel(normalizeTaskType(scope.row.task_type))
                   }}</template></el-table-column
                 ><el-table-column prop="period_key" label="周期" width="110" /><el-table-column
                   label="任务状态"
@@ -792,6 +804,7 @@ function employeeStatusForRecord(item: {
               >
               <AppPagination
                 v-if="detailTasks"
+                :resource_element="archivesElements.tasks"
                 :page="detailTaskPage"
                 :page-size="detailTaskPageSize"
                 :total="detailTasks.total"
@@ -824,7 +837,11 @@ function employeeStatusForRecord(item: {
                 :closable="false"
                 show-icon
                 ><template #default
-                  ><el-button link type="primary" @click="emit('retry', 'courses')"
+                  ><el-button
+                    v-resource-element="archivesElements.courses"
+                    link
+                    type="primary"
+                    @click="emit('retry', 'courses')"
                     >重新加载</el-button
                   ></template
                 ></el-alert
@@ -879,7 +896,11 @@ function employeeStatusForRecord(item: {
                 :closable="false"
                 show-icon
                 ><template #default
-                  ><el-button link type="primary" @click="emit('retry', 'exams')"
+                  ><el-button
+                    v-resource-element="archivesElements.exams"
+                    link
+                    type="primary"
+                    @click="emit('retry', 'exams')"
                     >重新加载</el-button
                   ></template
                 ></el-alert
@@ -919,6 +940,7 @@ function employeeStatusForRecord(item: {
                   ><template #default="scope"
                     ><el-button
                       v-if="canViewExamSnapshot && scope.row.submitted_at"
+                      v-resource-element="archivesElements.snapshot"
                       link
                       type="primary"
                       @click="openSnapshot(scope.row)"
@@ -933,7 +955,12 @@ function employeeStatusForRecord(item: {
       </div>
     </DetailDrawer>
 
-    <DetailDrawer v-model="answerVisible" title="历史考试答题快照" :size="900">
+    <DetailDrawer
+      v-model="answerVisible"
+      :resource_element="archivesElements.snapshot"
+      title="历史考试答题快照"
+      :size="900"
+    >
       <div v-loading="sectionState('snapshot') === 'loading'" class="training-detail-layout">
         <el-alert
           v-if="sectionState('snapshot') === 'retryable-error'"
@@ -942,7 +969,11 @@ function employeeStatusForRecord(item: {
           :closable="false"
           show-icon
           ><template #default
-            ><el-button link type="primary" @click="emit('retry', 'snapshot')"
+            ><el-button
+              v-resource-element="archivesElements.snapshot"
+              link
+              type="primary"
+              @click="emit('retry', 'snapshot')"
               >重新加载</el-button
             ></template
           ></el-alert
@@ -1004,6 +1035,9 @@ function employeeStatusForRecord(item: {
 
     <FormDialog
       v-model="exportVisible"
+      :resource_element="
+        includeSensitive ? archivesElements.sensitiveExport : archivesElements.export
+      "
       title="导出员工培训档案"
       confirm-button-text="开始生成"
       :submitting="exporting"
@@ -1014,7 +1048,10 @@ function employeeStatusForRecord(item: {
           ><strong>当前筛选条件 · {{ archiveReport?.total ?? rows.length }} 名员工</strong>
         </div>
         <el-checkbox model-value disabled>包含任务、课程与考试结果</el-checkbox
-        ><el-checkbox v-if="canExportExamMaterials" v-model="includeSensitive"
+        ><el-checkbox
+          v-if="canExportExamMaterials"
+          v-model="includeSensitive"
+          v-resource-element="archivesElements.sensitiveExport"
           >另行导出敏感答题材料</el-checkbox
         >
         <p class="training-operations-page__muted">

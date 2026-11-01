@@ -1,51 +1,56 @@
 # IAM 框架上下文接口
 
-## 通用约束
+2026-09-29 按后端 `Doc/Engineering/iam-deprecated-api-route-mapping.md` 迁移。
 
-- Host 由 `src/shared/api/apiConfig.ts` 和环境变量统一提供，Feature 只能声明相对路径。
-- IAM 基础路径固定由 `src/shared/api/backendServices.ts` 的 `/iam-admin` 管理。
-- 四个接口均使用 `POST`；`CurrentAppMenus` 按服务端契约使用 `Content-Type: application/json`，其余接口使用 `Accept: text/plain`、`Content-Type: application/json-patch+json`。
-- 四个接口均为受保护接口，由统一 HTTP 拦截器写入 `Authorization: Bearer <token>` 与 `X-Request-ID`。
-- 成功业务数据位于平台统一响应信封的 `data` 字段；401 统一清理会话并返回登录页。
-- App、Module、Menu、Page、Function 与用户数据中的并发 `version` 是 `VersionToken` 字符串，只能直接保存和传递，禁止任何数值转换。
+## 统一约束
 
-## 当前用户可访问应用
+Host/服务前缀仍由统一配置管理。以下接口均 POST，经统一拦截器携带 Authorization、X-Request-ID，解包成功信封 data。所有版本值均为 VersionToken 字符串，不做数字转换。CurrentPermissionResource 三个接口属于会话自服务，不加入业务 Permission。
 
-- 路径：`/iam-admin/Permission/CurrentApps`
-- 请求：`{}`
-- 响应数据：`{ apps: IamApplication[] }`
-- 用途：顶部 App 切换的唯一权限来源。展示文本必须使用接口返回的 `app_name`；`app_code` 只用于内部标识、权限作用域和路由匹配。客户端不得使用静态子系统名称覆盖 `app_name`，也不得补出未授权 App。
+2026-10-16：上述导航与页面资源接口均以当前 Tenant 授权为准；无有效当前 Tenant 时不发起请求。集团信息、Tenant 管理和系统资源目录也使用同一页面守卫，不因 SA、共享数据或旧 `global` 元信息豁免授权。不合并其他 Tenant 的 SA 角色资源。SA 专属后端操作仍需 SA 身份 + 对应 Function。
 
-## 当前应用的模块与菜单
+Tenant/Query 是目录查询，经 Function 授权后可以返回非本人所属租户；其 Update/ChangeStatus 的目标 `id` 原样提交，允许不同于当前 Tenant。目录结果不得充当切换候选，候选仍只取登录/切换响应的 `available_tenants`。
 
-- 路径：`/iam-admin/Permission/CurrentAppMenus`
-- 请求：`{ app_id: number }`
-- 响应数据：`{ app: IamApplication, modules: IamCurrentAppModuleMenusResponse[] }`。Module 只包含自身资源字段与 `menus`；Menu 只包含自身资源字段。接口不返回 Page 或 Function。
-- 用途：当前 Tenant 下指定 App 的可访问 `App → Module → Menu` 导航树。前端按 `sort_order` 排序，并过滤不可见、当前无效或路由不安全的 Menu，不补出静态导航。`is_visible=false` 的 Menu 不进入菜单栏；Module 作为分组容器时不以自身 `is_visible` 过滤整棵子树，只要当前有效且包含可用 Menu，仍需展示该分组。
-- Menu 的 `permission_code` 用于其导航路由。隐藏 Page 由前端静态路由登记，并显式归属唯一 Menu；其入口和路由门禁使用该 Menu 的 `CurrentFunctions(menu_id)` 返回的 `:view` Function，而不是 Page `permission_code`。
+## 顶部 App 与导航
 
-## 当前 Menu 的 Function 权限
+- `/iam-admin/CurrentPermissionResource/CurrentApps`，请求 `{}`，响应 `{ apps, authorization_version }`。App 为 id/app_code/app_name/icon/route_prefix；顶部显示 app_name，不补静态授权。
+- `/iam-admin/CurrentPermissionResource/CurrentAppMenus`，请求 `{ app_id }`。
+- 响应 `{ app, modules: [{ resource: Module资源, menus: Menu资源[] }], authorization_version }`。读取 module.resource，按 sort_order/id 排序；Module 不因自身 is_visible=false 而丢弃可见菜单。
+- 仅导航 Menu；不从导航推断按钮权限。继续过滤不安全路由、退役入口和生产占位页。
 
-- 路径：`/iam-admin/Permission/CurrentFunctions`
-- 请求：`{ menu_id: number }`；`menu_id` 必须来自已成功返回的 `CurrentAppMenus(app_id)`，禁止在 Menu 未解析前请求，也禁止发送 `0` 或空对象。
-- 响应数据：`{ menu: IamPermissionResource, functions: IamPermissionResource[], permission_codes: string[] }`。
-- 用途：提供当前 Menu 范围（包括资源目录中隐藏 Page 后代）内的有效 Function 权限。`:view` Function 同时控制隐藏 Page 的入口、路由和查询能力；`:update` 或其他专用 Function 控制写操作。Function 不动态注册路由。
-- 初始化顺序固定为 `CurrentApps → CurrentAppMenus(app_id) → 解析当前路由所属 Menu → CurrentFunctions(menu_id)`；`QueryUsers` 可与这条权限链并行。
-- 同一 Menu 下的 Menu/Page 路由共享按 `menu_id` 缓存的 Function 权限；切换到其他 Menu 时必须加载目标 Menu 的权限并清空旧权限，防止跨 Menu 泄漏。
-- 权限结果加载失败时，前端默认隐藏受控操作并拒绝进入隐藏 Page，但继续保留已由 `CurrentAppMenus` 确认的 Menu 导航；不得使用本地静态列表补权。
+## 页面与按钮权限
 
-## 查询当前用户资料
+- `/iam-admin/CurrentPermissionResource/CurrentPageResources`，请求 `{ page_resource_code }`，编码来自正式路由注册，不再发送 menu_id。
+- 响应 `{ page_resource_code, can_access, button_resource_codes, button_page_resource_codes, read_function_resource_codes, authorization_version }`。
+- 所有已登记受保护页面进入前校验 can_access；按钮使用返回的精确前端资源集合，不从父节点、后端 Function、SA 身份或登录缓存推导写权限。
+- Menu 与 ButtonPage 独立校验，不复用旧 Menu Function 缓存。无需先取得菜单 ID；导航链仍为 CurrentApps → CurrentAppMenus，本人资料可并行。
+- 响应编码不匹配/结构错误/服务失败进入权限服务异常页；明确无权限进入 403，Dashboard 无权限回 Welcome。Welcome 保留会话可访问规则。
+- 缓存按 token、session/version、Tenant、页面编码隔离，短 TTL；权限刷新清空缓存，旧响应不得覆盖新上下文。
+- 旧 UI 判断常量通过 `src/shared/services/pageResourceAliases.ts` 显式投影到本页精确 V2 资源；不请求 V1、不读取登录权限补权、不按前缀猜编码。培训成员新增/单个退出/批量退出/重入已分为独立资源。
+- 这个运行时适配不代表维护 rollout、通信证据或线上授权已全部验收。
 
-- 路径：`/iam-admin/Membership/QueryUsers`
-- 请求：`{ page_index: 1, page_size: 20, keyword: <登录账号> }`
-- 响应数据：`{ total, page_index, page_size, items }`
-- 用途：侧栏底部用户头像、姓名、岗位与组织上下文。
-- 示例中的 `id: 0` 只是 Swagger 占位值，生产请求不得发送；否则后端会按 ID 0 过滤。
-- 查询返回后必须按 `user.user_name` 与登录账号做不区分大小写的精确匹配，禁止直接采用第一条模糊搜索结果。
+## 权限管理页 App 候选
 
-## 前端归属
+- `/iam-admin/PermissionApp/Query`，请求支持 id/app_code/managed_key/include_deleted。
+- 返回 `{ apps, snapshot_version, scope_complete, scope }`，不是旧直接数组。API 层解出 apps；不完整范围或非法结构作为错误。
+- Function 为 `IAM.PERMISSION_APP.QUERY`，后端已改为 business/read/composable=true。现有业务包需维护方引用新 Function；前端接口替换不自动写库。
 
-- 类型：`src/features/iam/shell-context/types/shellContext.ts`
-- Endpoint 与调用：`src/features/iam/shell-context/api/shellContextApi.ts`
-- DTO 到 AppShell 映射：`src/features/iam/shell-context/adapters/shellContextAdapter.ts`
-- 生产编排：`src/app/composables/useAppShellContext.ts`
+## 本人资料与品牌配置
+
+`/iam-admin/Auth/CurrentProfile` 无请求体。返回本人及当前 Tenant、组织、岗位显示信息和 avatar_url/avatar_file_id；直接使用 IAM 图片 URL。失败保留登录账号，旧会话慢响应丢弃。不得为显示头像补授 Membership/QueryUsers。
+
+生产框架已预接可选 `data.branding: { brand_name, platform_name, logo_url }`；后端尚待按 [品牌配置契约](../coordination/platform-shell-branding-backend-contract.md) 增量返回。字段缺失分别使用默认品牌、平台名及本地图标，不增加任何网络请求或业务权限。
+
+## Owner
+
+- DTO/API：src/features/iam/shell-context/{types,api}
+- 导航：src/features/iam/shell-context/adapters/shellContextAdapter.ts
+- 页面守卫/缓存：src/app/router/index.ts、src/features/iam/shell-context/services/currentPageResourceAccess.ts
+- Shell：src/app/composables/useAppShellContext.ts；状态：src/app/store/session.ts
+
+## 本轮验证与交接（2026-09-29）
+
+- 已通过代码 Lint、应用/测试 TypeCheck、生产 Build；构建仍有既有大分包提示。
+- 框架、新权限页、接口迁移与缓存隔离：三视口 126 项通过；基础页、成员查询、角色分配抽屉及资源标记另 34 项通过；培训生产页 13 项通过。
+- 浏览器用项目 Playwright 和契约模拟响应验证（Browser plugin / ego-browser CLI 不可用）；已查看三视口截图。未使用真实账号验收业务授权、未更新任何视觉基线。
+- 全量 `pnpm quality` 未通过：在 `iam:maintenance:check` 因 `Changed/incomplete communication chain dependencies: foundation.group.load` 阻断。单跑治理测试 90/91 通过，唯一失败为同一过期通信证据。不是将旧审查 hash 刷新后即可放行。
+- 系统资源维护方需重新核对受共享守卫/API 变更影响的通信链，更新 Permission 模板对 `IAM.PERMISSION_APP.QUERY` 的引用及运行时迁移证据，再生成维护清单；此前清单不可直接同步。本轮仅导入权威 Function 定义快照、更新前端声明，没有初始化数据库或分配授权。

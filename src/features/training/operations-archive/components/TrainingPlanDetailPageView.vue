@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { planDetailElements } from '../iam-resource.registry'
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 import { computed, reactive, ref, watch } from 'vue'
 
 import AppPage from '@shared/components/AppPage.vue'
@@ -24,6 +26,7 @@ import {
   taskTypeLabel,
 } from '../operationsUi'
 import { TRAINING_PERMISSIONS } from '../trainingPermissions'
+import { quarterlyTaskSchedule, trainingPeriodOptions } from '../trainingTaskSchedule'
 import type {
   TrainingAutoEnrollmentJobRecord,
   TrainingAutoEnrollmentRuleRecord,
@@ -155,7 +158,7 @@ const taskPageSize = ref(props.taskPageSize)
 const employeePage = ref(props.employeePage)
 const employeePageSize = ref(props.employeePageSize)
 const form = reactive({
-  taskType: 'TEMPORARY' as TrainingTaskType,
+  taskType: TRAINING_TASK_TYPES.OTHER as TrainingTaskType,
   periodKey: '',
   name: '',
   startAt: '',
@@ -172,7 +175,7 @@ const taskColumns: DataTableColumn[] = [
   { label: '状态', width: 96, slot: 'status' },
   { label: '完成', width: 108, slot: 'progress' },
   { label: '完成率', width: 96, slot: 'rate' },
-  { label: '操作', width: 224, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 const employeeColumns: DataTableColumn[] = [
   { prop: 'employeeCode', label: '员工编号', width: 132 },
@@ -182,7 +185,7 @@ const employeeColumns: DataTableColumn[] = [
   { label: '关系', width: 108, slot: 'relation' },
   { prop: 'effectiveFrom', label: '加入时间', minWidth: 144 },
   { prop: 'effectiveTo', label: '退出时间', minWidth: 144 },
-  { label: '操作', width: 176, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 const historyColumns: DataTableColumn[] = [
   { prop: 'effectiveFrom', label: '加入时间', minWidth: 176 },
@@ -202,7 +205,7 @@ const onboardingJobColumns: DataTableColumn[] = [
   { label: '状态', width: 96, slot: 'status' },
   { prop: 'attemptCount', label: '尝试次数', width: 88, align: 'right' },
   { prop: 'lastError', label: '最近错误', minWidth: 180 },
-  { label: '操作', width: 84, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 const onboardingForm = reactive({ taskId: 0, enabled: false })
 const planTasks = computed(() =>
@@ -220,42 +223,17 @@ const taskCreationAvailable = computed(() =>
   ),
 )
 const allowedTaskTypes = computed<TrainingTaskType[]>(() => {
-  if (props.plan?.planType === 'STANDING') return ['TEMPORARY']
-  return props.plan?.frequency ? [props.plan.frequency, 'TEMPORARY'] : ['TEMPORARY']
+  if (props.plan?.planType === 'STANDING') return [TRAINING_TASK_TYPES.OTHER]
+  return props.plan?.frequency
+    ? [props.plan.frequency, TRAINING_TASK_TYPES.OTHER]
+    : [TRAINING_TASK_TYPES.OTHER]
 })
 const standingTasks = computed(() => planTasks.value.filter((task) => task.isLongRunning))
 const onboardingFormValid = computed(() => onboardingForm.taskId > 0)
-const periodOptions = computed(() => {
-  const plan = props.plan
-  if (!plan || form.taskType === 'TEMPORARY') return []
-  const start = new Date(`${plan.startAt.slice(0, 10)}T00:00:00`)
-  if (!plan.endAt) return []
-  const end = new Date(`${plan.endAt.slice(0, 10)}T00:00:00`)
-  const keys: string[] = []
-  if (form.taskType === 'MONTHLY') {
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
-    while (cursor <= end) {
-      keys.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`)
-      cursor.setMonth(cursor.getMonth() + 1)
-    }
-  } else {
-    let year = start.getFullYear()
-    let quarter = Math.floor(start.getMonth() / 3) + 1
-    while (
-      year < end.getFullYear() ||
-      (year === end.getFullYear() && quarter <= Math.floor(end.getMonth() / 3) + 1)
-    ) {
-      keys.push(`${year}-Q${quarter}`)
-      quarter += 1
-      if (quarter > 4) {
-        quarter = 1
-        year += 1
-      }
-    }
-  }
-  const occupied = new Set(props.occupiedPeriodKeys)
-  return keys.filter((key) => !occupied.has(key))
-})
+const isQuarterlyTask = computed(() => form.taskType === 'QUARTERLY')
+const periodOptions = computed(() =>
+  trainingPeriodOptions(props.plan, form.taskType, props.occupiedPeriodKeys),
+)
 
 function timestamp(value: string, endOfDay = false) {
   if (!value) return Number.NaN
@@ -266,6 +244,7 @@ function timestamp(value: string, endOfDay = false) {
 }
 
 const taskScheduleError = computed(() => {
+  if (form.name.length > 200) return '自动生成的任务名称超过 200 个字符，请先缩短计划名称。'
   if (!props.plan || !form.startAt) return ''
   const start = timestamp(form.startAt)
   if (!Number.isFinite(start)) return '开始时间格式不正确。'
@@ -276,7 +255,7 @@ const taskScheduleError = computed(() => {
   if (!Number.isFinite(end) || end <= start) return '截止时间必须晚于开始时间。'
   let lower = timestamp(props.plan.startAt)
   let upper = props.plan.endAt ? timestamp(props.plan.endAt, true) : Number.POSITIVE_INFINITY
-  if (form.taskType !== 'TEMPORARY' && form.periodKey) {
+  if (form.taskType !== TRAINING_TASK_TYPES.OTHER && form.periodKey) {
     const monthly = /^(\d{4})-(\d{2})$/u.exec(form.periodKey)
     const quarterly = /^(\d{4})-Q([1-4])$/u.exec(form.periodKey)
     if (monthly) {
@@ -296,7 +275,7 @@ const taskScheduleError = computed(() => {
 const taskFormValid = computed(() =>
   Boolean(
     form.name.trim() &&
-    (form.taskType === 'TEMPORARY' || form.periodKey.trim()) &&
+    (form.taskType === TRAINING_TASK_TYPES.OTHER || form.periodKey.trim()) &&
     form.startAt &&
     (form.isLongRunning || form.endAt) &&
     !taskScheduleError.value &&
@@ -310,9 +289,6 @@ function asTask(row: Record<string, unknown>) {
 }
 function asEmployee(row: Record<string, unknown>) {
   return row as unknown as TrainingPlanEmployeeRecord
-}
-function openTaskIfAllowed(task: TrainingTaskRecord) {
-  if (props.canViewTaskDetail) emit('openTask', task)
 }
 function selectEmployees(rows: Record<string, unknown>[]) {
   selectedEmployees.value = rows.map(asEmployee).filter((employee) => employee.isCurrent)
@@ -340,7 +316,7 @@ function batchResultLabel(result: string) {
 }
 function openTaskForm() {
   Object.assign(form, {
-    taskType: 'TEMPORARY',
+    taskType: TRAINING_TASK_TYPES.OTHER,
     periodKey: '',
     name: '',
     startAt: '',
@@ -419,16 +395,29 @@ function submitTask() {
   }
   emit(
     'createTask',
-    form.taskType === 'TEMPORARY' ? base : { ...base, periodKey: form.periodKey.trim() },
+    form.taskType === TRAINING_TASK_TYPES.OTHER ? base : { ...base, periodKey: form.periodKey.trim() },
   )
 }
 watch(
   () => form.taskType,
-  () => {
+  (value, previous) => {
     form.periodKey = ''
-    if (form.taskType !== 'TEMPORARY') form.isLongRunning = false
+    if (value === 'QUARTERLY' || previous === 'QUARTERLY') {
+      Object.assign(form, { name: '', startAt: '', endAt: '' })
+    }
+    if (value !== TRAINING_TASK_TYPES.OTHER) form.isLongRunning = false
   },
 )
+watch(periodOptions, (keys) => {
+  if (form.periodKey && !keys.includes(form.periodKey)) form.periodKey = ''
+})
+watch([() => form.periodKey, () => props.plan], () => {
+  if (!isQuarterlyTask.value) return
+  Object.assign(
+    form,
+    quarterlyTaskSchedule(props.plan, form.periodKey) ?? { name: '', startAt: '', endAt: '' },
+  )
+})
 watch(
   () => form.isLongRunning,
   (value) => {
@@ -496,21 +485,25 @@ watch(
 </script>
 
 <template>
-  <AppPage class="training-operations-page">
+  <AppPage :resource_element="planDetailElements.page" class="training-operations-page">
     <DetailPageTemplate scroll-mode="page">
       <template #header>
         <PageHeader title="培训计划详情" description="计划资料与任务执行上下文保持在同一页面">
           <template #actions>
-            <el-button @click="emit('back')">返回计划列表</el-button>
+            <el-button v-resource-element="planDetailElements.local" @click="emit('back')"
+              >返回计划列表</el-button
+            >
             <el-button
               v-if="plan?.planType === 'STANDING' && canManageOnboarding"
+              v-resource-element="planDetailElements.candidateOnly"
               v-permission="TRAINING_PERMISSIONS.onboarding.update"
               @click="openOnboarding"
               >配置入职自动纳入</el-button
             >
             <el-button
               v-if="canCreateTask"
-              v-permission="TRAINING_PERMISSIONS.tasks.create"
+              v-resource-element="planDetailElements.createTask"
+              v-permission="planDetailElements.createTask.frontend_resource_code"
               type="primary"
               :disabled="!taskCreationAvailable"
               :title="
@@ -554,7 +547,13 @@ watch(
         show-icon
       >
         <template #default
-          ><el-button link type="primary" @click="emit('retry')">重新加载</el-button></template
+          ><el-button
+            v-resource-element="planDetailElements.page"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          ></template
         >
       </el-alert>
       <el-skeleton v-else-if="state === 'loading'" :rows="8" animated />
@@ -599,6 +598,7 @@ watch(
               />
               <el-button
                 v-if="autoEnrollmentRule?.isEnabled"
+                v-resource-element="planDetailElements.candidateOnly"
                 v-permission="TRAINING_PERMISSIONS.onboarding.update"
                 type="warning"
                 plain
@@ -607,6 +607,7 @@ watch(
               >
               <el-button
                 v-else
+                v-resource-element="planDetailElements.candidateOnly"
                 v-permission="TRAINING_PERMISSIONS.onboarding.update"
                 type="primary"
                 @click="openOnboarding"
@@ -628,10 +629,15 @@ watch(
           <el-tab-pane v-if="canViewTasks" label="计划与任务" name="tasks">
             <div class="training-detail-layout">
               <section class="training-surface">
-                <TableToolbar title="培训任务" :total="effectiveTaskTotal" @refresh="emit('retry')">
+                <TableToolbar
+                  :resource_element="planDetailElements.page"
+                  title="培训任务"
+                  :total="effectiveTaskTotal"
+                  @refresh="emit('retry')"
+                >
                   <template #summary
                     ><span class="training-operations-page__summary"
-                      >月度、季度与临时任务统一在计划内管理</span
+                      >月度、季度与其他任务统一在计划内管理</span
                     ></template
                   >
                 </TableToolbar>
@@ -639,11 +645,11 @@ watch(
                   :data="planTasks as unknown as Record<string, unknown>[]"
                   :columns="taskColumns"
                   height="420px"
-                  @row-click="openTaskIfAllowed(asTask($event))"
                 >
                   <template #name="{ row }"
                     ><button
                       v-if="canViewTaskDetail"
+                      v-resource-element="planDetailElements.taskDetail"
                       class="training-operations-link"
                       type="button"
                       @click.stop="emit('openTask', asTask(row))"
@@ -688,14 +694,8 @@ watch(
                   <template #actions="{ row }"
                     ><RowActionGrid :aria-label="`${asTask(row).name} 的操作`">
                       <el-button
-                        v-permission="TRAINING_PERMISSIONS.tasks.detail"
-                        link
-                        type="primary"
-                        @click.stop="emit('openTask', asTask(row))"
-                        >查看任务</el-button
-                      >
-                      <el-button
                         v-if="canRetryStart(asTask(row))"
+                        v-resource-element="planDetailElements.startTask"
                         v-permission="TRAINING_PERMISSIONS.tasks.start"
                         link
                         type="primary"
@@ -704,6 +704,7 @@ watch(
                       >
                       <el-button
                         v-if="asTask(row).status === 'NOT_STARTED'"
+                        v-resource-element="planDetailElements.deleteTask"
                         v-permission="TRAINING_PERMISSIONS.tasks.delete"
                         link
                         type="danger"
@@ -716,6 +717,7 @@ watch(
                 <AppPagination
                   v-model:page="taskPage"
                   v-model:page-size="taskPageSize"
+                  :resource_element="planDetailElements.tasks"
                   :total="effectiveTaskTotal"
                   @change="emit('queryTasks', taskPage, taskPageSize)"
                 />
@@ -741,11 +743,13 @@ watch(
                 </div>
                 <div class="training-detail-actions">
                   <el-button
+                    v-resource-element="planDetailElements.exitEmployees"
                     v-permission="TRAINING_PERMISSIONS.plans.exitEmployees"
                     :disabled="!selectedEmployees.length"
                     @click="emit('exitEmployees', selectedEmployees)"
                     >批量退出</el-button
                   ><el-button
+                    v-resource-element="planDetailElements.addEmployees"
                     v-permission="TRAINING_PERMISSIONS.plans.addEmployees"
                     type="primary"
                     @click="openEmployeeForm"
@@ -768,6 +772,7 @@ watch(
                 <template #actions="{ row }"
                   ><RowActionGrid :aria-label="`${asEmployee(row).name} 的计划关系操作`"
                     ><el-button
+                      v-resource-element="planDetailElements.history"
                       v-permission="TRAINING_PERMISSIONS.plans.queryEmployees"
                       link
                       type="primary"
@@ -775,13 +780,15 @@ watch(
                       >有效期历史</el-button
                     ><el-button
                       v-if="asEmployee(row).isCurrent"
-                      v-permission="TRAINING_PERMISSIONS.plans.exitEmployees"
+                      v-resource-element="planDetailElements.exitEmployee"
+                      v-permission="TRAINING_PERMISSIONS.plans.exitEmployee"
                       link
                       type="warning"
                       @click="emit('exitEmployees', [asEmployee(row)])"
                       >退出</el-button
                     ><el-button
                       v-else
+                      v-resource-element="planDetailElements.rejoinEmployee"
                       v-permission="TRAINING_PERMISSIONS.plans.rejoinEmployee"
                       link
                       type="primary"
@@ -794,6 +801,7 @@ watch(
               <AppPagination
                 v-model:page="employeePage"
                 v-model:page-size="employeePageSize"
+                :resource_element="planDetailElements.employees"
                 :total="effectiveEmployeeTotal"
                 @change="emit('queryPlanEmployees', employeePage, employeePageSize)"
               />
@@ -812,6 +820,7 @@ watch(
 
     <FormDrawer
       v-model="taskFormVisible"
+      :resource_element="planDetailElements.createTask"
       title="在当前计划中新建任务"
       :size="760"
       :submitting="taskSubmitting"
@@ -830,10 +839,15 @@ watch(
                 :value="type" /></el-select
           ></el-form-item>
           <el-form-item label="任务名称" required
-            ><el-input v-model="form.name" maxlength="200" show-word-limit
+            ><el-input
+              v-model="form.name"
+              :readonly="isQuarterlyTask"
+              :placeholder="isQuarterlyTask ? '选择任务周期后自动生成' : '填写任务名称'"
+              maxlength="200"
+              show-word-limit
           /></el-form-item>
           <el-form-item
-            v-if="form.taskType === 'TEMPORARY' && plan?.planType === 'STANDING'"
+            v-if="form.taskType === TRAINING_TASK_TYPES.OTHER && plan?.planType === 'STANDING'"
             label="执行模式"
             required
             ><el-switch
@@ -841,7 +855,7 @@ watch(
               active-text="长期开放"
               inactive-text="限时任务"
           /></el-form-item>
-          <el-form-item v-if="form.taskType !== 'TEMPORARY'" label="任务周期" required
+          <el-form-item v-if="form.taskType !== TRAINING_TASK_TYPES.OTHER" label="任务周期" required
             ><el-select v-model="form.periodKey" placeholder="选择计划有效期内周期"
               ><el-option
                 v-for="period in periodOptions"
@@ -852,18 +866,23 @@ watch(
           <el-form-item label="开始时间" required
             ><el-date-picker
               v-model="form.startAt"
+              :readonly="isQuarterlyTask"
+              :clearable="!isQuarterlyTask"
               type="datetime"
               value-format="YYYY-MM-DDTHH:mm:ssZ"
           /></el-form-item>
           <el-form-item v-if="!form.isLongRunning" label="截止时间" required
             ><el-date-picker
               v-model="form.endAt"
+              :readonly="isQuarterlyTask"
+              :clearable="!isQuarterlyTask"
               type="datetime"
               value-format="YYYY-MM-DDTHH:mm:ssZ"
           /></el-form-item>
           <el-form-item class="training-form-grid__full" label="课程顺序" required
             ><el-select
               v-model="form.courseIds"
+              v-resource-element="planDetailElements.createCourseOptions"
               multiple
               filterable
               remote
@@ -879,6 +898,7 @@ watch(
           <el-form-item class="training-form-grid__full" label="考试配置" required
             ><el-select
               v-model="form.examId"
+              v-resource-element="planDetailElements.createExamOptions"
               filterable
               remote
               reserve-keyword
@@ -906,8 +926,15 @@ watch(
           show-icon
         />
         <el-alert
-          v-else-if="form.taskType === 'TEMPORARY'"
-          title="临时任务技术周期标识由服务端生成；任务仍受当前计划有效期与 Tenant 边界约束。"
+          v-else-if="isQuarterlyTask"
+          title="名称和起止时间按季度自动生成；计划仅覆盖部分季度时，使用季度与计划有效期的交集。"
+          type="info"
+          :closable="false"
+          show-icon
+        />
+        <el-alert
+          v-else-if="form.taskType === TRAINING_TASK_TYPES.OTHER"
+          title="其他任务技术周期标识由服务端生成；任务仍受当前计划有效期与 Tenant 边界约束。"
           type="info"
           :closable="false"
           show-icon
@@ -917,6 +944,7 @@ watch(
 
     <FormDrawer
       v-model="onboardingVisible"
+      :resource_element="planDetailElements.candidateOnly"
       title="配置入职培训自动纳入"
       :size="760"
       :submitting="onboardingSubmitting"
@@ -973,6 +1001,7 @@ watch(
             <template #actions="{ row }"
               ><el-button
                 v-if="row.status === 'FAILED'"
+                v-resource-element="planDetailElements.candidateOnly"
                 v-permission="TRAINING_PERMISSIONS.onboarding.retry"
                 link
                 type="primary"
@@ -989,6 +1018,7 @@ watch(
 
     <FormDialog
       v-model="onboardingStopVisible"
+      :resource_element="planDetailElements.candidateOnly"
       title="停止接收新员工"
       confirm-type="warning"
       confirm-button-text="停止接收"
@@ -1001,6 +1031,7 @@ watch(
 
     <DetailDrawer
       v-model="historyVisible"
+      :resource_element="planDetailElements.history"
       :title="`${historyEmployee?.name ?? '员工'} · 计划有效期历史`"
       :size="760"
     >
@@ -1020,6 +1051,7 @@ watch(
 
     <DetailDrawer
       v-model="batchResultVisible"
+      :resource_element="planDetailElements.local"
       :title="batchResult?.title ?? '批量处理结果'"
       :size="900"
     >
@@ -1040,6 +1072,7 @@ watch(
 
     <FormDrawer
       v-model="employeeFormVisible"
+      :resource_element="planDetailElements.addEmployees"
       title="加入计划员工"
       :size="640"
       :submitting="employeeSubmitting"
@@ -1051,6 +1084,7 @@ watch(
         <el-form-item label="当前 Tenant 员工" required>
           <el-select
             v-model="employeeIds"
+            v-resource-element="planDetailElements.employeeOptions"
             multiple
             filterable
             remote
@@ -1078,6 +1112,9 @@ watch(
 
     <FormDialog
       v-model="taskConfirmVisible"
+      :resource_element="
+        taskConfirmAction === 'start' ? planDetailElements.startTask : planDetailElements.deleteTask
+      "
       :title="taskConfirmAction === 'start' ? '重试启动培训任务' : '删除培训任务'"
       :confirm-type="taskConfirmAction === 'delete' ? 'danger' : 'primary'"
       :confirm-button-text="taskConfirmAction === 'start' ? '确认重试' : '确认删除'"

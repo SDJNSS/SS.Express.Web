@@ -2,6 +2,15 @@ import { readFileSync } from 'node:fs'
 
 import { defineConfig } from '@playwright/test'
 
+import {
+  appHost,
+  appPort,
+  previewHost,
+  previewPort,
+  sourceHost,
+  sourcePort,
+} from './tests/visual/helpers/testServers'
+
 interface FrontendStandardsRegistry {
   viewports: Array<{
     id: string
@@ -24,6 +33,7 @@ export default defineConfig({
     ? [['line'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
     : 'list',
   snapshotPathTemplate: './UIDesign/baselines/{arg}{ext}',
+  updateSnapshots: 'none',
   expect: {
     timeout: 10_000,
     toHaveScreenshot: {
@@ -34,7 +44,7 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: appHost,
     browserName: 'chromium',
     colorScheme: 'light',
     locale: 'zh-CN',
@@ -48,19 +58,27 @@ export default defineConfig({
   })),
   webServer: [
     {
-      command: 'pnpm dev -- --strictPort',
-      url: 'http://127.0.0.1:4173',
-      reuseExistingServer: !process.env.CI,
+      command: `pnpm exec vite preview --host 127.0.0.1 --port ${appPort} --strictPort`,
+      url: appHost,
+      reuseExistingServer: false,
       timeout: 120_000,
-      stdout: 'ignore',
+      stdout: 'pipe',
       stderr: 'pipe',
     },
     {
-      command: 'pnpm ui:dev -- --strictPort',
-      url: 'http://127.0.0.1:4174',
-      reuseExistingServer: !process.env.CI,
+      command: `pnpm exec vite preview --config UIDesign/vite.config.ts --host 127.0.0.1 --port ${previewPort} --strictPort`,
+      url: previewHost,
+      reuseExistingServer: false,
       timeout: 120_000,
-      stdout: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    },
+    {
+      command: `pnpm exec vite --config tests/visual/helpers/sourceRuntime.config.ts --host 127.0.0.1 --port ${sourcePort} --strictPort`,
+      url: sourceHost,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      stdout: 'pipe',
       stderr: 'pipe',
     },
   ],

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Historical source relocation only; never an active page or approval replacement.",
+  "sources": [
+    {
+      "from": "docs/page-specs/iam-application-resources.yaml",
+      "to": "archive/iam-permission-v1/2026-09-27/docs/page-specs/iam-application-resources.yaml",
+      "sha256": "5deea9df666c1b1f04fca4bea6f5fd5fb2293f34d51f5980f479cb47f0cb18fa"
+    },
+    {
+      "from": "docs/page-specs/iam-role-function-permissions.yaml",
+      "to": "archive/iam-permission-v1/2026-09-27/docs/page-specs/iam-role-function-permissions.yaml",
+      "sha256": "6e574f90793ad059a34dddf6712da2352902f5d2a0c0e58262fdb96a0cbf6cae"
+    },
+    {
+      "from": "docs/page-specs/iam-permission-package-management.yaml",
+      "to": "archive/iam-permission-packages/2026-10-18/docs/page-specs/iam-permission-package-management.yaml",
+      "sha256": "32fcea6c95c61cf66be445389b4aff59bfdc2396e1bcc642d572b7d8dd222d0a"
+    },
+    {
+      "from": "docs/page-specs/iam-permission-package-permissions.yaml",
+      "to": "archive/iam-permission-packages/2026-10-18/docs/page-specs/iam-permission-package-permissions.yaml",
+      "sha256": "35303a423e3d8bc1dac96db74b48d4ef6d8a126e290bdbdaa37c5ba662211529"
+    }
+  ]
+}

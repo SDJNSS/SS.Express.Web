@@ -1,9 +1,11 @@
+import type { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
+
 export type TrainingOperationsPreviewState = 'ready' | 'loading' | 'empty' | 'retryable-error'
 export type PlanStatus = 'DRAFT' | 'PUBLISHED'
 export type TrainingPlanType = 'ANNUAL' | 'STANDING'
 export type PlanFrequency = 'MONTHLY' | 'QUARTERLY'
 export type TaskStatus = 'NOT_STARTED' | 'ACTIVE' | 'OVERDUE' | 'COMPLETED'
-export type TrainingTaskType = 'MONTHLY' | 'QUARTERLY' | 'TEMPORARY'
+export type TrainingTaskType = (typeof TRAINING_TASK_TYPES)[keyof typeof TRAINING_TASK_TYPES]
 export type EmployeeTrainingStatus =
   'NOT_STARTED' | 'LEARNING' | 'READY_FOR_EXAM' | 'EXAM_FAILED' | 'COMPLETED' | 'OVERDUE'
 export type CourseLearningStatus = 'NOT_STARTED' | 'LEARNING' | 'COMPLETED'

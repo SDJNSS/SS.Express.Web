@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const previewHost = 'http://127.0.0.1:4174'
+import { previewHost } from './helpers/testServers'
 
 test.describe('platform framework shell approved preview', () => {
   test('uses the shared shell and ListPage pattern with local-only interactions', async ({

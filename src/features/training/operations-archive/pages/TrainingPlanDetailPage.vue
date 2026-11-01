@@ -7,6 +7,8 @@ import { notification } from '@shared/services/notification'
 import { mapPlanEmployee, mapTrainingPlan, mapTrainingTask } from '../adapters/trainingOperationsAdapter'
 import { currentTrainingTenantId, trainingApiErrorMessage, trainingOperationsApi } from '../api/trainingOperationsApi'
 import TrainingPlanDetailPageView from '../components/TrainingPlanDetailPageView.vue'
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
+import { planDetailElements } from '../iam-resource.registry'
 import { TRAINING_PERMISSIONS } from '../trainingPermissions'
 import type {
   TrainingOperationsPreviewState,
@@ -54,7 +56,8 @@ const planId = computed(() => Number(route.params.planId))
 const initialTab = computed<'tasks' | 'employees'>(() => route.query.tab === 'employees' ? 'employees' : 'tasks')
 const canViewTasks = computed(() => hasPermission(TRAINING_PERMISSIONS.tasks.view))
 const canViewEmployees = computed(() => hasPermission(TRAINING_PERMISSIONS.plans.queryEmployees))
-const canCreateTask = computed(() => hasPermission(TRAINING_PERMISSIONS.tasks.create) && hasPermission(TRAINING_PERMISSIONS.courses.view) && hasPermission(TRAINING_PERMISSIONS.exams.view))
+// Candidate queries belong to this action's Permission, not the course/exam management Menus.
+const canCreateTask = computed(() => hasPermission(planDetailElements.createTask.frontend_resource_code))
 const canViewTaskDetail = computed(() => hasPermission(TRAINING_PERMISSIONS.tasks.detail))
 
 const tenantId = currentTrainingTenantId
@@ -198,7 +201,7 @@ async function searchEmployees(keyword: string) {
 }
 
 async function createTask(value: { taskType: TrainingTaskType; periodKey?: string; name: string; startAt: string; endAt: string; courseIds: number[]; examId: number; requestId: string }) {
-  if (taskSubmitting.value) return
+  if (!canCreateTask.value || taskSubmitting.value) return
   taskSubmitting.value = true
   try {
     const base = {
@@ -211,7 +214,7 @@ async function createTask(value: { taskType: TrainingTaskType; periodKey?: strin
       courses: value.courseIds.map((courseId, index) => ({ course_id: courseId, sort_order: index + 1 })),
       request_id: value.requestId,
     }
-    await trainingOperationsApi.createTask(value.taskType === 'TEMPORARY' ? base : { ...base, period_key: value.periodKey ?? '' })
+    await trainingOperationsApi.createTask(value.taskType === TRAINING_TASK_TYPES.OTHER ? base : { ...base, period_key: value.periodKey ?? '' })
     notification.success('培训任务已创建')
     await Promise.all([loadTasks(1, taskPageSize.value), refreshPlan()])
     taskSubmissionVersion.value += 1

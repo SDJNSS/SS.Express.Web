@@ -6,12 +6,24 @@ page:
     feature: training/operations-archive,
     type: DetailPage,
     patternKey: DetailPageTemplate,
-    revision: 2,
+    revision: 6,
   }
 sources:
   inputMode: prd-only
   prd:
     [
+      {
+        id: training-other-task-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 2026-10-30 任务类型命名调整,
+        purpose: 统一其他任务展示与OTHER代码命名，保持后端TEMPORARY协议及既有行为,
+      },
+      {
+        id: training-quarter-prd,
+        ref: docs/prd/training/training-operations-archive.md,
+        section: 2026-10-21 季度任务表单调整,
+        purpose: 约束计划年度周期选项、季度任务只读名称及自动起止时间,
+      },
       {
         id: training-operations-prd,
         ref: docs/prd/training/training-operations-archive.md,
@@ -133,7 +145,7 @@ composition:
         id: task-form,
         componentKey: shared.form-drawer,
         regionId: form,
-        purpose: 创建月度季度普通临时或常设长期任务,
+        purpose: 创建月度季度其他或常设长期任务,
       },
       {
         id: employee-form,
@@ -172,6 +184,13 @@ states:
   ]
 interactions:
   [
+    {
+      id: quarterly-task-schedule,
+      trigger: 选择季度任务及任务周期,
+      targetRef: form,
+      observableResult: 周期年份严格匹配计划年度；自动生成只读名称和季度日期；部分季度取有效期交集，切换任务类型不残留旧值,
+      ruleRef: training-quarter-prd,
+    },
     {
       id: create-task,
       trigger: 点击新建任务并提交,
@@ -262,6 +281,27 @@ issues:
 acceptance:
   [
     {
+      id: quarterly-task-schedule,
+      sourceRef: training-quarter-prd,
+      observableResult: UTC 跨年日期不产生上年周期；四季度起止时间与只读名称准确；已占用和无交集周期不可选；其他和月度任务仍可手填，其他任务通过OTHER常量保持TEMPORARY协议，提交保留原API与request_id,
+      affectedScopes: [preview-interaction, production-binding, production-regression],
+      testRef: tests/visual/training-operations-production.spec.ts,
+    },
+    {
+      id: exact-create-task-resource,
+      sourceRef: training-permission,
+      observableResult: 新建任务仅检查本页 CREATETASK Button 资源，不附加课程管理或考试管理 Menu 权限；计划未发布及年度计划无员工时仍禁用；失败保留输入和 request_id,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/training-operations-production.spec.ts,
+    },
+    {
+      id: compact-row-actions,
+      sourceRef: project-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    },
+    {
       id: plan-detail,
       sourceRef: training-operations-prd,
       observableResult: 计划详情、服务端分页任务、员工范围、周期规则和幂等重试完整可用,
@@ -292,5 +332,9 @@ acceptance:
 verification:
   {
     viewports: [desktop-1366, desktop-1440, desktop-1920],
-    browserTests: [tests/visual/training-operations-archive-previews.spec.ts],
+    browserTests:
+      [
+        tests/visual/training-operations-archive-previews.spec.ts,
+        tests/visual/training-operations-production.spec.ts,
+      ],
   }

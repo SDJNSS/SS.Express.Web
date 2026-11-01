@@ -5,7 +5,7 @@ page:
   feature: training/content-exam
   type: ListPage
   patternKey: ListPageTemplate
-  revision: 2
+  revision: 5
 sources:
   inputMode: prd-only
   prd:
@@ -32,8 +32,8 @@ sources:
       }
     - {
         id: iam-runtime-permission,
-        ref: docs/api/iam-admin-api.md,
-        section: Permission CurrentFunctions,
+        ref: docs/api/iam-shell-context.md,
+        section: 页面与按钮权限,
         purpose: 定义正式运行时功能权限发现机制,
       }
   ux:
@@ -194,6 +194,27 @@ issues:
       }
 acceptance:
   - {
+      id: question-id-and-single-answer,
+      sourceRef: training-prd,
+      observableResult: 列表展示只读题目ID，多选至少三个选项且允许单个正确答案，零个正确答案仍阻止提交；后端旧规则拒绝时保留输入,
+      affectedScopes: [preview-interaction, production-binding],
+      testRef: tests/visual/training-paper-selection.spec.ts,
+    }
+  - {
+      id: permission-loading,
+      sourceRef: iam-runtime-permission,
+      observableResult: 权限未就绪或属于其他页时保持加载且不请求业务；路由提交后用最终条件只查询一次，真实拒绝及查询失败仍拦截或可重试，旧响应不覆盖新上下文,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/training-permission-loading.spec.ts,
+    }
+  - {
+      id: compact-row-actions,
+      sourceRef: list-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
+  - {
       id: production-api-binding,
       sourceRef: training-content-api,
       observableResult: 正式页面按接口执行查询详情写入并保留失败上下文,
@@ -221,4 +242,6 @@ verification:
     [
       tests/visual/training-content-exam-previews.spec.ts,
       tests/visual/training-content-production.spec.ts,
+      tests/visual/training-permission-loading.spec.ts,
+      tests/visual/training-paper-selection.spec.ts,
     ]

@@ -4,7 +4,6 @@ import type {
   ExamConfigurationRecord,
   PaperRecord,
   QuestionRecord,
-  QuestionType,
 } from '../types/trainingContent'
 import type { CourseForm, ExamForm, PaperForm, QuestionForm } from '../types/trainingContentRuntime'
 import type {
@@ -69,7 +68,7 @@ export function mapQuestion(dto: QuestionSummaryDto | QuestionDetailDto): Questi
   }
 }
 export function mapPaper(dto: PaperSummaryDto | PaperDetailDto): PaperRecord {
-  const detail = 'fixed_questions' in dto ? dto : undefined
+  const detail = 'questions' in dto ? dto : undefined
   return {
     ...audit(dto),
     id: dto.id,
@@ -81,7 +80,7 @@ export function mapPaper(dto: PaperSummaryDto | PaperDetailDto): PaperRecord {
     randomizeQuestionOrder: detail?.random_question_order ?? false,
     randomizeOptionOrder: detail?.random_option_order ?? false,
     fixedQuestions:
-      detail?.fixed_questions
+      detail?.questions
         .map((q) => ({
           questionId: q.question_id,
           stem: q.question_text,
@@ -89,30 +88,24 @@ export function mapPaper(dto: PaperSummaryDto | PaperDetailDto): PaperRecord {
           status: q.question_status,
           score: q.question_score,
           order: q.sort_order,
+          questionUpdatedAt: q.question_updated_at,
         }))
         .sort((a, b) => a.order - b.order) ?? [],
     randomRules: detail
-      ? [
-          {
-            type: 'SINGLE_CHOICE',
-            count: detail.single_choice_count ?? 0,
-            scorePerQuestion: detail.single_choice_score ?? 0,
-            availableCount: 0,
-          },
-          {
-            type: 'MULTIPLE_CHOICE',
-            count: detail.multiple_choice_count ?? 0,
-            scorePerQuestion: detail.multiple_choice_score ?? 0,
-            availableCount: 0,
-          },
-          {
-            type: 'TRUE_FALSE',
-            count: detail.true_false_count ?? 0,
-            scorePerQuestion: detail.true_false_score ?? 0,
-            availableCount: 0,
-          },
-        ]
+      ? detail.groups.map((group) => ({
+          type: group.question_type,
+          count: group.count,
+          scorePerQuestion: group.question_score ?? 0,
+          totalScore: group.total_score ?? undefined,
+          availableCount: 0,
+        }))
       : [],
+    ...(detail
+      ? {
+          configurationValid: detail.is_configuration_valid,
+          configurationInvalidReason: detail.configuration_invalid_reason,
+        }
+      : {}),
   }
 }
 export function mapExam(dto: ExamDto): ExamConfigurationRecord {
@@ -156,30 +149,21 @@ export function questionPayload(form: QuestionForm): QuestionContentRequest {
   }
 }
 export function paperPayload(form: PaperForm): PaperContentRequest {
-  const rule = (type: QuestionType) => form.randomRules.find((item) => item.type === type)
-  const count = (type: QuestionType) => (form.mode === 'RANDOM' ? (rule(type)?.count ?? 0) : null)
-  const score = (type: QuestionType) =>
-    count(type) ? (rule(type)?.scorePerQuestion ?? null) : null
+  if (!form.fixedQuestions.length || form.fixedQuestions.some((q) => !q.questionUpdatedAt))
+    throw new Error('请先确认完整题集及每题版本；保存不会自动抽题，请刷新或重新选择缺少版本的题目')
   return {
     paper_name: form.name.trim(),
     paper_mode: form.mode,
     total_score: form.totalScore,
     random_question_order: form.randomizeQuestionOrder,
     random_option_order: form.randomizeOptionOrder,
-    fixed_questions:
-      form.mode === 'FIXED'
-        ? form.fixedQuestions.map((item, index) => ({
-            question_id: item.questionId,
-            question_score: item.score,
-            sort_order: index + 1,
-          }))
-        : [],
-    single_choice_count: count('SINGLE_CHOICE'),
-    single_choice_score: score('SINGLE_CHOICE'),
-    multiple_choice_count: count('MULTIPLE_CHOICE'),
-    multiple_choice_score: score('MULTIPLE_CHOICE'),
-    true_false_count: count('TRUE_FALSE'),
-    true_false_score: score('TRUE_FALSE'),
+    questions: form.fixedQuestions.map((item, index) => ({
+      question_id: item.questionId,
+      question_score: item.score,
+      sort_order: index + 1,
+      question_type: item.type,
+      question_updated_at: item.questionUpdatedAt!,
+    })),
   }
 }
 export function examPayload(form: ExamForm): ExamContentRequest {

@@ -345,7 +345,6 @@ async function exportCurrent(tab: StatisticsTab) {
 }
 
 onMounted(() => {
-  document.title = '专项统计 · 陆链控制台'
   void Promise.all([loadOptions(), load('task')])
 })
 </script>

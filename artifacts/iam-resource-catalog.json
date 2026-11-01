@@ -1,6 +1,6 @@
 {
-  "schema_version": "2.0",
-  "generated_at": "2026-09-20T08:36:16.522Z",
+  "schema_version": "3.0",
+  "generated_at": "2026-10-30T16:04:14.042Z",
   "apps": [
     {
       "app_code": "DMS",
@@ -14,16 +14,18 @@
         {
           "resource_code": "DMS",
           "resource_name": "DMS 物流平台门户",
+          "source": "frontend",
           "resource_type": "module",
           "icon": "",
           "is_visible": false,
           "sort_order": 0,
           "status": "active",
-          "remarks": "默认 Module；承载统一 AppShell、Welcome 与 Dashboard。",
+          "remarks": "用途：组织平台 Welcome 与物流总览入口的结构 Module，无独立业务 API；场景：还原平台导航父级，不因拥有此节点获得后代页面或操作权限。",
           "menus": [
             {
               "resource_code": "DMS.DASHBOARD",
               "resource_name": "物流运营总览",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/platform/dashboard",
               "component": "platform/dashboard/pages/PlatformDashboardPage",
@@ -32,12 +34,12 @@
               "is_visible": true,
               "sort_order": 10,
               "status": "active",
-              "remarks": "DMS 的可见导航入口；Dashboard 自身即为 Menu，不再重复登记同路由 Page。",
+              "remarks": "用途：展示物流运营总览本地演示数据或登录欢迎内容，无真实运输统计 API；场景：查看总览样式与已授权导航，不能据演示数据下达运输任务。",
               "pages": [
                 {
                   "resource_code": "DMS.DASHBOARD.WELCOME",
                   "resource_name": "Welcome",
-                  "resource_type": "page",
+                  "resource_type": "button_page",
                   "route_path": "/platform/welcome",
                   "component": "platform/dashboard/pages/PlatformWelcomePage",
                   "permission_code": "dms:welcome:view",
@@ -45,12 +47,133 @@
                   "is_visible": false,
                   "sort_order": 10,
                   "status": "active",
-                  "remarks": "无 Dashboard 权限时进入的隐藏兜底页面，不出现在导航菜单。",
+                  "remarks": "用途：展示登录欢迎和可访问业务入口，不调用业务统计或写入 API；场景：无 Dashboard 权限用户的登录落点，不代表拥有其他业务权限。",
                   "pages": [],
-                  "functions": []
+                  "buttons": [],
+                  "functions": [],
+                  "source": "frontend"
                 }
               ],
-              "functions": []
+              "buttons": [],
+              "functions": [
+                {
+                  "resource_code": "DMS.DASHBOARD.CURRENT_APPS",
+                  "resource_name": "查询当前可用 App",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:current-apps",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CurrentApps",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "AppShell 初始化必需 Function。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CURRENT_APP_MENUS",
+                  "resource_name": "查询当前 App 导航",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:current-app-menus",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CurrentAppMenus",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "AppShell 初始化必需 Function。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CURRENT_MODULES",
+                  "resource_name": "查询当前 App Module",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:current-modules",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CurrentModules",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "兼容现有 Module 导航查询。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CURRENT_MODULE_MENUS",
+                  "resource_name": "查询当前 Module 菜单",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:current-module-menus",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CurrentModuleMenus",
+                  "is_visible": false,
+                  "sort_order": 40,
+                  "status": "active",
+                  "remarks": "兼容现有 Module 菜单查询。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CURRENT_FUNCTIONS",
+                  "resource_name": "查询当前 Menu 功能",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:current-functions",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CurrentFunctions",
+                  "is_visible": false,
+                  "sort_order": 50,
+                  "status": "active",
+                  "remarks": "运行时功能权限发现接口。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CHECK_FUNCTION",
+                  "resource_name": "校验当前功能权限",
+                  "resource_type": "function",
+                  "permission_code": "dms:framework:check-function",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Permission/CheckFunction",
+                  "is_visible": false,
+                  "sort_order": 60,
+                  "status": "active",
+                  "remarks": "运行时按稳定资源编码检查功能权限。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.SWITCH_TENANT",
+                  "resource_name": "切换当前 Tenant",
+                  "resource_type": "function",
+                  "permission_code": "dms:session:switch-tenant",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Auth/SwitchTenant",
+                  "is_visible": false,
+                  "sort_order": 70,
+                  "status": "active",
+                  "remarks": "认证会话自服务接口；仍由服务端校验用户实际 Tenant 归属。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CHANGE_INITIAL_PASSWORD",
+                  "resource_name": "修改初始密码",
+                  "resource_type": "function",
+                  "permission_code": "dms:session:change-initial-password",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Auth/ChangeInitialPassword",
+                  "is_visible": false,
+                  "sort_order": 80,
+                  "status": "active",
+                  "remarks": "初始密码受限登录状态使用。"
+                },
+                {
+                  "resource_code": "DMS.DASHBOARD.CHANGE_PASSWORD",
+                  "resource_name": "修改本人密码",
+                  "resource_type": "function",
+                  "permission_code": "dms:session:change-password",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/Auth/ChangePassword",
+                  "is_visible": false,
+                  "sort_order": 90,
+                  "status": "active",
+                  "remarks": "认证用户修改本人密码。"
+                }
+              ]
             }
           ]
         }
@@ -68,16 +191,18 @@
         {
           "resource_code": "IAM",
           "resource_name": "IAM 身份权限管理",
+          "source": "frontend",
           "resource_type": "module",
           "icon": "",
           "is_visible": false,
           "sort_order": 0,
           "status": "active",
-          "remarks": "默认 Module",
+          "remarks": "用途：组织身份、租户、组织岗位、员工、角色与权限治理菜单，无独立业务 API；场景：还原 IAM 导航分组，不代表自动拥有成员、授权或高危操作能力。",
           "menus": [
             {
               "resource_code": "IAM.OVERVIEW",
               "resource_name": "身份总览",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/overview",
               "component": "iam/overview/pages/IamOverviewPage",
@@ -86,13 +211,15 @@
               "is_visible": true,
               "sort_order": 1,
               "status": "active",
-              "remarks": "产品确认的 IAM 默认入口；当前仅展示本地概览，不登记虚构统计 Function。",
+              "remarks": "用途：展示身份中心入口及当前本地演示指标，不调用业务统计 API；场景：导航到已授权的身份管理页面，不作为真实人数或风险统计依据。",
               "pages": [],
+              "buttons": [],
               "functions": []
             },
             {
               "resource_code": "IAM.GROUP",
               "resource_name": "集团信息",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/group",
               "component": "iam/foundation/pages/GroupProfilePage",
@@ -101,8 +228,22 @@
               "is_visible": true,
               "sort_order": 10,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：通过 Group/Info 读取部署集团的品牌、联系与区域资料；场景：核对集团共享信息，不用于查询租户或切换登录租户。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.GROUP.BUTTON.EDIT",
+                  "resource_name": "编辑集团信息",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:group:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：更新集团基础、联系与区域资料，Logo 经 DMS 上传后保存文件引用；场景：修订集团共享资料，编码不可手工修改。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.GROUP.VIEW",
@@ -135,6 +276,7 @@
             {
               "resource_code": "IAM.TENANTS",
               "resource_name": "Tenant 管理",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/tenants",
               "component": "iam/foundation/pages/TenantManagementPage",
@@ -143,8 +285,46 @@
               "is_visible": true,
               "sort_order": 20,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询租户目录及租户资料；场景：平台管理员查找和核对租户，不将目录结果用作本人可切换租户清单。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TENANTS.BUTTON.CREATE",
+                  "resource_name": "新建 Tenant",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:tenants:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：事务创建租户及首名管理员，图片经 DMS 上传，企业名称取租户名称；场景：开通新租户，不由用户填写系统编码。"
+                },
+                {
+                  "resource_code": "IAM.TENANTS.BUTTON.EDIT",
+                  "resource_name": "编辑 Tenant",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:tenants:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：更新指定租户的名称、Logo、联系及区域设置并刷新目录；场景：维护租户主资料，不切换当前会话租户。"
+                },
+                {
+                  "resource_code": "IAM.TENANTS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:tenants:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 Tenant/ChangeStatus 启用或停用指定租户；场景：控制租户当前可用性，不物理删除租户或重建其编码。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.TENANTS.QUERY",
@@ -203,6 +383,7 @@
             {
               "resource_code": "IAM.ORGANIZATIONS",
               "resource_name": "组织管理",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/organizations",
               "component": "iam/foundation/pages/OrganizationManagementPage",
@@ -211,8 +392,58 @@
               "is_visible": true,
               "sort_order": 30,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户组织并展示层级及详情；场景：定位部门和上下级关系，查询不改变组织或成员归属。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.ORGANIZATIONS.BUTTON.CREATE",
+                  "resource_name": "新建组织",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:organizations:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：创建当前租户组织，可查询负责人候选并选择上级组织；场景：新增部门或顶级组织，组织编码由服务端生成。"
+                },
+                {
+                  "resource_code": "IAM.ORGANIZATIONS.BUTTON.EDIT",
+                  "resource_name": "编辑组织",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:organizations:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：更新组织名称、负责人及允许的资料，候选负责人限定当前租户；场景：修订组织资料，调整父级使用独立层级操作。"
+                },
+                {
+                  "resource_code": "IAM.ORGANIZATIONS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:organizations:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：启用或停用选定组织并重查组织树；场景：控制组织当前有效性，不删除组织或直接改写员工归属。"
+                },
+                {
+                  "resource_code": "IAM.ORGANIZATIONS.BUTTON.MOVE",
+                  "resource_name": "调整组织层级",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:organizations:button:move",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 40,
+                  "status": "active",
+                  "remarks": "用途：通过 Organization/Move 修改组织父级并刷新树；场景：调整当前租户部门层级，不修改成员、岗位或角色授权。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.ORGANIZATIONS.QUERY",
@@ -297,6 +528,7 @@
             {
               "resource_code": "IAM.POSITIONS",
               "resource_name": "岗位管理",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/positions",
               "component": "iam/foundation/pages/PositionManagementPage",
@@ -305,8 +537,46 @@
               "is_visible": true,
               "sort_order": 40,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户岗位的名称、类型、状态、人数和详情；场景：核对岗位目录，不将岗位自动解释为权限角色。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.POSITIONS.BUTTON.CREATE",
+                  "resource_name": "新建岗位",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:positions:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：创建当前租户岗位并刷新列表，岗位编码由服务端生成；场景：登记新的工作岗位，不自动给员工分配岗位或角色。"
+                },
+                {
+                  "resource_code": "IAM.POSITIONS.BUTTON.EDIT",
+                  "resource_name": "编辑岗位",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:positions:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：更新岗位名称、类型、排序等允许字段并刷新列表；场景：维护岗位主资料，不修改岗位编码或员工归属。"
+                },
+                {
+                  "resource_code": "IAM.POSITIONS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:positions:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 Position/ChangeStatus 启用或停用岗位；场景：控制岗位当前可用性，不删除历史成员岗位关系。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.POSITIONS.QUERY",
@@ -365,6 +635,7 @@
             {
               "resource_code": "IAM.MEMBERS",
               "resource_name": "用户与成员",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/members",
               "component": "iam/foundation/pages/MembershipManagementPage",
@@ -373,104 +644,225 @@
               "is_visible": true,
               "sort_order": 50,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：按当前租户筛选用户及成员，读取详情、组织岗位关系和角色，筛选候选来自 QueryFilterOptions；场景：查找员工及核对身份，不跨租户聚合管理。",
               "pages": [
                 {
-                  "resource_code": "IAM.MEMBERS.PERMISSIONS",
-                  "resource_name": "用户角色与权限",
-                  "resource_type": "page",
-                  "route_path": "/iam/members/permissions",
-                  "component": "iam/access-control/pages/MemberPermissionPage",
-                  "permission_code": "iam:members:permissions",
-                  "icon": "mdi:account-key-outline",
+                  "resource_code": "IAM.MEMBERS.EFFECTIVE_PERMISSIONS",
+                  "resource_name": "用户有效权限",
+                  "source": "frontend",
+                  "resource_type": "button_page",
+                  "permission_code": "iam:members:effective-permissions:view",
+                  "route_path": "/iam/members/effective-permissions",
+                  "component": "iam/permission-governance/pages/UserEffectivePermissionsPage",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：通过 QueryUserPermissions 读取当前租户用户的原子有效 Permission、资源及来源角色；场景：只读排查用户能访问什么及授权来源，不直接授予权限。",
+                  "pages": [],
+                  "buttons": [],
+                  "functions": []
+                }
+              ],
+              "buttons": [
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.CREATE",
+                  "resource_name": "新增 Tenant 成员",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:create",
+                  "icon": "",
                   "is_visible": false,
                   "sort_order": 10,
                   "status": "active",
-                  "remarks": "",
-                  "pages": [],
-                  "functions": [
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_USER_TENANTS",
-                      "resource_name": "查询用户 Tenant 关系",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/Membership/QueryUserTenants",
-                      "is_visible": false,
-                      "sort_order": 10,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ROLES",
-                      "resource_name": "查询可分配角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryRoles",
-                      "is_visible": false,
-                      "sort_order": 20,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ASSIGNMENTS",
-                      "resource_name": "查询用户当前 Tenant 角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/MemberRole/Query",
-                      "is_visible": false,
-                      "sort_order": 30,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_FUNCTIONS",
-                      "resource_name": "查询当前 Tenant 成员功能权限",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/Permission/QueryMemberFunctionPermissions",
-                      "is_visible": false,
-                      "sort_order": 40,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.ASSIGN_ROLE",
-                      "resource_name": "为用户分配角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:assign-role",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/MemberRole/Assign",
-                      "is_visible": false,
-                      "sort_order": 50,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.MEMBERS.PERMISSIONS.REVOKE_ROLE",
-                      "resource_name": "移除用户角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:members:permissions:revoke-role",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/MemberRole/Revoke",
-                      "is_visible": false,
-                      "sort_order": 60,
-                      "status": "active",
-                      "remarks": ""
-                    }
-                  ]
+                  "remarks": "用途：创建新用户或关联已有账号加入当前租户，可上传头像并设置初始组织岗位；场景：建立租户成员，编码和成员显示名由服务端生成。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.EDIT_USER",
+                  "resource_name": "编辑基本信息",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:edit-user",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：通过 UpdateUser 修改姓名、手机、邮箱、头像等共享基本信息，登录账号只读且保留原昵称数据；场景：修订用户资料，可能影响该账号在其他租户的展示，不修改成员归属。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.EDIT_MEMBER",
+                  "resource_name": "编辑成员资料",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:edit-member",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 UpdateMember 更新当前租户成员的允许资料并回读详情；场景：修订租户内成员信息，不改共享用户资料或系统生成编码、显示名。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.MEMBER_STATUS",
+                  "resource_name": "启用/停用成员",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:member-status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 40,
+                  "status": "active",
+                  "remarks": "用途：启用或停用当前租户成员关系并回读；场景：冻结或恢复该租户内成员，不停用全局账号、不永久清退成员。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.ORGANIZATION",
+                  "resource_name": "维护组织归属",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:organization",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 50,
+                  "status": "active",
+                  "remarks": "用途：新增或编辑成员组织关系，编辑使用原关系 ID/版本并选择当前租户组织；场景：维护主要组织和有效期，历史结束关系只读，不新增重复关系替代编辑。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.POSITION",
+                  "resource_name": "维护岗位归属",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:position",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 60,
+                  "status": "active",
+                  "remarks": "用途：新增或编辑成员岗位关系，编辑使用原关系 ID/版本并选择当前租户岗位；场景：维护主要岗位和有效期，不据岗位推导角色或功能权限。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.ASSIGN_ROLE",
+                  "resource_name": "分配角色",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:assign-role",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 70,
+                  "status": "active",
+                  "remarks": "用途：查询成员已有角色和可分配角色，再通过 Assign 添加当前租户角色关系；场景：在员工详情抽屉分配角色，不直接授予 Function 或任命管理员。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.REVOKE_ROLE",
+                  "resource_name": "移除角色",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:revoke-role",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 80,
+                  "status": "active",
+                  "remarks": "用途：通过 Revoke 移除当前租户成员的所选角色并回读；场景：撤销该角色带来的授权，不移除其他角色或取消管理员身份。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.APPOINT_ADMIN",
+                  "resource_name": "任命管理员",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:appoint-admin",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 90,
+                  "status": "active",
+                  "remarks": "用途：通过 AppointTenantAdmin 任命当前租户有效成员为管理员并回读；场景：SA 执行管理员身份变更，不以身份代替明确的业务 Permission 授权。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.CANCEL_ADMIN",
+                  "resource_name": "取消管理员",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:cancel-admin",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 100,
+                  "status": "active",
+                  "remarks": "用途：通过 CancelTenantAdmin 取消当前租户管理员身份并回读，受最后一名有效管理员限制；场景：SA 调整管理职责，不撤销普通角色或结束成员关系。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.END_ORGANIZATION",
+                  "resource_name": "结束组织归属",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:end-organization",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 110,
+                  "status": "active",
+                  "remarks": "用途：通过 EndOrganization 设置指定组织关系的结束时间并保留历史；场景：结束员工的一段组织归属，不删除组织或自动指定新主要组织。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.BUTTON.END_POSITION",
+                  "resource_name": "结束岗位归属",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:members:button:end-position",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 120,
+                  "status": "active",
+                  "remarks": "用途：通过 EndPosition 设置指定岗位关系的结束时间并保留历史；场景：结束员工的一段岗位归属，不删除岗位或自动指定新主要岗位。"
                 }
               ],
               "functions": [
+                {
+                  "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ROLES",
+                  "resource_name": "查询可分配角色",
+                  "resource_type": "function",
+                  "permission_code": "iam:members:permissions:view",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/RolePermission/QueryRoles",
+                  "is_visible": false,
+                  "sort_order": 150,
+                  "status": "active",
+                  "remarks": "原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ASSIGNMENTS",
+                  "resource_name": "查询用户角色关系",
+                  "resource_type": "function",
+                  "permission_code": "iam:members:permissions:view",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/MemberRole/Query",
+                  "is_visible": false,
+                  "sort_order": 160,
+                  "status": "active",
+                  "remarks": "原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.PERMISSIONS.ASSIGN_ROLE",
+                  "resource_name": "分配用户角色",
+                  "resource_type": "function",
+                  "permission_code": "iam:members:permissions:assign-role",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/MemberRole/Assign",
+                  "is_visible": false,
+                  "sort_order": 170,
+                  "status": "active",
+                  "remarks": "原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。"
+                },
+                {
+                  "resource_code": "IAM.MEMBERS.PERMISSIONS.REVOKE_ROLE",
+                  "resource_name": "移除用户角色",
+                  "resource_type": "function",
+                  "permission_code": "iam:members:permissions:revoke-role",
+                  "icon": "",
+                  "http_method": "POST",
+                  "api_path": "/iam-admin/MemberRole/Revoke",
+                  "is_visible": false,
+                  "sort_order": 180,
+                  "status": "active",
+                  "remarks": "原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。"
+                },
                 {
                   "resource_code": "IAM.MEMBERS.QUERY_USERS",
                   "resource_name": "查询用户及 Tenant 成员",
@@ -684,6 +1076,7 @@
             {
               "resource_code": "IAM.ROLES",
               "resource_name": "角色管理",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/roles",
               "component": "iam/access-control/pages/RoleManagementPage",
@@ -692,174 +1085,42 @@
               "is_visible": true,
               "sort_order": 60,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户角色的名称、类型、状态和详情；场景：查找待维护角色或进入其成员、直接 Permission 授权页，不在查询中修改授权。",
               "pages": [
                 {
-                  "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS",
-                  "resource_name": "角色功能权限",
-                  "resource_type": "page",
-                  "route_path": "/iam/roles/function-permissions",
-                  "component": "iam/access-control/pages/RoleFunctionPermissionPage",
-                  "permission_code": "iam:roles:function-permissions",
-                  "icon": "mdi:shield-key-outline",
+                  "resource_code": "IAM.ROLES.AUTHORIZATION",
+                  "resource_name": "角色授权",
+                  "source": "frontend",
+                  "resource_type": "button_page",
+                  "permission_code": "iam:roles:authorization:view",
+                  "route_path": "/iam/roles/authorization",
+                  "component": "iam/permission-governance/pages/RoleAuthorizationPage",
+                  "icon": "",
                   "is_visible": false,
-                  "sort_order": 10,
+                  "sort_order": 5,
                   "status": "active",
-                  "remarks": "",
+                  "remarks": "用途：读取当前租户指定角色的明确 Permission、完整候选及资源详情；场景：审核角色授权草稿，资源和分组只读，树父子关系不产生继承。",
                   "pages": [],
-                  "functions": [
+                  "buttons": [
                     {
-                      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_ROLE",
-                      "resource_name": "查询当前角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:roles:function-permissions:view",
+                      "resource_code": "IAM.ROLES.AUTHORIZATION.SAVE",
+                      "resource_name": "保存角色授权",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:roles:authorization:save",
                       "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryRoles",
                       "is_visible": false,
                       "sort_order": 10,
                       "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_SYSTEMS",
-                      "resource_name": "查询授权系统",
-                      "resource_type": "function",
-                      "permission_code": "iam:roles:function-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/AuthorizationCatalog/QuerySystems",
-                      "is_visible": false,
-                      "sort_order": 20,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY",
-                      "resource_name": "查询功能权限",
-                      "resource_type": "function",
-                      "permission_code": "iam:roles:function-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryFunctionPermissions",
-                      "is_visible": false,
-                      "sort_order": 30,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.SAVE",
-                      "resource_name": "保存功能权限",
-                      "resource_type": "function",
-                      "permission_code": "iam:roles:function-permissions:update",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/SaveFunctionPermissions",
-                      "is_visible": false,
-                      "sort_order": 40,
-                      "status": "active",
-                      "remarks": ""
+                      "remarks": "用途：通过 Save 提交角色最终明确 Permission ID 集合、角色及目录快照版本；场景：保存已确认的授权增删，空集合表示清空，结果未知时禁止盲目重提。"
                     }
-                  ]
-                },
-                {
-                  "resource_code": "IAM.ROLES.DATA_PERMISSIONS",
-                  "resource_name": "角色数据权限",
-                  "resource_type": "page",
-                  "route_path": "/iam/roles/data-permissions",
-                  "component": "iam/access-control/pages/RoleDataPermissionPage",
-                  "permission_code": "iam:roles:data-permissions",
-                  "icon": "mdi:database-lock-outline",
-                  "is_visible": false,
-                  "sort_order": 20,
-                  "status": "active",
-                  "remarks": "",
-                  "pages": [],
-                  "functions": [
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_ROLE",
-                      "resource_name": "查询当前角色",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryRoles",
-                      "is_visible": false,
-                      "sort_order": 10,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_SYSTEMS",
-                      "resource_name": "查询授权系统",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/AuthorizationCatalog/QuerySystems",
-                      "is_visible": false,
-                      "sort_order": 20,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_DOMAINS",
-                      "resource_name": "查询数据域",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryDataDomains",
-                      "is_visible": false,
-                      "sort_order": 30,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY",
-                      "resource_name": "查询数据权限",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/QueryDataPermissions",
-                      "is_visible": false,
-                      "sort_order": 40,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_TENANT_OPTIONS",
-                      "resource_name": "查询 Tenant 数据范围选项",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:view",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/Tenant/Query",
-                      "is_visible": false,
-                      "sort_order": 50,
-                      "status": "active",
-                      "remarks": ""
-                    },
-                    {
-                      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.SAVE",
-                      "resource_name": "保存数据权限",
-                      "resource_type": "function",
-                      "permission_code": "iam:role-data-permissions:update",
-                      "icon": "",
-                      "http_method": "POST",
-                      "api_path": "/iam-admin/RolePermission/SaveDataPermission",
-                      "is_visible": false,
-                      "sort_order": 60,
-                      "status": "active",
-                      "remarks": ""
-                    }
-                  ]
+                  ],
+                  "functions": []
                 },
                 {
                   "resource_code": "IAM.ROLES.ASSIGNMENTS",
                   "resource_name": "角色成员",
-                  "resource_type": "page",
+                  "resource_type": "button_page",
                   "route_path": "/iam/roles/assignments",
                   "component": "iam/access-control/pages/RoleAssignmentPage",
                   "permission_code": "iam:roles:assignments",
@@ -867,8 +1128,34 @@
                   "is_visible": false,
                   "sort_order": 30,
                   "status": "active",
-                  "remarks": "",
+                  "remarks": "用途：查询当前租户指定角色的直接成员及有效性；场景：核对谁已获得该角色，添加和移除成员需使用独立操作。",
                   "pages": [],
+                  "buttons": [
+                    {
+                      "resource_code": "IAM.ROLES.ASSIGNMENTS.BUTTON.ASSIGN",
+                      "resource_name": "添加角色成员",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:roles:assignments:button:assign",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 10,
+                      "status": "active",
+                      "remarks": "用途：从当前租户成员中选择用户并调用 Assign 建立角色关系，随后回读；场景：向指定角色增加成员，不修改角色权限或管理员身份。"
+                    },
+                    {
+                      "resource_code": "IAM.ROLES.ASSIGNMENTS.BUTTON.REVOKE",
+                      "resource_name": "移除角色成员",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:roles:assignments:button:revoke",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 20,
+                      "status": "active",
+                      "remarks": "用途：调用 Revoke 撤销选中成员与当前角色的关系并回读；场景：收回该角色授予，不退出租户、不取消管理员身份。"
+                    }
+                  ],
                   "functions": [
                     {
                       "resource_code": "IAM.ROLES.ASSIGNMENTS.QUERY_TENANT_OPTIONS",
@@ -948,7 +1235,46 @@
                       "status": "active",
                       "remarks": ""
                     }
-                  ]
+                  ],
+                  "source": "frontend"
+                }
+              ],
+              "buttons": [
+                {
+                  "resource_code": "IAM.ROLES.BUTTON.CREATE",
+                  "resource_name": "新建角色",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:roles:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：创建当前租户的自定义角色并刷新列表，编码由服务端生成；场景：建立新职责角色，后续另行明确授予 Permission。"
+                },
+                {
+                  "resource_code": "IAM.ROLES.BUTTON.EDIT",
+                  "resource_name": "编辑角色",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:roles:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：更新所选角色的名称、类型、说明和排序等允许字段并回读；场景：修订角色资料，不通过编辑资料替代权限或成员分配。"
+                },
+                {
+                  "resource_code": "IAM.ROLES.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:roles:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 ChangeRoleStatus 启用或停用角色并回读；场景：暂停或恢复角色有效性，保留既有权限和成员关系。"
                 }
               ],
               "functions": [
@@ -1020,153 +1346,263 @@
               ]
             },
             {
-              "resource_code": "IAM.APPLICATION_RESOURCES",
-              "resource_name": "应用与权限资源",
+              "resource_code": "IAM.SYSTEM_RESOURCES",
+              "resource_name": "系统资源目录",
+              "source": "frontend",
               "resource_type": "menu",
-              "route_path": "/iam/application-resources",
-              "component": "iam/application-resources/pages/ApplicationResourcesPage",
-              "permission_code": "iam:application-resources:view",
-              "icon": "mdi:layers-triple-outline",
+              "route_path": "/iam/system-resources",
+              "component": "iam/permission-governance/pages/SystemResourceCatalogPage",
+              "permission_code": "iam:system-resources:view",
+              "icon": "mdi:file-tree-outline",
               "is_visible": true,
-              "sort_order": 70,
+              "sort_order": 80,
               "status": "active",
-              "remarks": "仅集团超级管理员可见",
+              "remarks": "用途：按 App、类型、名称或编码查询原始资源并读取详情；场景：核对资源目录、前端路由或后端 Method/Path，不聚合引用统计或执行授权。",
               "pages": [],
-              "functions": [
+              "buttons": [
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.VIEW",
-                  "resource_name": "查看应用与权限资源",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:view",
+                  "resource_code": "IAM.SYSTEM_RESOURCES.CREATE",
+                  "resource_name": "新增资源",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:system-resources:create",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/Permission/SystemResources",
                   "is_visible": false,
                   "sort_order": 10,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：创建前端 Module/Menu/Button/ButtonPage 或后端 Function，父级按同 App 类型选择，编码由后端生成；场景：人工登记资源事实，不自动创建 Permission 或授予角色。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.CREATE_APP",
-                  "resource_name": "创建 App",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:create",
+                  "resource_code": "IAM.SYSTEM_RESOURCES.UPDATE",
+                  "resource_name": "编辑资源",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:system-resources:update",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/CreateSystem",
                   "is_visible": false,
                   "sort_order": 20,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：先 Get 最新资源及版本，再更新可编辑名称、路由或接口等类型适用字段；场景：修正资源定义，保留身份、所属 App 和维护归属，不直接修改角色授权。"
+                }
+              ],
+              "functions": []
+            },
+            {
+              "resource_code": "IAM.PERMISSIONS",
+              "resource_name": "权限管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/permissions",
+              "component": "iam/permission-governance/pages/PermissionManagementPage",
+              "permission_code": "iam:permissions:view",
+              "icon": "mdi:shield-key-outline",
+              "is_visible": true,
+              "sort_order": 90,
+              "status": "active",
+              "remarks": "用途：按名称查询当前租户 Permission 并读取其元数据与资源组合；场景：定位业务能力进行维护，不把展示父级当作授权继承。",
+              "pages": [
+                {
+                  "resource_code": "IAM.PERMISSIONS.CONFIGURATION",
+                  "resource_name": "权限功能配置",
+                  "source": "frontend",
+                  "resource_type": "button_page",
+                  "permission_code": "iam:permissions:configuration:view",
+                  "route_path": "/iam/permissions/configuration",
+                  "component": "iam/permission-governance/pages/PermissionConfigurationPage",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：读取指定 Permission 与资源候选，展示前端业务根及关联 Function；场景：核对并准备调整精确资源组合，浏览或搜索本身不保存授权。",
+                  "pages": [],
+                  "buttons": [
+                    {
+                      "resource_code": "IAM.PERMISSIONS.CONFIGURATION.SAVE",
+                      "resource_name": "保存权限功能配置",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:permissions:configuration:save",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 10,
+                      "status": "active",
+                      "remarks": "用途：通过 SaveTree 保存当前 Permission 的完整资源组合并携带版本；场景：明确增加或移除该能力使用的前后端资源，保存前核对差异，不直接分配角色。"
+                    }
+                  ],
+                  "functions": []
+                }
+              ],
+              "buttons": [
+                {
+                  "resource_code": "IAM.PERMISSIONS.UPDATE",
+                  "resource_name": "编辑权限",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:permissions:update",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：读取最新 Permission 后更新名称、说明、排序、展示父级及默认联动配置；场景：修订权限定义，不隐式更改既有角色授权集合。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.UPDATE_APP",
-                  "resource_name": "编辑 App",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:update",
+                  "resource_code": "IAM.PERMISSIONS.CREATE",
+                  "resource_name": "新建权限",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:permissions:create",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/UpdateSystem",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：在选定 App 创建 Permission 基本定义，编码由后端生成，随后进入资源配置；场景：登记新的业务能力，不通过创建自动授予角色。"
+                },
+                {
+                  "resource_code": "IAM.PERMISSIONS.COPY",
+                  "resource_name": "复制权限",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:permissions:copy",
+                  "icon": "",
                   "is_visible": false,
                   "sort_order": 30,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：通过 Copy 复制现有 Permission 并提交新名称、展示父级及默认联动配置；场景：复用资源组合建立独立权限，不复制角色授权关系。"
+                }
+              ],
+              "functions": []
+            },
+            {
+              "resource_code": "IAM.DICTIONARIES",
+              "resource_name": "字典管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/dictionaries",
+              "component": "iam/dictionaries/pages/DictionaryManagementPage",
+              "permission_code": "iam:dictionaries:view",
+              "icon": "",
+              "is_visible": true,
+              "sort_order": 120,
+              "status": "active",
+              "remarks": "用途：按编码精确、名称等关键词模糊查询平台字典并读取字典值；场景：授权用户查阅公共枚举，写按钮仅授予SA，不按租户隔离，不包含业务数据修复。",
+              "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.DICTIONARIES.CREATE",
+                  "resource_name": "新建字典",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：原子创建字典及可选初始字典值；场景：SA 登记稳定业务编码，失败不留下部分记录。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.CHANGE_APP_STATUS",
-                  "resource_name": "变更 App 状态",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:change-status",
+                  "resource_code": "IAM.DICTIONARIES.UPDATE",
+                  "resource_name": "编辑字典",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:update",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/ChangeSystemStatus",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：按版本更新字典名称和描述；场景：修订说明，编码与字典值保持独立。"
+                },
+                {
+                  "resource_code": "IAM.DICTIONARIES.ENABLE",
+                  "resource_name": "启用字典",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:enable",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：按当前版本启用平台字典，仅恢复自身启用子值的可用性；场景：重新开放公共枚举，不启用单独停用的值、不恢复已删除记录。"
+                },
+                {
+                  "resource_code": "IAM.DICTIONARIES.DISABLE",
+                  "resource_name": "停用字典",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:disable",
+                  "icon": "",
                   "is_visible": false,
                   "sort_order": 40,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：按当前版本停用平台字典，使全部值不可用于新业务；场景：暂停公共枚举，保留数据及子值自身状态、版本和历史引用。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.DELETE_APP",
-                  "resource_name": "删除 App",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:delete",
+                  "resource_code": "IAM.DICTIONARIES.CREATE_ITEM",
+                  "resource_name": "新增字典值",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:create-item",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/DeleteSystem",
                   "is_visible": false,
                   "sort_order": 50,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：在指定字典中新增值及排序、状态、颜色和 JSON 扩展数据；场景：扩充公共枚举，编码在字典内唯一。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.CREATE_RESOURCE",
-                  "resource_name": "创建权限资源",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:create",
+                  "resource_code": "IAM.DICTIONARIES.UPDATE_ITEM",
+                  "resource_name": "编辑字典值",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:update-item",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/CreateResource",
                   "is_visible": false,
                   "sort_order": 60,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：按独立版本更新值的属性；场景：修订枚举显示，不修改编码、不移动字典。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.UPDATE_RESOURCE",
-                  "resource_name": "编辑权限资源",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:update",
+                  "resource_code": "IAM.DICTIONARIES.ENABLE_ITEM",
+                  "resource_name": "启用字典值",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:enable-item",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/UpdateResource",
                   "is_visible": false,
                   "sort_order": 70,
                   "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：按独立版本启用指定字典值；场景：重新开放单个枚举，父字典停用时仍不可用于新业务，不隐式启用父字典。"
                 },
                 {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.CHANGE_RESOURCE_STATUS",
-                  "resource_name": "变更权限资源状态",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:change-status",
+                  "resource_code": "IAM.DICTIONARIES.DISABLE_ITEM",
+                  "resource_name": "停用字典值",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:dictionaries:disable-item",
                   "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/ChangeResourceStatus",
                   "is_visible": false,
                   "sort_order": 80,
                   "status": "active",
-                  "remarks": ""
-                },
-                {
-                  "resource_code": "IAM.APPLICATION_RESOURCES.DELETE_RESOURCE",
-                  "resource_name": "删除权限资源",
-                  "resource_type": "function",
-                  "permission_code": "iam:application-resources:delete",
-                  "icon": "",
-                  "http_method": "POST",
-                  "api_path": "/iam-admin/AuthorizationCatalog/DeleteResource",
-                  "is_visible": false,
-                  "sort_order": 90,
-                  "status": "active",
-                  "remarks": ""
+                  "remarks": "用途：按独立版本停用指定字典值；场景：暂停单个枚举，不删除数据，不修改父字典或其他值，不改写历史引用。"
                 }
-              ]
+              ],
+              "functions": []
             }
           ]
         },
         {
           "resource_code": "IAM.TRAINING",
           "resource_name": "培训中心",
+          "source": "frontend",
           "resource_type": "module",
           "icon": "mdi:school-outline",
           "is_visible": false,
           "sort_order": 100,
           "status": "active",
-          "remarks": "IAM App 下独立培训中心 Module；所有数据由当前 Tenant 上下文隔离。",
+          "remarks": "用途：组织培训素材、考试规则、计划执行、档案和统计菜单，无独立业务 API；场景：导航到当前租户已授权的培训功能，不代表已完成学习或考试。",
           "menus": [
             {
               "resource_code": "IAM.TRAINING.OVERVIEW",
               "resource_name": "培训概览",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/training/overview",
               "component": "training/operations-archive/pages/TrainingOperationsOverviewPage",
@@ -1175,8 +1611,9 @@
               "is_visible": true,
               "sort_order": 10,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户培训概览、趋势及未完成、当前逾期或曾逾期人员；场景：监控真实培训进度并下钻问题人员，三类范围不得混用。",
               "pages": [],
+              "buttons": [],
               "functions": [
                 {
                   "resource_code": "IAM.TRAINING.OVERVIEW.QUERY",
@@ -1248,6 +1685,7 @@
             {
               "resource_code": "IAM.TRAINING.PLANS",
               "resource_name": "培训计划",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/training/plans",
               "component": "training/operations-archive/pages/TrainingPlanManagementPage",
@@ -1256,12 +1694,12 @@
               "is_visible": true,
               "sort_order": 20,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户年度及常设培训计划、状态与任务摘要；场景：定位计划后进入其任务及员工列表，不将所有任务混为独立运营列表。",
               "pages": [
                 {
                   "resource_code": "IAM.TRAINING.PLANS.DETAIL",
                   "resource_name": "培训计划详情",
-                  "resource_type": "page",
+                  "resource_type": "button_page",
                   "route_path": "/iam/training/plans/:planId",
                   "component": "training/operations-archive/pages/TrainingPlanDetailPage",
                   "permission_code": "iam:training:plan-detail:view",
@@ -1269,12 +1707,12 @@
                   "is_visible": false,
                   "sort_order": 10,
                   "status": "active",
-                  "remarks": "",
+                  "remarks": "用途：读取指定计划详情、其任务、当前员工与成员历史；场景：在计划上下文核对任务进度和员工范围，不查询其他租户员工。",
                   "pages": [
                     {
                       "resource_code": "IAM.TRAINING.PLANS.DETAIL.TASK",
                       "resource_name": "培训任务详情",
-                      "resource_type": "page",
+                      "resource_type": "button_page",
                       "route_path": "/iam/training/plans/:planId/tasks/:taskId",
                       "component": "training/operations-archive/pages/TrainingTaskDetailPage",
                       "permission_code": "iam:training:task-detail:view",
@@ -1282,8 +1720,46 @@
                       "is_visible": false,
                       "sort_order": 10,
                       "status": "active",
-                      "remarks": "",
+                      "remarks": "用途：读取计划内任务、课程考试统计及员工执行记录，并按人数状态下钻；场景：核对学习与考试完成情况，结果以服务端为准，不在查看时修改进度。",
                       "pages": [],
+                      "buttons": [
+                        {
+                          "resource_code": "IAM.TRAINING.PLANS.DETAIL.TASK.BUTTON.EDIT",
+                          "resource_name": "编辑培训任务",
+                          "source": "frontend",
+                          "resource_type": "button",
+                          "permission_code": "iam:training:plans:detail:task:button:edit",
+                          "icon": "",
+                          "is_visible": false,
+                          "sort_order": 10,
+                          "status": "active",
+                          "remarks": "用途：查询课程和考试候选后更新指定任务内容及允许资料并回读；场景：修订当前计划的培训安排，不直接编辑员工学习、答题或成绩。"
+                        },
+                        {
+                          "resource_code": "IAM.TRAINING.PLANS.DETAIL.TASK.BUTTON.START",
+                          "resource_name": "重试启动培训任务",
+                          "source": "frontend",
+                          "resource_type": "button",
+                          "permission_code": "iam:training:plans:detail:task:button:start",
+                          "icon": "",
+                          "is_visible": false,
+                          "sort_order": 20,
+                          "status": "active",
+                          "remarks": "用途：通过 TrainingTask/Start 重试启动当前任务并刷新详情和员工记录；场景：处理允许重试的任务启动，不重新创建任务。"
+                        },
+                        {
+                          "resource_code": "IAM.TRAINING.PLANS.DETAIL.TASK.BUTTON.DELETE",
+                          "resource_name": "删除培训任务",
+                          "source": "frontend",
+                          "resource_type": "button",
+                          "permission_code": "iam:training:plans:detail:task:button:delete",
+                          "icon": "",
+                          "is_visible": false,
+                          "sort_order": 30,
+                          "status": "active",
+                          "remarks": "用途：通过 TrainingTask/Delete 删除允许删除的当前任务；场景：清理错误任务，成功后离开已删除详情，不静默删除整个计划。"
+                        }
+                      ],
                       "functions": [
                         {
                           "resource_code": "IAM.TRAINING.PLANS.DETAIL.TASK.QUERY",
@@ -1402,7 +1878,94 @@
                           "status": "active",
                           "remarks": ""
                         }
-                      ]
+                      ],
+                      "source": "frontend"
+                    }
+                  ],
+                  "buttons": [
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.CREATETASK",
+                      "resource_name": "新建培训任务",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:create-task",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 10,
+                      "status": "active",
+                      "remarks": "用途：查询课程、考试和已有周期后在当前计划创建培训任务；场景：安排月度、季度、其他或符合常设规则的长期任务，成功后回读计划及任务。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.STARTTASK",
+                      "resource_name": "重试启动培训任务",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:start-task",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 20,
+                      "status": "active",
+                      "remarks": "用途：通过 TrainingTask/Start 重试启动指定任务并回读；场景：恢复服务端允许重试的启动流程，不重复创建任务或伪造员工进度。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.DELETETASK",
+                      "resource_name": "删除培训任务",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:delete-task",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 30,
+                      "status": "active",
+                      "remarks": "用途：通过 TrainingTask/Delete 删除当前计划下允许删除的任务并回读；场景：清理错误任务，遵守任务状态和引用校验。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.ADDEMPLOYEES",
+                      "resource_name": "加入计划员工",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:add-employees",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 40,
+                      "status": "active",
+                      "remarks": "用途：查询当前租户用户并通过 BatchAdd 加入当前培训计划；场景：扩大本计划员工范围，不创建新用户或将其他租户人员加入。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.EXITEMPLOYEE",
+                      "resource_name": "退出计划员工",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:exit-employee",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 50,
+                      "status": "active",
+                      "remarks": "用途：通过 Exit 退出当前计划中的指定员工并回读；场景：调整计划应培训范围，保留既有培训事实，不退出租户成员关系。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.EXITEMPLOYEES",
+                      "resource_name": "批量退出计划员工",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:exit-employees",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 60,
+                      "status": "active",
+                      "remarks": "用途：通过 Exit 或 BatchExit 退出当前计划中明确选定的员工并回读；场景：批量调整计划员工范围，不按当前分页默认为全部员工。"
+                    },
+                    {
+                      "resource_code": "IAM.TRAINING.PLANS.DETAIL.BUTTON.REJOINEMPLOYEE",
+                      "resource_name": "重新加入计划",
+                      "source": "frontend",
+                      "resource_type": "button",
+                      "permission_code": "iam:training:plans:detail:button:rejoin-employee",
+                      "icon": "",
+                      "is_visible": false,
+                      "sort_order": 70,
+                      "status": "active",
+                      "remarks": "用途：通过 Rejoin 恢复历史退出员工在当前计划中的关系并回读；场景：重新纳入应培训范围，不删除旧历史或伪造完成结果。"
                     }
                   ],
                   "functions": [
@@ -1536,7 +2099,58 @@
                       "status": "active",
                       "remarks": ""
                     }
-                  ]
+                  ],
+                  "source": "frontend"
+                }
+              ],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.PLANS.BUTTON.CREATE",
+                  "resource_name": "新建培训计划",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:plans:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：创建年度或常设计划并刷新列表；场景：建立培训安排，常设计划不提交年度、结束时间或月度季度频率。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.PLANS.BUTTON.EDIT",
+                  "resource_name": "编辑培训计划",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:plans:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：通过 Update 修改选定培训计划的允许资料并回读；场景：修订计划名称、有效期等定义，常设与年度字段规则分别校验。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.PLANS.BUTTON.PUBLISH",
+                  "resource_name": "发布培训计划",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:plans:button:publish",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 Publish 发布指定培训计划并刷新状态；场景：将符合条件的计划投入运营，发布前由服务端校验，不伪造任务完成结果。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.PLANS.BUTTON.DELETE",
+                  "resource_name": "删除培训计划",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:plans:button:delete",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 40,
+                  "status": "active",
+                  "remarks": "用途：确认目标后调用 Delete 删除服务端允许删除的计划并刷新列表；场景：清理不再需要的计划，受状态和引用约束，不以停用冒充删除。"
                 }
               ],
               "functions": [
@@ -1610,6 +2224,7 @@
             {
               "resource_code": "IAM.TRAINING.EMPLOYEE_ARCHIVES",
               "resource_name": "员工培训档案",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/training/employee-archives",
               "component": "training/operations-archive/pages/EmployeeTrainingArchivePage",
@@ -1618,8 +2233,46 @@
               "is_visible": true,
               "sort_order": 30,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：查询当前租户员工档案，并读取计划任务、课程结果及考试历史；场景：按员工、组织、岗位、计划等核对真实培训记录，保留独立执行轮次。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.EMPLOYEE_ARCHIVES.BUTTON.EXPORT",
+                  "resource_name": "导出员工培训档案",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:employee_archives:button:export",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：按当前服务端筛选导出员工培训档案；场景：离线核对或归档员工培训情况，不以当前页可见行替代完整筛选范围。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.EMPLOYEE_ARCHIVES.BUTTON.SENSITIVEEXPORT",
+                  "resource_name": "导出档案及考试材料",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:employee_archives:button:sensitive-export",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：按选择导出员工档案及考试审计材料，并保留导出范围；场景：授权后的审计取证，涉及敏感考试材料时须明确确认。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.EMPLOYEE_ARCHIVES.BUTTON.SNAPSHOT",
+                  "resource_name": "查看历史答题快照",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:employee_archives:button:snapshot",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 ExamSnapshot 读取指定历史考试的答题与试卷快照；场景：授权后的争议核查，不用当前题库替代历史内容，不修改成绩。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.TRAINING.EMPLOYEE_ARCHIVES.QUERY",
@@ -1782,6 +2435,7 @@
             {
               "resource_code": "IAM.TRAINING.STATISTICS",
               "resource_name": "培训专项统计",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/iam/training/statistics",
               "component": "training/operations-archive/pages/TrainingStatisticsPage",
@@ -1790,8 +2444,34 @@
               "is_visible": true,
               "sort_order": 40,
               "status": "active",
-              "remarks": "",
+              "remarks": "用途：按当前租户和筛选查询任务、课程、考试、逾期统计并下钻人员；场景：分析培训完成和异常，执行人次、去重人数及各类比率分别展示。",
               "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.STATISTICS.BUTTON.EXPORT",
+                  "resource_name": "导出任务台账",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:statistics:button:export",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：按当前统计筛选通过 ExportTaskLedger 导出任务台账；场景：离线核验培训执行明细，不以页面汇总数字生成替代材料。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.STATISTICS.BUTTON.AUDITEXPORT",
+                  "resource_name": "导出考试审计材料",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:statistics:button:audit-export",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：通过 ExportExamMaterials 导出筛选范围内考试审计材料；场景：授权后的考试核查取证，包含敏感信息，需确认范围。"
+                }
+              ],
               "functions": [
                 {
                   "resource_code": "IAM.TRAINING.STATISTICS.TASKS",
@@ -1963,6 +2643,234 @@
                   "remarks": ""
                 }
               ]
+            },
+            {
+              "resource_code": "IAM.TRAINING.COURSES",
+              "resource_name": "课程管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/training/courses",
+              "component": "training/content-exam/pages/CourseManagementPage",
+              "permission_code": "iam:training:courses:view",
+              "icon": "",
+              "is_visible": true,
+              "sort_order": 270,
+              "status": "active",
+              "remarks": "用途：分页查询当前租户课程、读取课程详情并按需获取视频临时链接进行只读预览；场景：查找与检查培训素材，播放不写入员工学习时长或完成记录。",
+              "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.COURSES.BUTTON.CREATE",
+                  "resource_name": "新建课程",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:courses:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：上传并校验 DMS 视频，获取标准化视频和缩略图进行只读核对，再创建课程；场景：建立培训素材，仅保存文件引用与计划时长，不写学习记录。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.COURSES.BUTTON.EDIT",
+                  "resource_name": "编辑课程",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:courses:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：读取最新课程并预览现有视频，替换视频上传校验后获取标准化播放与缩略图，再更新课程资料；场景：维护前核对素材，预览不写员工学习记录。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.COURSES.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:courses:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：通过 ChangeStatus 启用或停用课程并刷新列表；场景：控制课程可选状态，不删除历史培训结果。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.COURSES.BUTTON.COPY",
+                  "resource_name": "复制课程",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:courses:button:copy",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 40,
+                  "status": "active",
+                  "remarks": "用途：按源课程 ID 调用 Copy 生成独立副本，副本名称由服务端生成；场景：复用已有素材建立新课程，再按需编辑。"
+                }
+              ],
+              "functions": []
+            },
+            {
+              "resource_code": "IAM.TRAINING.QUESTIONS",
+              "resource_name": "题库管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/training/questions",
+              "component": "training/content-exam/pages/QuestionBankPage",
+              "permission_code": "iam:training:questions:view",
+              "icon": "",
+              "is_visible": true,
+              "sort_order": 280,
+              "status": "active",
+              "remarks": "用途：查询题目列表并按需读取题干、题型、选项、正确答案和解析；场景：维护考题素材，不是员工答题或成绩查询入口。",
+              "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.QUESTIONS.BUTTON.CREATE",
+                  "resource_name": "新建题库",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:questions:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：创建题目及其选项、正确答案和解析；场景：向题库补充考题，提交前按题型校验正确答案数量。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.QUESTIONS.BUTTON.EDIT",
+                  "resource_name": "编辑题库",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:questions:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：读取题目完整详情及并发时间戳后更新题干、选项、答案和解析；场景：修订现有考题，不把列表摘要当完整题目覆盖。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.QUESTIONS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:questions:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：启用或停用选定题目并重查列表；场景：控制后续选题可用性，不通过状态操作改写既有答题事实。"
+                }
+              ],
+              "functions": []
+            },
+            {
+              "resource_code": "IAM.TRAINING.PAPERS",
+              "resource_name": "试卷管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/training/papers",
+              "component": "training/content-exam/pages/PaperManagementPage",
+              "permission_code": "iam:training:papers:view",
+              "icon": "",
+              "is_visible": true,
+              "sort_order": 290,
+              "status": "active",
+              "remarks": "用途：查询试卷并读取已保存的最终题集、分值和排序详情；场景：核对考试使用的试卷，查看不会重新抽题，不代表执行考试或批改。",
+              "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.PAPERS.BUTTON.CREATE",
+                  "resource_name": "新建试卷",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:papers:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：选择题目或生成随机初稿后按明确最终题集创建试卷；场景：准备考试试卷，携带每题版本并精确均分，保存不重新抽题。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.PAPERS.BUTTON.EDIT",
+                  "resource_name": "编辑试卷",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:papers:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：读取最新试卷和可用题目后更新组卷、分值与随机顺序配置；场景：修订试卷定义，保留并发时间戳，不生成员工考试记录。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.PAPERS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:papers:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：启用或停用试卷并刷新列表；场景：控制试卷后续可选状态，不删除历史考试材料。"
+                }
+              ],
+              "functions": []
+            },
+            {
+              "resource_code": "IAM.TRAINING.EXAMS",
+              "resource_name": "考试配置管理",
+              "source": "frontend",
+              "resource_type": "menu",
+              "route_path": "/iam/training/exams",
+              "component": "training/content-exam/pages/ExamConfigurationPage",
+              "permission_code": "iam:training:exams:view",
+              "icon": "",
+              "is_visible": true,
+              "sort_order": 300,
+              "status": "active",
+              "remarks": "用途：查询考试配置并读取关联试卷、考试时长、及格分、次数和反馈规则；场景：核对考试规则，不是参加考试或查看个人成绩。",
+              "pages": [],
+              "buttons": [
+                {
+                  "resource_code": "IAM.TRAINING.EXAMS.BUTTON.CREATE",
+                  "resource_name": "新建考试配置",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:exams:button:create",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 10,
+                  "status": "active",
+                  "remarks": "用途：查询启用试卷并创建考试配置，设置时长、及格分、次数及答案解析反馈；场景：为培训任务准备可引用的考试规则。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.EXAMS.BUTTON.EDIT",
+                  "resource_name": "编辑考试配置",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:exams:button:edit",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 20,
+                  "status": "active",
+                  "remarks": "用途：读取最新考试与原试卷，再更新关联试卷和考试规则；场景：修订考试配置，新选试卷须可用，不把未返回的试卷状态伪造为启用。"
+                },
+                {
+                  "resource_code": "IAM.TRAINING.EXAMS.BUTTON.STATUS",
+                  "resource_name": "启用/停用",
+                  "source": "frontend",
+                  "resource_type": "button",
+                  "permission_code": "iam:training:exams:button:status",
+                  "icon": "",
+                  "is_visible": false,
+                  "sort_order": 30,
+                  "status": "active",
+                  "remarks": "用途：启用或停用考试配置并回读列表；场景：控制后续任务引用的可用性，不改写真实成绩或通过结果。"
+                }
+              ],
+              "functions": []
             }
           ]
         }
@@ -1980,16 +2888,18 @@
         {
           "resource_code": "TMS",
           "resource_name": "TMS 运输管理",
+          "source": "frontend",
           "resource_type": "module",
           "icon": "",
           "is_visible": false,
           "sort_order": 0,
           "status": "active",
-          "remarks": "默认 Module",
+          "remarks": "用途：组织运输管理导航，无独立业务 API；场景：承载运输总览与后续业务菜单，不表示订单、调度、行程等未实现入口已经可操作。",
           "menus": [
             {
               "resource_code": "TMS.OVERVIEW",
               "resource_name": "运输总览",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/tms/overview",
               "component": "tms/overview/pages/TmsOverviewPage",
@@ -1998,8 +2908,9 @@
               "is_visible": true,
               "sort_order": 1,
               "status": "active",
-              "remarks": "产品确认的 TMS 默认入口；当前仅展示本地概览，不登记虚构统计 Function。",
+              "remarks": "用途：展示运输管理入口及本地演示指标，无真实订单、调度或行程统计 API；场景：进入已授权运输模块，不以演示数字作调度决策。",
               "pages": [],
+              "buttons": [],
               "functions": []
             }
           ]
@@ -2018,16 +2929,18 @@
         {
           "resource_code": "VMS",
           "resource_name": "VMS 车辆管理",
+          "source": "frontend",
           "resource_type": "module",
           "icon": "",
           "is_visible": false,
           "sort_order": 0,
           "status": "active",
-          "remarks": "默认 Module",
+          "remarks": "用途：组织车务管理导航，无独立业务 API；场景：承载车务总览及后续菜单，不恢复已退役车辆样本，也不隐式授权后代。",
           "menus": [
             {
               "resource_code": "VMS.OVERVIEW",
               "resource_name": "车辆管理总览",
+              "source": "frontend",
               "resource_type": "menu",
               "route_path": "/vms/overview",
               "component": "vms/overview/pages/VmsOverviewPage",
@@ -2036,8 +2949,9 @@
               "is_visible": true,
               "sort_order": 1,
               "status": "active",
-              "remarks": "产品确认的 VMS 默认入口；当前仅展示本地概览，不登记虚构统计 Function。",
+              "remarks": "用途：展示车务管理入口及本地演示指标，无真实车辆运营统计 API；场景：访问已授权车务模块，不执行已退役车辆样本的新增、导出或编辑。",
               "pages": [],
+              "buttons": [],
               "functions": []
             }
           ]

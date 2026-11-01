@@ -10,6 +10,7 @@ defineProps<{
   setAsDefault: boolean
   state: FoundationPreviewState
   account?: string | undefined
+  mode?: 'select' | 'switch'
 }>()
 
 const emit = defineEmits<{
@@ -32,7 +33,7 @@ const emit = defineEmits<{
           :selected-id="selectedId"
           :set-as-default="setAsDefault"
           :state="state"
-          mode="select"
+          :mode="mode ?? 'select'"
           @select="emit('select', $event)"
           @update:set-as-default="emit('update:setAsDefault', $event)"
           @submit="emit('submit')"

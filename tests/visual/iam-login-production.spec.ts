@@ -110,7 +110,7 @@ test.describe('IAM login production binding', () => {
 
     page.on('request', (request) => {
       if (
-        /Permission\/CurrentApps|Permission\/CurrentAppMenus|Membership\/QueryUsers/.test(
+        /Permission\/CurrentApps|Permission\/CurrentAppMenus|Auth\/CurrentProfile|Membership\/QueryUsers/.test(
           request.url(),
         )
       ) {

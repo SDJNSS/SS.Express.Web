@@ -1,6 +1,14 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { resourceRegistry as overviewResources } from './overview/iam-resource.registry'
+import { resourceRegistry as foundationResources } from './foundation/iam-resource.registry'
+import { resourceRegistry as accessControlResources } from './access-control/iam-resource.registry'
+import { resourceRegistry as permissionGovernanceResources } from './permission-governance/iam-resource.registry'
+import { resourceRegistry as dictionaryResources } from './dictionaries/iam-resource.registry'
 
-import { IAM_PERMISSIONS } from '@shared/constants/iamPermissions'
+import {
+  IAM_PERMISSION_GOVERNANCE_RESOURCES,
+  IAM_PERMISSIONS,
+} from '@shared/constants/iamPermissions'
 
 export const iamPublicRoutes: RouteRecordRaw[] = [
   {
@@ -19,11 +27,26 @@ export const iamPublicRoutes: RouteRecordRaw[] = [
 
 export const iamRoutes: RouteRecordRaw[] = [
   {
+    path: 'iam/dictionaries',
+    name: 'iam-dictionary-management',
+    component: () => import('./dictionaries/pages/DictionaryManagementPage.vue'),
+    meta: {
+      title: '字典管理',
+      subsystem: 'iam',
+      resourceCode: dictionaryResources.dictionaries.resource_code,
+      resource_element: dictionaryResources.dictionaries.elements.page.resource_element,
+      authorizationModel: 'v2',
+      breadcrumb: ['IAM 身份中心', '字典管理'],
+    },
+  },
+  {
     path: 'iam/overview',
     name: 'iam-overview',
     component: () => import('./overview/pages/IamOverviewPage.vue'),
     meta: {
       title: 'IAM 身份中心',
+      resourceCode: overviewResources.overview.resource_code,
+      resource_element: overviewResources.overview.elements.page.resource_element,
       subsystem: 'iam',
       permission: 'iam:overview:view',
       breadcrumb: ['IAM 身份中心', '身份总览'],
@@ -37,6 +60,8 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: '集团信息',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.group.view,
+      resourceCode: foundationResources.group.resource_code,
+      resource_element: foundationResources.group.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', '集团信息'],
     },
   },
@@ -48,6 +73,8 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: 'Tenant 管理',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.tenants.view,
+      resourceCode: foundationResources.tenants.resource_code,
+      resource_element: foundationResources.tenants.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', 'Tenant 管理'],
     },
   },
@@ -59,6 +86,8 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: '组织管理',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.organizations.view,
+      resourceCode: foundationResources.organizations.resource_code,
+      resource_element: foundationResources.organizations.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', '组织管理'],
     },
   },
@@ -70,6 +99,8 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: '岗位管理',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.positions.view,
+      resourceCode: foundationResources.positions.resource_code,
+      resource_element: foundationResources.positions.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', '岗位管理'],
     },
   },
@@ -81,6 +112,8 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: '用户与成员',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.members.view,
+      resourceCode: foundationResources.members.resource_code,
+      resource_element: foundationResources.members.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', '用户与成员'],
     },
   },
@@ -92,42 +125,78 @@ export const iamRoutes: RouteRecordRaw[] = [
       title: '角色管理',
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.roles.view,
+      resourceCode: accessControlResources.roles.resource_code,
+      resource_element: accessControlResources.roles.elements.page.resource_element,
       breadcrumb: ['IAM 身份中心', '角色管理'],
     },
   },
   {
-    path: 'iam/application-resources',
-    name: 'iam-application-resources',
-    component: () => import('./application-resources/pages/ApplicationResourcesPage.vue'),
+    path: 'iam/system-resources',
+    name: 'iam-system-resource-catalog',
+    component: () => import('./permission-governance/pages/SystemResourceCatalogPage.vue'),
     meta: {
-      title: '应用与权限资源',
+      title: '系统资源目录',
       subsystem: 'iam',
-      permission: IAM_PERMISSIONS.applicationResources.view,
-      breadcrumb: ['IAM 身份中心', '应用与权限资源'],
+      authorizationModel: 'v2',
+      resourceCode: IAM_PERMISSION_GOVERNANCE_RESOURCES.systemResources.view,
+      resource_element: permissionGovernanceResources.catalog.elements.page.resource_element,
+      breadcrumb: ['IAM 身份中心', '系统资源目录'],
     },
   },
   {
-    path: 'iam/roles/function-permissions',
-    name: 'iam-role-function-permissions',
-    component: () => import('./access-control/pages/RoleFunctionPermissionPage.vue'),
+    path: 'iam/permissions',
+    name: 'iam-permission-management',
+    component: () => import('./permission-governance/pages/PermissionManagementPage.vue'),
     meta: {
-      title: '角色功能权限',
+      title: '权限管理',
       subsystem: 'iam',
-      permission: IAM_PERMISSIONS.roles.queryFunctionPermissions,
-      hidden: true,
-      breadcrumb: ['IAM 身份中心', '角色管理', '功能权限'],
+      authorizationModel: 'v2',
+      resourceCode: IAM_PERMISSION_GOVERNANCE_RESOURCES.permissions.view,
+      resource_element: permissionGovernanceResources.permissions.elements.page.resource_element,
+      breadcrumb: ['IAM 身份中心', '权限管理'],
     },
   },
   {
-    path: 'iam/roles/data-permissions',
-    name: 'iam-role-data-permissions',
-    component: () => import('./access-control/pages/RoleDataPermissionPage.vue'),
+    path: 'iam/permissions/configuration',
+    name: 'iam-permission-configuration',
+    component: () => import('./permission-governance/pages/PermissionConfigurationPage.vue'),
     meta: {
-      title: '角色数据权限',
+      title: '权限功能配置',
       subsystem: 'iam',
-      permission: IAM_PERMISSIONS.roles.queryDataPermissions,
+      authorizationModel: 'v2',
+      resourceCode: IAM_PERMISSION_GOVERNANCE_RESOURCES.permissions.configure,
+      resource_element: permissionGovernanceResources.configuration.elements.page.resource_element,
       hidden: true,
-      breadcrumb: ['IAM 身份中心', '角色管理', '数据权限'],
+      breadcrumb: ['IAM 身份中心', '权限管理', '权限功能配置'],
+    },
+  },
+  {
+    path: 'iam/roles/authorization',
+    name: 'iam-role-authorization',
+    component: () => import('./permission-governance/pages/RoleAuthorizationPage.vue'),
+    meta: {
+      title: '角色授权',
+      subsystem: 'iam',
+      authorizationModel: 'v2',
+      resourceCode: IAM_PERMISSION_GOVERNANCE_RESOURCES.roles.authorization,
+      resource_element:
+        permissionGovernanceResources.roleAuthorization.elements.page.resource_element,
+      hidden: true,
+      breadcrumb: ['IAM 身份中心', '角色管理', '角色授权'],
+    },
+  },
+  {
+    path: 'iam/members/effective-permissions',
+    name: 'iam-user-effective-permissions',
+    component: () => import('./permission-governance/pages/UserEffectivePermissionsPage.vue'),
+    meta: {
+      title: '用户有效权限',
+      subsystem: 'iam',
+      authorizationModel: 'v2',
+      resourceCode: IAM_PERMISSION_GOVERNANCE_RESOURCES.members.effectivePermissions,
+      resource_element: permissionGovernanceResources.userEffective.elements.page.resource_element,
+      hidden: true,
+      breadcrumb: ['IAM 身份中心', '用户与成员', '用户有效权限'],
     },
   },
   {
@@ -136,6 +205,8 @@ export const iamRoutes: RouteRecordRaw[] = [
     component: () => import('./access-control/pages/RoleAssignmentPage.vue'),
     meta: {
       title: '角色分配',
+      resourceCode: accessControlResources.assignments.resource_code,
+      resource_element: accessControlResources.assignments.elements.page.resource_element,
       subsystem: 'iam',
       permission: IAM_PERMISSIONS.roles.queryAssignments,
       hidden: true,
@@ -146,18 +217,6 @@ export const iamRoutes: RouteRecordRaw[] = [
     path: 'iam/role-assignments',
     name: 'iam-role-assignments-legacy',
     redirect: (to) => ({ name: 'iam-role-assignments', query: to.query }),
-  },
-  {
-    path: 'iam/members/permissions',
-    name: 'iam-member-permissions',
-    component: () => import('./access-control/pages/MemberPermissionPage.vue'),
-    meta: {
-      title: '用户角色与权限',
-      subsystem: 'iam',
-      permission: IAM_PERMISSIONS.members.queryPermissions,
-      hidden: true,
-      breadcrumb: ['IAM 身份中心', '用户与成员', '角色与权限'],
-    },
   },
   {
     path: 'iam/users',

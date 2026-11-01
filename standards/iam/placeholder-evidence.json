@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "entries": [
+    {
+      "evidence_id": "feature-scaffold-no-business-communication-2026-09-27",
+      "component_file": "src/shared/business-components/FeatureScaffoldPage.vue",
+      "route_paths": [
+        "/platform/analytics",
+        "/platform/todos",
+        "/tms/dispatch",
+        "/tms/orders",
+        "/tms/trips",
+        "/vms/certificates",
+        "/vms/drivers",
+        "/vms/maintenance"
+      ],
+      "route_hashes": {
+        "/platform/analytics": "6e00d52b3417b7cd9121d0441307ddcfacbb320a6094ebb33b9f68c767f99c14",
+        "/platform/todos": "5b8e53525a81d5fe8bb830695457e05f757ed19346709d37fce8734072af6fbf",
+        "/tms/dispatch": "06cc32d25c3abe51fe69a8683d4f784d6079c9517dfb0424d51ca5a244979412",
+        "/tms/orders": "947da7d64d6a03e6ace3fb1e98dcab3a843a002036adaa6c02f17d5ca78acba4",
+        "/tms/trips": "c3634931d544fc0776360bc703bbd4e6cb79e37c2d42a27dc3f634ba25060e01",
+        "/vms/certificates": "083416c945f6433986594c7ad17212d1723f27b083eb78707aa2369c02e9e908",
+        "/vms/drivers": "ed261d0a33bb7c9b0e696ac7c7ab823a21493c735c0457fb13c4b809093ded2a",
+        "/vms/maintenance": "c978de63cdeaa6cf39180e1e471a5fcc39bda4177f2ce51001d1280080bc4d5d"
+      },
+      "dependencies": [
+        {
+          "file": "src/shared/business-components/FeatureScaffoldPage.vue",
+          "sha256": "b9102d7a128787ae065a424afa2290c6d73bd71e54e74fe5523717e887054749"
+        },
+        {
+          "file": "src/shared/components/AppPage.vue",
+          "sha256": "f34ef079a01c1e007deb13a2591e643689649cc535d90b8a4bbc911c6c846b47"
+        },
+        {
+          "file": "src/shared/components/AppShell.vue",
+          "sha256": "46db184f19b1801c82c3ccfdb6232358bdb58c0db39f9ffef7c4e83ad02ad773"
+        },
+        {
+          "file": "src/shared/components/PageHeader.vue",
+          "sha256": "3d2a8d7b06b2fcedfd80c316adcde790900c33e890c7409a2450b6c5068be945"
+        },
+        {
+          "file": "src/shared/components/appShellBranding.ts",
+          "sha256": "923ed05b44c87c87c553cf2249ffbe5de3ae0415ea17b5589c4ab0de7070ee7a"
+        },
+        {
+          "file": "src/shared/components/appShellContentContext.ts",
+          "sha256": "a8ab4121d7a3d683879b332de7021f357d37ff59b022403e230de490f4d1f872"
+        },
+        {
+          "file": "src/shared/services/resourceElement.ts",
+          "sha256": "b8fce0b4f0ca4c93d3d0810bb6cdbd554bf2adb17998f355d180617fd0ac613e"
+        }
+      ],
+      "candidates_hash": "1ef036f5ab285ab6482e42e8c38eb417f34f4e045eb806c36244ee5f4d408425",
+      "candidate_reviews": [
+        {
+          "candidate_id": "src/shared/components/PageHeader.vue#injection:5b4e21e12dc986a2:0",
+          "classification": "local",
+          "reason": "PageHeader only reads pageActionsTarget for Teleport; FeatureScaffoldPage supplies no actions slot. AppShell provides a static DOM selector, with no callback or network gateway in this context.",
+          "provider_candidate_id": "src/shared/components/AppShell.vue#injection:a85b94f3a3babd60:0"
+        }
+      ],
+      "reviewed_by": "Codex single-agent metadata-only review 2026-10-21",
+      "evidence": [
+        "standards/resource-elements.md: SDK only adds description data attributes; all 1624 communication candidate expressions unchanged. Placeholder routes, providers, callbacks and business behavior remain unchanged.",
+        "docs/coordination/iam-communication-review-2026-10-16.md: reviewed changed AppShell provider without changing placeholder business behavior.",
+        "The eight route records use FeatureScaffoldPage and implementationStatus=placeholder. Route identities and metadata are hashed; routes remain discoverable.",
+        "FeatureScaffoldPage renders fixed development status and string props. The Reference RouterLink is guarded by import.meta.env.DEV and does not render in production.",
+        "AppPage only renders content and resource-element DOM attributes. resourceElement.ts mutates data attributes without event interception or network access.",
+        "PageHeader injects appShellContentContextKey; AppShell.vue provides {pageActionsTarget: APP_SHELL_PAGE_ACTIONS_TARGET}. appShellContentContext.ts defines a constant DOM selector. Provider source/import hashes and the exact provide candidate are bound.",
+        "Shell navigation, authentication, DMS fileTransferKey and other shared communication remain in the global inventory. This proof does not waive their review."
+      ]
+    }
+  ]
+}

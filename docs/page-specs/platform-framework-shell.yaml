@@ -5,7 +5,7 @@ page:
   feature: platform/framework
   type: ListPage
   patternKey: ListPageTemplate
-  revision: 3
+  revision: 4
 sources:
   inputMode: prd-with-reference
   prd:
@@ -14,6 +14,10 @@ sources:
       section: 本次范围
       purpose: 记录用户确认的候选范围、非目标和验收要求
   api:
+    - id: shell-branding-api
+      ref: docs/coordination/platform-shell-branding-backend-contract.md
+      section: 响应增量
+      purpose: CurrentProfile 可选 branding 配置品牌名、平台名及 Logo；后端缺省时分别回退，不新增业务授权
     - id: current-modules-api
       ref: docs/api/iam-shell-context.md
       section: 当前用户可访问模块
@@ -25,7 +29,7 @@ sources:
     - id: current-user-api
       ref: docs/api/iam-shell-context.md
       section: 查询当前用户资料
-      purpose: 驱动侧栏用户头像和名称；当前 Tenant 名称来自认证会话
+      purpose: 通过 Auth/CurrentProfile 会话自服务驱动本人头像和名称；当前 Tenant 名称来自认证会话，不依赖用户管理业务权限
   permissions:
     - id: shell-module-permission
       ref: docs/permissions/platform-framework-shell.md
@@ -201,6 +205,12 @@ issues:
       description: 当前项目只承诺三个桌面视口和 Light Theme
       affectedScopes: [preview-visual, production-regression]
 acceptance:
+  - id: configurable-branding
+    sourceRef: shell-branding-api
+    observableResult: 品牌区展示远端 Logo 与两行名称，缺失或失败按字段回退；折叠保留 Logo，长名称可聚焦查看，旧会话迟到响应被丢弃
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/platform-shell-branding.spec.ts
   - id: shell-complete
     sourceRef: framework-shell-prd
     observableResult: 完整 App Shell、分组导航、顶部工具区、以最后一级 h1 表示当前页面的面包屑、右侧页面动作区、内容区和页脚可见
@@ -243,7 +253,7 @@ acceptance:
     testRef: tests/visual/platform-framework-production.spec.ts
   - id: current-user-bound
     sourceRef: current-user-api
-    observableResult: 侧栏用户区域展示精确匹配登录账号的头像与名称，并展示认证会话中的当前 Tenant 名称
+    observableResult: 侧栏使用 Auth/CurrentProfile 展示会话本人的头像与名称，不调用 Membership/QueryUsers；展示认证会话中的当前 Tenant 名称，丢弃过期会话慢响应
     affectedScopes: [production-binding, production-regression]
     stateRef: ready
     testRef: tests/visual/platform-framework-production.spec.ts
@@ -262,6 +272,7 @@ acceptance:
 verification:
   viewports: [desktop-1366, desktop-1440, desktop-1920]
   browserTests:
+    - tests/visual/platform-shell-branding.spec.ts
     - tests/visual/platform-framework-shell.spec.ts
     - tests/visual/platform-framework-production.spec.ts
     - tests/visual/app-shell-content-contract.spec.ts

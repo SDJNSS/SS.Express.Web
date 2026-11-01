@@ -1,0 +1,219 @@
+schemaVersion: '0.1'
+page:
+  id: iam-permission-scheme-management
+  name: 权限管理
+  feature: iam/permission-governance
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 6
+sources:
+  inputMode: prd-only
+  prd:
+    - id: permission-v2-prd
+      ref: docs/prd/iam/permission-scheme-v2.md
+      section: 权限管理
+      purpose: 定义 iam_permission 列表、名称查询、详情、创建和编辑入口
+  api:
+    - id: permission-scheme-api
+      ref: src/features/iam/permission-governance/api/permissionGovernanceApi.ts
+      section: endpoints
+      operation: POST /iam-admin/PermissionApp/Query; POST /iam-admin/PermissionScheme/Query; POST /iam-admin/PermissionScheme/Get; POST /iam-admin/PermissionScheme/Create; POST /iam-admin/PermissionScheme/Copy; POST /iam-admin/PermissionScheme/Update
+      purpose: 绑定权限列表、详情、创建、复制和编辑的正式端点与服务端生成编码 DTO
+  permissions:
+    - id: permission-scheme-permission
+      ref: src/shared/constants/iamPermissions.ts
+      section: IAM_PERMISSION_GOVERNANCE_RESOURCES.permissions
+      operation: IAM.PERMISSIONS; IAM.PERMISSIONS.CREATE; IAM.PERMISSIONS.COPY; IAM.PERMISSIONS.UPDATE; IAM.PERMISSIONS.CONFIGURATION
+      purpose: 分别控制权限管理路由、新建、复制、编辑和进入功能配置的稳定前端资源
+  ux:
+    - id: dataset-ux
+      ref: UX-CONTRACT.md
+      section: Dataset navigation
+      purpose: 约束名称查询、列表、分页和行操作
+    - id: async-ux
+      ref: UX-CONTRACT.md
+      section: Async and resilience
+      purpose: 约束写操作提交、失败保留和重试
+  references:
+    - id: role-management-sibling
+      ref: docs/page-specs/iam-role-management.yaml
+      origin: project
+      kind: approved-page
+      purpose: 复用 IAM 高密度治理列表的视觉节奏
+implementation:
+  canonicalEntry: src/features/iam/permission-governance/components/PermissionSchemeManagementPageView.vue
+  previewEntry: src/features/iam/permission-governance/public.preview.ts
+  previewBinding: src/features/iam/permission-governance/preview/PermissionGovernancePreviewPage.vue
+  productionBinding: src/features/iam/permission-governance/pages/PermissionManagementPage.vue
+  productionRoute: /iam/permissions
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: filters, role: search, order: 2 }
+    - { id: results, role: data, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: forms, role: form, order: 5 }
+    - { id: feedback, role: feedback, order: 6 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 承载页面标题和新增权限入口,
+      }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: filters,
+        purpose: 只按权限名称进行模糊查询,
+      }
+    - {
+        id: permission-table,
+        componentKey: shared.data-table,
+        regionId: results,
+        purpose: 展示权限名称、编码、所属 App、前端资源、Function 数量、状态和版本,
+      }
+    - {
+        id: permission-detail,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 展示 Permission 基本信息及前后端资源组合，不展示 App 资源分布或适用范围,
+      }
+    - {
+        id: permission-form,
+        componentKey: shared.form-drawer,
+        regionId: forms,
+        purpose: 新增时先选择所属 App 并维护权限基本信息,
+      }
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 展示权限列表、所属 App、前端资源和后端 Function 数量
+    ruleRef: permission-v2-prd
+  - id: loading
+    scopeRef: results
+    observableResult: 权限加载期间保持列表结构且不显示陈旧结果
+    ruleRef: async-ux
+  - id: empty
+    scopeRef: results
+    observableResult: 无权限记录时提供新增权限入口
+    ruleRef: permission-v2-prd
+  - id: filter-empty
+    scopeRef: results
+    observableResult: 名称无匹配结果时保留关键词并提供清空入口
+    ruleRef: dataset-ux
+  - id: creating
+    scopeRef: forms
+    observableResult: 创建抽屉只录入所属 App、权限名称、说明、排序及展示层级；保存基本信息后进入权限功能配置选择资源
+    ruleRef: permission-v2-prd
+  - id: retryable-error
+    scopeRef: feedback
+    observableResult: 查询或提交失败时保留上下文并提供重试
+    ruleRef: async-ux
+interactions:
+  - id: filter-permissions
+    trigger: 提交或清空权限名称
+    targetRef: results
+    observableResult: 只按权限名称模糊查询并重置分页，不提供 App、状态或适用范围筛选
+    ruleRef: dataset-ux
+  - id: create-permission
+    trigger: 点击新增权限
+    targetRef: forms
+    observableResult: 打开创建抽屉，先选择所属 App，再填写名称等基本信息并进入权限功能配置
+    ruleRef: permission-v2-prd
+  - id: inspect-permission
+    trigger: 点击详情
+    targetRef: detail
+    observableResult: 展示单个前端资源与后端 Function 组合，不展示 App 资源分布或适用范围
+    ruleRef: permission-v2-prd
+  - id: edit-permission
+    trigger: 点击列表或详情中的编辑
+    targetRef: forms
+    observableResult: Get 回读最新版本后编辑名称、说明、排序及同App展示父级和默认联动配置；Update 成功后保留列表查询并刷新，失败保留输入与版本，结果未知使用原 request_id 重试
+    ruleRef: permission-v2-prd
+  - id: configure-permission-functions
+    trigger: 点击功能配置
+    targetRef: results
+    observableResult: 进入该 Permission 的权限功能配置 Candidate，并保持所属 App 上下文
+    ruleRef: permission-v2-prd
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [permission-list-aligned, name-only-filter, create-requires-app, preview-isolated]
+  - id: empty-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [create-requires-app]
+exceptions: []
+issues:
+  blockers: []
+  deferred:
+    - id: production-deployment-deferred
+      description: 正式 API、DTO、稳定前端资源码与 Production Binding 已闭合；生产环境部署和真实身份端到端联调由发布流程继续跟踪
+      affectedScopes: [production-regression]
+      owner: Web 与 IAM 发布
+      resolutionTarget: 发布窗口完成生产部署和真实环境回归
+  outOfScope:
+    - id: no-tenant-scheme
+      description: 本页维护 App 内前后端资源组合，不再表达岗位功能合集、Tenant 方案或适用范围
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-app-distribution
+      description: 详情不展示 App 资源分布
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - {
+      id: compact-row-actions,
+      sourceRef: dataset-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
+  - id: permission-list-aligned
+    sourceRef: permission-v2-prd
+    observableResult: 页面名称为权限管理，列表将“覆盖 App”改为“所属 App”，并移除适用范围
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: name-only-filter
+    sourceRef: permission-v2-prd
+    observableResult: 查询区只保留权限名称模糊查询，不显示覆盖 App 或方案状态筛选
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: filter-permissions
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: create-requires-app
+    sourceRef: permission-v2-prd
+    observableResult: 新增权限必须选择 App，创建抽屉不选择前端资源或 Function；创建成功后进入权限功能配置，详情和创建流程均不出现适用范围或 App 资源分布
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: create-permission
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: async-ux
+    observableResult: Candidate Preview 只使用确定性 Fixture，不访问 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: production-permission-api-bound
+    sourceRef: permission-scheme-api
+    observableResult: 正式路由使用 Query/Get 加载权限，Create/Copy 不提交前端生成的 permission_code，并保留失败表单上下文
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+  - id: production-permission-edit-bound
+    sourceRef: permission-scheme-api
+    observableResult: 列表及详情按独立编辑资源展示入口，Get 最新版本后通过 Update 修改基本信息，保留查询并刷新；冲突与结果未知保留表单，未知结果复用原 request_id
+    affectedScopes: [production-binding, production-regression]
+    interactionRef: edit-permission
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-permission-governance-previews.spec.ts,
+      tests/visual/iam-permission-governance-production.spec.ts,
+    ]

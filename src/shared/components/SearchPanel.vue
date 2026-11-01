@@ -1,18 +1,17 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     loading?: boolean
     collapsible?: boolean
     defaultExpanded?: boolean
   }>(),
-  {
-    loading: false,
-    collapsible: false,
-    defaultExpanded: false,
-  },
+  { resource_element: undefined, loading: false, collapsible: false, defaultExpanded: false },
 )
 
 const emit = defineEmits<{
@@ -24,7 +23,11 @@ const expanded = ref(props.defaultExpanded)
 </script>
 
 <template>
-  <section class="search-panel surface" aria-label="查询条件">
+  <section
+    v-bind="resourceElementAttributes(resource_element)"
+    class="search-panel surface"
+    aria-label="查询条件"
+  >
     <div class="search-panel__fields">
       <slot />
     </div>
@@ -36,7 +39,13 @@ const expanded = ref(props.defaultExpanded)
     <div class="search-panel__footer">
       <div class="search-panel__footer-leading">
         <slot name="footer-leading" />
-        <el-button v-if="collapsible" link type="primary" @click="expanded = !expanded">
+        <el-button
+          v-if="collapsible"
+          v-resource-element="resource_element"
+          link
+          type="primary"
+          @click="expanded = !expanded"
+        >
           {{ expanded ? '收起筛选' : '更多筛选' }}
           <Icon
             :icon="expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'"
@@ -46,8 +55,14 @@ const expanded = ref(props.defaultExpanded)
         </el-button>
       </div>
       <div class="search-panel__actions">
-        <el-button @click="emit('reset')">重置</el-button>
-        <el-button type="primary" :loading="loading" @click="emit('search')">查询</el-button>
+        <el-button v-resource-element="resource_element" @click="emit('reset')">重置</el-button>
+        <el-button
+          v-resource-element="resource_element"
+          type="primary"
+          :loading="loading"
+          @click="emit('search')"
+          >查询</el-button
+        >
       </div>
     </div>
   </section>

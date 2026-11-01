@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const previewHost = 'http://127.0.0.1:4174'
+import { previewHost } from './helpers/testServers'
 const candidatePages = [
   { id: 'training-operations-overview', heading: '培训概览' },
   { id: 'training-plan-management', heading: '培训计划' },

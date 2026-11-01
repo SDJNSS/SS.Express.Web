@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { resourceRegistry as overviewResources } from './overview/iam-resource.registry'
 
 const tmsFeatureRoutes: RouteRecordRaw[] = (
   [
@@ -38,6 +39,8 @@ export const tmsRoutes: RouteRecordRaw[] = [
     component: () => import('./overview/pages/TmsOverviewPage.vue'),
     meta: {
       title: 'TMS 运输管理',
+      resourceCode: overviewResources.overview.resource_code,
+      resource_element: overviewResources.overview.elements.page.resource_element,
       subsystem: 'tms',
       permission: 'tms:overview:view',
       breadcrumb: ['TMS 运输管理', '运输总览'],

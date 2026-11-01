@@ -5,7 +5,7 @@ page:
   feature: training/content-exam
   type: ListPage
   patternKey: ListPageTemplate
-  revision: 2
+  revision: 5
 sources:
   inputMode: prd-only
   prd:
@@ -20,7 +20,7 @@ sources:
         id: training-content-api,
         ref: docs/api/training-content-exam-api.md,
         section: 写操作模型,
-        operation: 'POST /iam-admin/TrainingPaper/Query|Detail|Create|Update|ChangeStatus',
+        operation: 'POST /iam-admin/TrainingPaper/Query|Detail|Create|Update|ChangeStatus|GeneratePreview',
         purpose: 定义正式页面查询与写操作模型,
       }
   permissions:
@@ -32,8 +32,8 @@ sources:
       }
     - {
         id: iam-runtime-permission,
-        ref: docs/api/iam-admin-api.md,
-        section: Permission CurrentFunctions,
+        ref: docs/api/iam-shell-context.md,
+        section: 页面与按钮权限,
         purpose: 定义正式运行时功能权限发现机制,
       }
   ux:
@@ -85,7 +85,7 @@ composition:
         id: detail-drawer,
         componentKey: shared.detail-drawer,
         regionId: detail,
-        purpose: 展示固定题目或随机规则与审计信息,
+        purpose: 展示固定或随机来源的已保存最终题集与审计信息,
       }
     - {
         id: form-drawer,
@@ -189,6 +189,34 @@ issues:
   outOfScope: []
 acceptance:
   - {
+      id: question-selection,
+      sourceRef: training-prd,
+      observableResult: 选题抽屉按题型搜索分页并跨页保留勾选，取消不变更，支持跨型替换及去重，题数变化仅清空受影响分组分数，按百分单位精确均分，保存携带每题原始版本且失败保留草稿,
+      affectedScopes: [preview-interaction, production-binding],
+      testRef: tests/visual/training-paper-selection.spec.ts,
+    }
+  - {
+      id: random-final-set-preview,
+      sourceRef: training-prd,
+      observableResult: 显式调用只读GeneratePreview生成一次初稿，移除替换后同步题型数量，固定随机均保存具体questions及每题版本，打开保存回读不重抽，失败或取消不丢草稿或污染下次编辑；不兼容旧数据且前端不清数据,
+      affectedScopes: [preview-interaction, production-binding],
+      testRef: tests/visual/training-paper-selection.spec.ts,
+    }
+  - {
+      id: permission-loading,
+      sourceRef: iam-runtime-permission,
+      observableResult: 权限未就绪或属于其他页时保持加载且不请求业务；路由提交后用最终条件只查询一次，真实拒绝及查询失败仍拦截或可重试，旧响应不覆盖新上下文,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/training-permission-loading.spec.ts,
+    }
+  - {
+      id: compact-row-actions,
+      sourceRef: list-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
+  - {
       id: production-api-binding,
       sourceRef: training-content-api,
       observableResult: 正式页面按接口执行查询详情写入并保留失败上下文,
@@ -216,4 +244,6 @@ verification:
     [
       tests/visual/training-content-exam-previews.spec.ts,
       tests/visual/training-content-production.spec.ts,
+      tests/visual/training-permission-loading.spec.ts,
+      tests/visual/training-paper-selection.spec.ts,
     ]

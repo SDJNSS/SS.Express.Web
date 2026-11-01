@@ -1,28 +1,31 @@
 export {
   collectCurrentAppPermissionRoutes,
-  collectCurrentPermissionCodes,
   collectCurrentAppMenuPermissionCodes,
   findCurrentMenuForRoute,
   mapCurrentAppMenusToNavigation,
   resolveFirstCurrentAppMenuRoute,
-  mapUserDetailToProfile,
+  mapCurrentProfileToUser,
   normalizeInternalRoute,
 } from './adapters/shellContextAdapter'
 export {
   getCurrentAppMenus,
   getCurrentApps,
-  getCurrentFunctions,
-  queryUsers,
+  getCurrentPageResources,
+  getCurrentProfile,
 } from './api/shellContextApi'
+export {
+  clearCurrentPageResourceAccessCache,
+  getCurrentPageResourcesCached,
+} from './services/currentPageResourceAccess'
 export type {
   IamApplication,
   IamCurrentAppMenusRequest,
   IamCurrentAppMenusResponse,
-  IamCurrentFunctionsResponse,
-  IamCurrentFunctionsRequest,
+  IamCurrentPageResourcesRequest,
+  IamCurrentPageResourcesResponse,
   IamCurrentAppModuleMenusResponse,
   IamCurrentMenuResourceResponse,
   IamPermissionResource,
-  IamUserQueryResponse,
+  IamCurrentProfileResponse,
   ShellUserProfile,
 } from './types/shellContext'

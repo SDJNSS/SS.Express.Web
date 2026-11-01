@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupElements } from '../iam-resource.registry'
 import { reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -51,16 +52,20 @@ async function finishEdit() {
 </script>
 
 <template>
-  <AppPage class="group-profile-page">
+  <AppPage :resource_element="groupElements.page" class="group-profile-page">
     <DetailPageTemplate scroll-mode="page">
       <template #header>
         <PageHeader title="集团信息" description="维护平台级品牌、联系信息与默认区域设置">
           <template #actions>
-            <el-button @click="emit('retry')">
+            <el-button v-resource-element="groupElements.query" @click="emit('retry')">
               <Icon icon="mdi:refresh" width="18" aria-hidden="true" />
               刷新
             </el-button>
-            <el-button v-permission="IAM_PERMISSIONS.group.update" type="primary" @click="openEdit"
+            <el-button
+              v-resource-element="groupElements.edit"
+              v-permission="IAM_PERMISSIONS.group.update"
+              type="primary"
+              @click="openEdit"
               >编辑集团信息</el-button
             >
           </template>
@@ -103,7 +108,9 @@ async function finishEdit() {
         sub-title="请检查网络连接后重新加载，编辑入口暂不可用。"
       >
         <template #extra>
-          <el-button type="primary" @click="emit('retry')">重新加载</el-button>
+          <el-button v-resource-element="groupElements.query" type="primary" @click="emit('retry')"
+            >重新加载</el-button
+          >
         </template>
       </el-result>
       <el-empty v-else-if="state === 'empty'" description="尚未配置集团信息" />
@@ -166,6 +173,7 @@ async function finishEdit() {
 
     <FormDrawer
       v-model="editVisible"
+      :resource_element="groupElements.edit"
       title="编辑集团信息"
       size="min(820px, 86%)"
       :submitting="submitting"
@@ -195,6 +203,7 @@ async function finishEdit() {
           <ImageAssetField
             v-model:file-id="editForm.logoFileId"
             v-model:image-url="editForm.logoUrl"
+            :resource_element="groupElements.logo"
             :disabled="submitting"
             @blocked-change="uploadBlocked = $event"
           />

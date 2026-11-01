@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { organizationsElements } from '../iam-resource.registry'
+import { resourceElementAttributes } from '@shared/services/resourceElement'
 import { computed, inject, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -207,10 +209,14 @@ async function confirmStatusChange() {
 </script>
 
 <template>
-  <AppPage :scrollable="false" class="organization-page">
+  <AppPage
+    :resource_element="organizationsElements.page"
+    :scrollable="false"
+    class="organization-page"
+  >
     <PageHeader title="组织管理" description="在当前 Tenant 内维护组织树、负责人和层级关系">
       <template #actions>
-        <el-button @click="emit('retry')">
+        <el-button v-resource-element="organizationsElements.query" @click="emit('retry')">
           <Icon icon="mdi:refresh" width="18" aria-hidden="true" />
           刷新组织树
         </el-button>
@@ -238,6 +244,7 @@ async function confirmStatusChange() {
               <span>共 {{ organizationNodes.length }} 个组织节点</span>
             </div>
             <el-button
+              v-resource-element="organizationsElements.create"
               v-permission="IAM_PERMISSIONS.organizations.create"
               class="organization-tree__add"
               type="primary"
@@ -270,12 +277,19 @@ async function confirmStatusChange() {
             sub-title="组织树未更新"
           >
             <template #extra
-              ><el-button link type="primary" @click="emit('retry')">重试</el-button></template
+              ><el-button
+                v-resource-element="organizationsElements.query"
+                link
+                type="primary"
+                @click="emit('retry')"
+                >重试</el-button
+              ></template
             >
           </el-result>
           <el-empty v-else-if="state === 'empty'" description="当前 Tenant 暂无组织" />
           <el-tree
             v-else
+            v-resource-element="organizationsElements.detail"
             class="organization-tree__control"
             :data="organizations"
             :props="treeProps"
@@ -313,20 +327,26 @@ async function confirmStatusChange() {
           </div>
           <div class="organization-detail__actions">
             <el-button
+              v-resource-element="organizationsElements.create"
               v-permission="IAM_PERMISSIONS.organizations.create"
               @click="openForm('create', selected.id)"
               >新增下级</el-button
             >
-            <el-button v-permission="IAM_PERMISSIONS.organizations.move" @click="moveVisible = true"
+            <el-button
+              v-resource-element="organizationsElements.move"
+              v-permission="IAM_PERMISSIONS.organizations.move"
+              @click="moveVisible = true"
               >调整层级</el-button
             >
             <el-button
+              v-resource-element="organizationsElements.edit"
               v-permission="IAM_PERMISSIONS.organizations.update"
               type="primary"
               @click="openForm('edit')"
               >编辑组织</el-button
             >
             <el-button
+              v-resource-element="organizationsElements.status"
               v-permission="IAM_PERMISSIONS.organizations.changeStatus"
               :type="selected.status === 'ACTIVE' ? 'warning' : 'success'"
               plain
@@ -385,6 +405,9 @@ async function confirmStatusChange() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="
+        formMode === 'create' ? organizationsElements.create : organizationsElements.edit
+      "
       :title="formMode === 'create' ? '新建组织' : `编辑 ${formRecord.name}`"
       :confirm-button-text="formMode === 'create' ? '创建组织' : '保存组织'"
       :submitting="submitting"
@@ -421,6 +444,11 @@ async function confirmStatusChange() {
         <el-form-item label="组织负责人">
           <OrganizationLeaderSelector
             v-model="form.leaderTenantUserId"
+            :resource_element="
+              formMode === 'create'
+                ? organizationsElements.createLeader
+                : organizationsElements.editLeader
+            "
             :selected-label="formMode === 'edit' ? formRecord.leader : ''"
             :scope-key="String(tenantId ?? tenant.code)"
             :active="formVisible"
@@ -440,6 +468,7 @@ async function confirmStatusChange() {
 
     <FormDrawer
       v-model="moveVisible"
+      :resource_element="organizationsElements.move"
       title="调整组织层级"
       confirm-button-text="确认移动"
       :submitting="submitting"
@@ -460,7 +489,7 @@ async function confirmStatusChange() {
           ><el-tree-select
             v-model="newParentId"
             :data="organizations"
-            :props="treeProps"
+            :props="treeSelectProps"
             check-strictly
             placeholder="顶级组织（无上级）"
         /></el-form-item>
@@ -468,6 +497,7 @@ async function confirmStatusChange() {
     </FormDrawer>
 
     <el-dialog
+      v-bind="resourceElementAttributes(organizationsElements.status)"
       v-model="confirmVisible"
       :title="`${selected.status === 'ACTIVE' ? '停用' : '启用'}组织`"
       width="540"
@@ -480,8 +510,11 @@ async function confirmStatusChange() {
         }}
       </p>
       <template #footer>
-        <el-button @click="confirmVisible = false">取消</el-button>
+        <el-button v-resource-element="organizationsElements.local" @click="confirmVisible = false"
+          >取消</el-button
+        >
         <el-button
+          v-resource-element="organizationsElements.status"
           v-permission="IAM_PERMISSIONS.organizations.changeStatus"
           :type="selected.status === 'ACTIVE' ? 'warning' : 'success'"
           :loading="submitting"

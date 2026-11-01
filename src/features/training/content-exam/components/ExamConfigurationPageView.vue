@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { examsElements } from '../iam-resource.registry'
 import { computed, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useTrainingContentView } from '../composables/useTrainingContentView'
@@ -79,7 +80,7 @@ const columns: DataTableColumn[] = [
   { prop: 'passScore', label: '及格分', width: 90, align: 'right' },
   { prop: 'maxAttempts', label: '最大次数', width: 100, align: 'right' },
   { label: '状态', width: 92, slot: 'status' },
-  { label: '操作', width: 190, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -273,7 +274,7 @@ function confirmStatus() {
 </script>
 
 <template>
-  <AppPage class="training-page exam-configuration-page">
+  <AppPage :resource_element="examsElements.page" class="training-page exam-configuration-page">
     <ListPageTemplate>
       <el-alert
         v-if="actionError && !formVisible && !statusVisible"
@@ -296,6 +297,7 @@ function confirmStatus() {
         >
           <template #actions
             ><el-button
+              v-resource-element="examsElements.create"
               type="primary"
               :disabled="!allowed('create') || submitting"
               @click="openForm('create')"
@@ -306,10 +308,16 @@ function confirmStatus() {
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="examsElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="配置名称"
             ><el-input
               v-model="query.keyword"
+              v-resource-element="examsElements.query"
               clearable
               placeholder="输入配置名称"
               @keyup.enter="handleSearchKeyup"
@@ -325,6 +333,7 @@ function confirmStatus() {
 
       <template #toolbar
         ><TableToolbar
+          :resource_element="examsElements.query"
           title="考试配置列表"
           :total="runtime?.total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -345,7 +354,9 @@ function confirmStatus() {
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="refresh">重新加载</el-button></template
+          ><el-button v-resource-element="examsElements.query" link type="primary" @click="refresh"
+            >重新加载</el-button
+          ></template
         ></el-alert
       >
 
@@ -353,10 +364,10 @@ function confirmStatus() {
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading' || submitting"
-        @row-click="openDetail(asConfiguration($event))"
       >
         <template #name="{ row }"
           ><button
+            v-resource-element="examsElements.detail"
             class="training-page__link"
             type="button"
             @click.stop="openDetail(asConfiguration(row))"
@@ -374,15 +385,15 @@ function confirmStatus() {
         /></template>
         <template #actions="{ row }"
           ><RowActionGrid :aria-label="`${asConfiguration(row).name} 的操作`"
-            ><el-button link type="primary" @click.stop="openDetail(asConfiguration(row))"
-              >详情</el-button
             ><el-button
+              v-resource-element="examsElements.edit"
               link
               type="primary"
               :disabled="!allowed('update') || submitting"
               @click.stop="openForm('edit', asConfiguration(row))"
               >编辑</el-button
             ><el-button
+              v-resource-element="examsElements.status"
               link
               :type="asConfiguration(row).status === 'ACTIVE' ? 'warning' : 'primary'"
               :disabled="!allowed('status') || submitting"
@@ -397,6 +408,7 @@ function confirmStatus() {
         ><AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="examsElements.query"
           :total="runtime?.total ?? visibleRecords.length"
           @change="paginate"
       /></template>
@@ -404,6 +416,7 @@ function confirmStatus() {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="examsElements.detail"
       :title="selected ? `考试配置详情 · ${selected.name}` : '考试配置详情'"
       :size="760"
     >
@@ -471,6 +484,7 @@ function confirmStatus() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? examsElements.create : examsElements.edit"
       :title="formMode === 'create' ? '新建考试配置' : `编辑考试配置 · ${selected?.name ?? ''}`"
       :size="760"
       :submitting="submitting"
@@ -493,20 +507,34 @@ function confirmStatus() {
             <el-form-item label="查找启用试卷"
               ><el-input
                 v-model="optionKeyword"
+                v-resource-element="
+                  formMode === 'create' ? examsElements.createOptions : examsElements.editOptions
+                "
                 clearable
                 placeholder="输入关键词后查询"
                 @keyup.enter="!$event.isComposing && searchOptions()" /></el-form-item
-            ><el-button :loading="runtime.optionsLoading" @click="searchOptions()"
+            ><el-button
+              v-resource-element="
+                formMode === 'create' ? examsElements.createOptions : examsElements.editOptions
+              "
+              :loading="runtime.optionsLoading"
+              @click="searchOptions()"
               >查询试卷</el-button
             >
           </div>
           <div class="training-detail__tags">
             <span>共 {{ runtime.optionsTotal }} 份 · 第 {{ runtime.optionsPage }} 页</span
             ><el-button
+              v-resource-element="
+                formMode === 'create' ? examsElements.createOptions : examsElements.editOptions
+              "
               :disabled="submitting || (runtime.optionsPage ?? 1) <= 1"
               @click="searchOptions((runtime.optionsPage ?? 1) - 1)"
               >上一页试卷</el-button
             ><el-button
+              v-resource-element="
+                formMode === 'create' ? examsElements.createOptions : examsElements.editOptions
+              "
               :disabled="
                 submitting || (runtime.optionsPage ?? 1) * 20 >= (runtime.optionsTotal ?? 0)
               "
@@ -624,6 +652,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="statusModel"
+      :resource_element="examsElements.status"
       :title="selected?.status === 'ACTIVE' ? '停用考试配置' : '启用考试配置'"
       :confirm-button-text="selected?.status === 'ACTIVE' ? '确认停用' : '确认启用'"
       :confirm-type="selected?.status === 'ACTIVE' ? 'warning' : 'primary'"
@@ -645,6 +674,7 @@ function confirmStatus() {
     >
     <FormDialog
       v-model="discardVisible"
+      :resource_element="examsElements.local"
       title="放弃未保存的修改？"
       confirm-button-text="放弃修改"
       confirm-type="warning"

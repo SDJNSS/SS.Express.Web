@@ -1,0 +1,44 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-dictionary-management",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-dictionary-management.yaml",
+    "revision": 4,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "85fe76b65ccfad47d06cad6e1667b84cda6a06ebddc07d2e7082a953b77e8ae7"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-10-29T06:01:50Z",
+    "evidence": "用户此前明确表示：“审核通过，可以进行正式页面开发。”本次又明确决定：“不必使用is_sa方案。我们控制写按钮仅分配给SA即可。”revision 4仅按此决定取消前端SA身份检查、改用页面与按钮资源判权，并删除不再成立的“仅SA可用”说明；布局和八个写资源码保持原方案。仅更新本页Contract与三视口内容基线，不更改其他页面。"
+  },
+  "scope": {
+    "id": "page-content",
+    "exceptionRefs": []
+  },
+  "viewports": [
+    "desktop-1366",
+    "desktop-1440",
+    "desktop-1920"
+  ],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-dictionary-management/desktop-1366.png",
+      "sha256": "8ad0c167a88b4ebed9ef831fb2d75d3ff9fe6ac6b975778be1fb22bd6e257417"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-dictionary-management/desktop-1440.png",
+      "sha256": "2231a815fab8351fc84e92accb6b9632fad63d291eda46484f942a95cf50a40b"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-dictionary-management/desktop-1920.png",
+      "sha256": "6acfbd78f9d459d7e05bbe0729e33e533db398eed12e3e81b1c81ec0b44c8dc9"
+    }
+  ],
+  "readyText": "字典管理"
+}

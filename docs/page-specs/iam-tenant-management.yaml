@@ -5,7 +5,7 @@ page:
   feature: iam/foundation
   type: ListPage
   patternKey: ListPageTemplate
-  revision: 5
+  revision: 7
 sources:
   inputMode: prd-only
   prd:
@@ -26,9 +26,9 @@ sources:
   permissions:
     - {
         id: tenant-permission,
-        ref: docs/prd/iam/organization-identity-tenant-foundation.md,
-        section: M02 权限与安全要求,
-        purpose: 区分集团管理员、Tenant 管理员和普通用户能力,
+        ref: docs/coordination/iam-current-tenant-scope.md,
+        section: 当前租户授权与目录例外,
+        purpose: 当前 Tenant 授权决定入口与按钮；目录查询可跨目标条目，写操作仍要求 SA + Function,
       }
   ux:
     - {
@@ -168,6 +168,20 @@ issues:
       }
 acceptance:
   - {
+      id: compact-row-actions,
+      sourceRef: list-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
+  - {
+      id: tenant-directory-authorization,
+      sourceRef: tenant-permission,
+      observableResult: 无有效当前 Tenant 不请求目录；当前 Tenant 明确拒绝时 SA 与旧缓存不能补权；目录可显示并按目标 id 编辑非当前 Tenant，目录结果不进入切换候选,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/iam-current-api-migration.spec.ts,
+    }
+  - {
       id: tenant-form-consistency,
       sourceRef: tenant-prd,
       observableResult: 每次创建从空白业务资料开始且不展示、采集或提交 tenant_code；编码由服务端生成、编辑态只读；确认和请求与实际输入一致；创建与更新的 company_name 等于 tenant_name；无独立企业名称且域名标签中文化,
@@ -193,4 +207,8 @@ acceptance:
 verification:
   viewports: [desktop-1366, desktop-1440, desktop-1920]
   browserTests:
-    [tests/visual/iam-foundation-previews.spec.ts, tests/visual/iam-tenant-forms.spec.ts]
+    [
+      tests/visual/iam-foundation-previews.spec.ts,
+      tests/visual/iam-tenant-forms.spec.ts,
+      tests/visual/iam-current-api-migration.spec.ts,
+    ]

@@ -6,7 +6,6 @@ import type {
   IamTenantMemberResponse,
   IamTenantResponse,
   IamUserQueryResponse,
-  IamUserTenantsResponse,
   IamUserTenantMembershipResponse,
 } from '../api/foundationApi'
 import type {
@@ -18,7 +17,6 @@ import type {
   PositionRecord,
   TenantMembershipSummary,
   TenantRecord,
-  UserTenantAssignmentSnapshot,
 } from '../types/foundation'
 
 function status(value: string | null | undefined): EntityStatus {
@@ -210,18 +208,6 @@ function queryMembershipSummary(
   }
 }
 
-export function mapUserTenantSnapshot(
-  response: IamUserTenantsResponse,
-): UserTenantAssignmentSnapshot {
-  return {
-    userId: response.user_id,
-    userVersion: response.user_version,
-    memberships: response.memberships.map((member) =>
-      queryMembershipSummary(member, {}, member.tenant_id),
-    ),
-  }
-}
-
 export function mapMember(
   member: IamTenantMemberResponse,
   allMemberships: IamTenantMemberResponse[] = [member],
@@ -253,6 +239,7 @@ export function mapMember(
     avatarUrl: value(user.avatar_url),
     avatarFileId: value(user.avatar_file_id),
     globalUserType: value(user.user_type),
+    roles: [],
     userStatus: status(user.status),
     memberStatus: status(member.status),
     effectiveness: member.is_currently_effective
@@ -330,12 +317,7 @@ export function mapUserQuery(
     tenantTimezone,
     userId: response.user_id || user.id,
     memberCode: value(response.tenant_user_code) || value(currentMembership?.tenant_user_code),
-    displayName:
-      value(response.display_name) ||
-      value(currentMembership?.display_name) ||
-      value(user.real_name) ||
-      value(user.nick_name) ||
-      value(user.user_name),
+    displayName: value(response.display_name) || value(currentMembership?.display_name),
     memberUserType: value(currentMembership?.user_type),
     userName: value(user.user_name),
     realName: value(user.real_name),
@@ -345,6 +327,7 @@ export function mapUserQuery(
     avatarUrl: value(user.avatar_url),
     avatarFileId: value(user.avatar_file_id),
     globalUserType: value(user.user_type),
+    roles: [...(response.roles ?? [])],
     userStatus: status(response.user_status || user.status),
     memberStatus: status(memberStatus),
     effectiveness: !hasCurrentMember

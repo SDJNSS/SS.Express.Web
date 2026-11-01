@@ -3,7 +3,9 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { notification } from '@shared/services/notification'
-import { foundationApi, mapTenant } from '@features/iam/foundation/public'
+import { IAM_PERMISSION_GOVERNANCE_RESOURCES } from '@shared/constants/iamPermissions'
+import { currentTenantOption, requireCurrentTenantId } from '../api/accessControlSession'
+import { getCurrentPageResourcesCached } from '@features/iam/shell-context/public'
 import { mapRole } from '../adapters/accessControlAdapter'
 import { accessControlApi } from '../api/accessControlApi'
 import { accessControlErrorMessage } from '../api/accessControlSession'
@@ -20,16 +22,15 @@ const router = useRouter()
 const route = useRoute()
 const workspace = computed(() => {
   const value = Array.isArray(route.query.view) ? route.query.view[0] : route.query.view
-  return ['function-permissions', 'data-permissions', 'assignments'].includes(value ?? '')
-    ? value
-    : ''
+  return ['function-permissions', 'assignments'].includes(value ?? '') ? value : ''
 })
 const records = ref<RoleRecord[]>([])
 const tenants = ref<TenantOption[]>([])
 const total = ref(0)
 const state = ref<AccessControlPreviewState>('loading')
+const canAccessAuthorization = ref(false)
 let activeQuery: RoleQueryValue = {
-  tenantId: 0,
+  tenantId: requireCurrentTenantId(),
   roleId: 0,
   roleType: '',
   pageIndex: 1,
@@ -51,7 +52,7 @@ async function queryRoles(query = activeQuery) {
       keyword: query.keyword.trim(),
       status: query.status,
     })
-    records.value = response.items.map(mapRole)
+    records.value = response.items.map(mapRole).filter((role) => role.tenantId === query.tenantId)
     total.value = response.total
     state.value = records.value.length ? 'ready' : 'empty'
   } catch (error) {
@@ -64,17 +65,24 @@ async function queryRoles(query = activeQuery) {
 async function load() {
   state.value = 'loading'
   try {
-    const response = await foundationApi.queryTenants({ page_index: 1, page_size: 1000 })
-    tenants.value = response.items.map(mapTenant).map((tenant) => ({
-      id: tenant.id,
-      code: tenant.code,
-      name: tenant.name,
-    }))
-    activeQuery.tenantId = activeQuery.tenantId || tenants.value[0]?.id || 0
+    tenants.value = [currentTenantOption()]
+    requireCurrentTenantId(activeQuery.tenantId)
     await queryRoles(activeQuery)
   } catch (error) {
     state.value = 'retryable-error'
     notification.error(accessControlErrorMessage(error, '角色上下文加载失败'))
+  }
+}
+
+async function loadAuthorizationEntryAccess() {
+  const resourceCode = IAM_PERMISSION_GOVERNANCE_RESOURCES.roles.authorization
+  try {
+    const response = await getCurrentPageResourcesCached(resourceCode)
+    canAccessAuthorization.value =
+      response.can_access && response.page_resource_code.trim() === resourceCode
+  } catch {
+    canAccessAuthorization.value = false
+    notification.warning('角色授权入口暂时无法校验，请刷新页面后重试')
   }
 }
 
@@ -130,7 +138,7 @@ async function submitStatus(record: RoleRecord, targetStatus: 'ACTIVE' | 'DISABL
 
 function navigate(target: 'function' | 'assignments', role: RoleRecord) {
   const routeNames = {
-    function: 'iam-role-function-permissions',
+    function: 'iam-role-authorization',
     assignments: 'iam-role-assignments',
   } as const
   void router.push({
@@ -145,8 +153,7 @@ watch(
   (value) => {
     if (value) {
       const routeNames = {
-        'function-permissions': 'iam-role-function-permissions',
-        'data-permissions': 'iam-role-data-permissions',
+        'function-permissions': 'iam-role-authorization',
         assignments: 'iam-role-assignments',
       } as const
       void router.replace({
@@ -155,6 +162,7 @@ watch(
       })
     } else if (!listLoaded) {
       listLoaded = true
+      void loadAuthorizationEntryAccess()
       void load()
     }
   },
@@ -169,6 +177,7 @@ watch(
     :tenants="tenants"
     :state="state"
     :total="total"
+    :can-access-authorization="canAccessAuthorization"
     :query-roles="queryRoles"
     :submit-role="submitRole"
     :submit-status="submitStatus"

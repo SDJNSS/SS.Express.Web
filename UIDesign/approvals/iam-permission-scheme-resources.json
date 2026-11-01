@@ -1,0 +1,37 @@
+{
+  "$schema": "../../standards/schemas/approval-record.v1.schema.json",
+  "schemaVersion": "1.0",
+  "pageId": "iam-permission-scheme-resources",
+  "status": "approved",
+  "contract": {
+    "path": "docs/page-specs/iam-permission-scheme-resources.yaml",
+    "revision": 3,
+    "digestAlgorithm": "sha256-canonical-json-v1",
+    "digest": "d1b19b897bf45470b138909a67ade28ee0e4e850bfe390f27dbf59026213bb4e"
+  },
+  "approval": {
+    "authority": "human",
+    "approvedAt": "2026-09-27T00:25:51+08:00",
+    "evidence": "用户在当前会话明确确认 IAM Permission Scheme v2 的全部七个 Candidate Preview 页面 approved，并授权按最新后端接口开发正式页面。"
+  },
+  "scope": { "id": "page-content", "exceptionRefs": [] },
+  "viewports": ["desktop-1366", "desktop-1440", "desktop-1920"],
+  "baselines": [
+    {
+      "viewportId": "desktop-1366",
+      "path": "UIDesign/baselines/iam-permission-scheme-resources/desktop-1366.png",
+      "sha256": "29165800ea0dacaf2754f49967b39684c5495ac56f81a66dad7d84bee0be8a05"
+    },
+    {
+      "viewportId": "desktop-1440",
+      "path": "UIDesign/baselines/iam-permission-scheme-resources/desktop-1440.png",
+      "sha256": "8f2ae313274446a6636071abe11e5bc949bd93dee0a2fb61409eb5acd1202779"
+    },
+    {
+      "viewportId": "desktop-1920",
+      "path": "UIDesign/baselines/iam-permission-scheme-resources/desktop-1920.png",
+      "sha256": "75ba96f0ca8b3d8743ba1cf909656c0c46e90b3991f3f39adaa32de73662ce06"
+    }
+  ],
+  "readyText": "权限功能配置"
+}

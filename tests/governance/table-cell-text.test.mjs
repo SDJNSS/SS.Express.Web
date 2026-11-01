@@ -52,7 +52,10 @@ test('DataTable 默认文本列统一复用可访问的 TableCellText，slot 列
 
   assert.match(dataTableSource, /import TableCellText from '\.\/TableCellText\.vue'/)
   assert.match(dataTableSource, /maxCharacters\?: number \| false/)
-  assert.match(dataTableSource, /:show-overflow-tooltip="Boolean\(column\.slot\)"/)
+  assert.match(
+    dataTableSource,
+    /:show-overflow-tooltip="Boolean\(column\.slot && column\.slot !== 'actions'\)"/,
+  )
   assert.match(dataTableSource, /<TableCellText/)
   assert.match(cellTextSource, /:tabindex="needsTooltip \? 0 : undefined"/)
   assert.match(cellTextSource, /:aria-label="needsTooltip \? truncation\.fullText : undefined"/)

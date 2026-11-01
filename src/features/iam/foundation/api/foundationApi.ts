@@ -4,6 +4,8 @@ import { requestApi } from '@shared/api/httpClient'
 import { createRequestId } from '@shared/api/requestIdentity'
 import type { VersionToken } from '@shared/types/common'
 
+export { createRequestId } from '@shared/api/requestIdentity'
+
 export type IamEntityStatus = 'ACTIVE' | 'DISABLED'
 
 export interface IamPagedResponse<T> {
@@ -327,29 +329,9 @@ export interface IamUserTenantMembershipResponse {
   updated_at: string
 }
 
-export interface IamUserTenantsResponse {
-  user_id: number
-  user_version: VersionToken
-  memberships: IamUserTenantMembershipResponse[]
-}
-
-export interface IamUserTenantsUpdateRequest {
-  user_id: number
-  user_version: VersionToken
-  original_memberships: Array<{
-    tenant_user_id: number
-    member_version: VersionToken
-  }>
-  tenants: Array<{
-    tenant_id: number
-    is_tenant_admin: boolean
-    restore: boolean
-  }>
-  remove_tenant_user_ids: number[]
-  request_id: string
-}
-
 export interface IamUserQueryResponse {
+  /** 当前 Tenant 的直接分配角色名称，不代表实际有效权限；兼容部署过渡期缺省。 */
+  roles?: string[]
   user_id: number
   tenant_user_id: number
   user_status: string
@@ -372,6 +354,8 @@ export interface IamUserQueryResponse {
 
 export interface IamUserListRequest {
   tenant_ids: number[]
+  tenant_user_code?: string
+  tenant_user_code_fuzzy?: boolean
   user_id?: number
   user_name?: string
   real_name?: string
@@ -433,8 +417,32 @@ export interface IamMemberRelationSaveRequest {
   target_id: number
   is_primary: boolean
   effective_start: string
-  effective_end?: string
+  effective_end?: string | null
   remarks: string
+}
+
+export interface IamMemberRelationEndRequest {
+  id: number
+  version: VersionToken
+  effective_end: string | null
+}
+
+export interface IamTenantAdminChangeRequest {
+  tenant_id: number
+  user_id: number
+  member_version: VersionToken
+  request_id: string
+}
+
+export interface IamTenantAdminChangeResponse {
+  tenant_id: number
+  user_id: number
+  tenant_user_id: number
+  is_tenant_admin: boolean
+  member_version: VersionToken
+  request_id: string
+  changed: boolean
+  idempotent: boolean
 }
 
 export interface IamTenantSwitchRequest {
@@ -490,15 +498,16 @@ const endpoints = Object.freeze({
   positionStatus: '/Position/ChangeStatus',
   userQuery: '/Membership/QueryUsers',
   membershipFilterOptions: '/Membership/QueryFilterOptions',
-  userTenantsQuery: '/Membership/QueryUserTenants',
-  userTenantsUpdate: '/Membership/UpdateUserTenants',
   memberCreate: '/Membership/CreateMember',
   memberUpdate: '/Membership/UpdateMember',
   userUpdate: '/Membership/UpdateUser',
   memberStatus: '/Membership/ChangeMemberStatus',
-  userStatus: '/Membership/ChangeUserStatus',
   saveOrganization: '/Membership/SaveOrganization',
   savePosition: '/Membership/SavePosition',
+  endOrganization: '/Membership/EndOrganization',
+  endPosition: '/Membership/EndPosition',
+  appointTenantAdmin: '/MemberRole/AppointTenantAdmin',
+  cancelTenantAdmin: '/MemberRole/CancelTenantAdmin',
   switchTenant: '/Auth/SwitchTenant',
   logout: '/Auth/Logout',
 } as const)
@@ -510,6 +519,9 @@ async function postIam<Response, Request>(
   signal?: AbortSignal,
 ): Promise<Response> {
   return requestApi<Response, Request>({
+    // Directory target IDs are independent of the tenant authorizing this request.
+    // Auth/SwitchTenant must also work before a current tenant has been selected.
+    tenantScoped: !path.startsWith('/Auth/'),
     method: 'POST',
     url: serviceApiPath('iam', defineApiPath(path)),
     data,
@@ -588,19 +600,6 @@ export const foundationApi = {
       createRequestId(),
       signal,
     ),
-  queryUserTenants: (userId: number) =>
-    postIam<IamUserTenantsResponse, { user_id: number }>(endpoints.userTenantsQuery, {
-      user_id: userId,
-    }),
-  updateUserTenants: (request: Omit<IamUserTenantsUpdateRequest, 'request_id'>) => {
-    const requestId = createRequestId()
-    const payload: IamUserTenantsUpdateRequest = { ...request, request_id: requestId }
-    return postIam<IamUserTenantsResponse, IamUserTenantsUpdateRequest>(
-      endpoints.userTenantsUpdate,
-      payload,
-      requestId,
-    )
-  },
   createMember: (request: IamTenantMemberCreateRequest) =>
     postIam<IamTenantMemberResponse, IamTenantMemberCreateRequest>(endpoints.memberCreate, request),
   updateMember: (request: IamTenantMemberUpdateRequest) =>
@@ -609,8 +608,6 @@ export const foundationApi = {
     postIam<IamUserResponse, IamUserUpdateRequest>(endpoints.userUpdate, request),
   changeMemberStatus: (request: IamStatusChangeRequest) =>
     postIam<IamActionResponse, IamStatusChangeRequest>(endpoints.memberStatus, request),
-  changeUserStatus: (request: IamStatusChangeRequest) =>
-    postIam<IamActionResponse, IamStatusChangeRequest>(endpoints.userStatus, request),
   saveOrganization: (request: IamMemberRelationSaveRequest) => {
     const { target_id, ...rest } = request
     return postIam<
@@ -625,6 +622,22 @@ export const foundationApi = {
       Omit<IamMemberRelationSaveRequest, 'target_id'> & { position_id: number }
     >(endpoints.savePosition, { ...rest, position_id: target_id })
   },
+  endOrganization: (request: IamMemberRelationEndRequest) =>
+    postIam<IamActionResponse, IamMemberRelationEndRequest>(endpoints.endOrganization, request),
+  endPosition: (request: IamMemberRelationEndRequest) =>
+    postIam<IamActionResponse, IamMemberRelationEndRequest>(endpoints.endPosition, request),
+  appointTenantAdmin: (request: IamTenantAdminChangeRequest) =>
+    postIam<IamTenantAdminChangeResponse, IamTenantAdminChangeRequest>(
+      endpoints.appointTenantAdmin,
+      request,
+      request.request_id,
+    ),
+  cancelTenantAdmin: (request: IamTenantAdminChangeRequest) =>
+    postIam<IamTenantAdminChangeResponse, IamTenantAdminChangeRequest>(
+      endpoints.cancelTenantAdmin,
+      request,
+      request.request_id,
+    ),
   switchTenant: (request: IamTenantSwitchRequest) =>
     postIam<IamTenantSwitchResponse, IamTenantSwitchRequest>(endpoints.switchTenant, request),
   logout: () =>

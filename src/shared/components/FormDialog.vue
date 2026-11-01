@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     modelValue: boolean
     title: string
     width?: string | number
@@ -11,6 +14,7 @@ withDefaults(
     confirmType?: 'primary' | 'success' | 'warning' | 'danger'
   }>(),
   {
+    resource_element: undefined,
     width: 560,
     submitting: false,
     confirmDisabled: false,
@@ -28,6 +32,7 @@ const emit = defineEmits<{
 
 <template>
   <el-dialog
+    v-bind="resourceElementAttributes(resource_element)"
     :model-value="modelValue"
     :title="title"
     :width="width"
@@ -37,10 +42,14 @@ const emit = defineEmits<{
     <slot />
     <template #footer>
       <slot name="footer">
-        <el-button :disabled="submitting" @click="emit('update:modelValue', false)">{{
-          cancelButtonText
-        }}</el-button>
         <el-button
+          v-resource-element="resource_element"
+          :disabled="submitting"
+          @click="emit('update:modelValue', false)"
+          >{{ cancelButtonText }}</el-button
+        >
+        <el-button
+          v-resource-element="resource_element"
           :type="confirmType"
           :disabled="confirmDisabled || submitting"
           :loading="submitting"

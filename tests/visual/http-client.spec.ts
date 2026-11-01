@@ -1,6 +1,113 @@
 import { expect, test } from '@playwright/test'
 
+import { sourceHost } from './helpers/testServers'
+
+test.use({ baseURL: sourceHost })
+
 test.describe('shared HTTP client', () => {
+  test('preserves tenant-switch guidance and classifies IAM denial envelopes and expired sessions', async ({
+    page,
+  }) => {
+    const cases = [
+      {
+        name: 'tenant-envelope',
+        status: 200,
+        code: 403,
+        message: '请求 Tenant 与当前会话 Tenant 不一致，请先切换租户',
+        reason_code: 'IAM_CURRENT_TENANT_MISMATCH',
+      },
+      {
+        name: 'tenant-http',
+        status: 403,
+        code: 403,
+        message: '请求 Tenant 与当前会话 Tenant 不一致，请先切换租户',
+        reason_code: 'IAM_CURRENT_TENANT_MISMATCH',
+      },
+      { name: 'forbidden', status: 200, code: 403, message: 'Forbidden' },
+      { name: 'expired', status: 200, code: 1002, message: '当前成员已失效' },
+      { name: 'conflict', status: 409, code: 1109, message: '版本已变化，请刷新后重试' },
+    ]
+    for (const entry of cases) {
+      await page.route(`**/api/test/${entry.name}`, (route) =>
+        route.fulfill({
+          status: entry.status,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            code: entry.code,
+            message: entry.message,
+            reason_code: entry.reason_code,
+            data: null,
+          }),
+        }),
+      )
+    }
+    await page.route('**/api/test/export-csv', (route) =>
+      route.fulfill({ contentType: 'text/csv', body: 'name\n张三' }),
+    )
+    await page.goto('/login')
+    const result = await page.evaluate(
+      async (names) => {
+        const modulePath = '/src/shared/api/httpClient.ts'
+        const { requestApi, requestRaw, configureHttpAuth } = await import(
+          /* @vite-ignore */ modulePath
+        )
+        let expired = 0
+        const restore = configureHttpAuth({
+          getAccessToken: () => 'current-tenant-token',
+          clearAccessToken: () => undefined,
+          onSessionExpired: () => {
+            expired += 1
+          },
+        })
+        const errors: Array<{ category?: string; message?: string; reasonCode?: string }> = []
+        try {
+          for (const name of names) {
+            try {
+              await requestApi({ url: `/test/${name}`, method: 'POST' })
+            } catch (error) {
+              const failure = error as { category?: string; message?: string; reasonCode?: string }
+              errors.push({
+                category: failure.category,
+                message: failure.message,
+                reasonCode: failure.reasonCode,
+              })
+            }
+          }
+          let exportFailure = ''
+          try {
+            await requestRaw({ url: '/test/tenant-envelope', method: 'POST', responseType: 'blob' })
+          } catch (error) {
+            exportFailure = (error as { category?: string }).category ?? ''
+          }
+          const exportedFile = (await requestRaw({
+            url: '/test/export-csv',
+            method: 'POST',
+            responseType: 'blob',
+          })) as Blob
+          return { errors, expired, exportFailure, exportedText: await exportedFile.text() }
+        } finally {
+          restore()
+        }
+      },
+      cases.map((entry) => entry.name),
+    )
+    expect(result.errors.map((error) => error.category)).toEqual([
+      'permission',
+      'permission',
+      'permission',
+      'authentication',
+      'business',
+    ])
+    expect(result.errors[0]?.message).toContain('请先切换租户')
+    expect(result.errors[1]?.message).toContain('请先切换租户')
+    expect(result.errors[0]?.reasonCode).toBe('IAM_CURRENT_TENANT_MISMATCH')
+    expect(result.errors[1]?.reasonCode).toBe('IAM_CURRENT_TENANT_MISMATCH')
+    expect(result.errors[4]?.message).toContain('刷新后重试')
+    expect(result.expired).toBe(1)
+    expect(result.exportFailure).toBe('permission')
+    expect(result.exportedText).toBe('name\n张三')
+  })
+
   test('uses the unified base URL, injects headers, and unwraps the API envelope', async ({
     page,
   }) => {
@@ -198,5 +305,88 @@ test.describe('shared HTTP client', () => {
 
     expect(category).toBe('authentication')
     expect(dispatchedRequests).toBe(0)
+  })
+
+  test('业务请求拒绝其他租户或空租户集合，且不触网', async ({ page }) => {
+    let dispatchedRequests = 0
+    await page.route('**/api/test/tenant-boundary', async (route) => {
+      dispatchedRequests += 1
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 1, message: '', data: true }),
+      })
+    })
+    await page.goto('/')
+    const categories = await page.evaluate(async () => {
+      const authModulePath = '/src/shared/api/authSession.ts'
+      const httpModulePath = '/src/shared/api/httpClient.ts'
+      const { setStoredAuthSession } = await import(/* @vite-ignore */ authModulePath)
+      const { requestApi } = await import(/* @vite-ignore */ httpModulePath)
+      setStoredAuthSession({
+        accessToken: 'tenant-a-token',
+        account: 'tester',
+        loginState: 'AUTHENTICATED',
+        currentTenantId: 1,
+      })
+      const results: string[] = []
+      for (const data of [{ tenant_id: 3 }, { tenant_ids: [] }, { tenant_ids: [1, 3] }]) {
+        try {
+          await requestApi({
+            url: '/test/tenant-boundary',
+            method: 'POST',
+            tenantScoped: true,
+            data,
+          })
+        } catch (error) {
+          results.push((error as { category?: string }).category ?? '')
+        }
+      }
+      return results
+    })
+    expect(categories).toEqual(['cancelled', 'cancelled', 'cancelled'])
+    expect(dispatchedRequests).toBe(0)
+  })
+
+  test('租户切换后的旧响应不能交付给新上下文', async ({ page }) => {
+    await page.route('**/api/test/tenant-slow', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 1, message: '', data: { tenant: 1 } }),
+      })
+    })
+    await page.goto('/')
+    const result = await page.evaluate(async () => {
+      const authModulePath = '/src/shared/api/authSession.ts'
+      const httpModulePath = '/src/shared/api/httpClient.ts'
+      const { setStoredAuthSession } = await import(/* @vite-ignore */ authModulePath)
+      const { requestApi } = await import(/* @vite-ignore */ httpModulePath)
+      setStoredAuthSession({
+        accessToken: 'tenant-a-token',
+        account: 'tester',
+        loginState: 'AUTHENTICATED',
+        currentTenantId: 1,
+      })
+      const pending = requestApi({
+        url: '/test/tenant-slow',
+        method: 'POST',
+        tenantScoped: true,
+        data: { tenant_id: 1 },
+      })
+      await new Promise((resolve) => setTimeout(resolve, 80))
+      setStoredAuthSession({
+        accessToken: 'tenant-b-token',
+        account: 'tester',
+        loginState: 'AUTHENTICATED',
+        currentTenantId: 3,
+      })
+      try {
+        await pending
+        return 'accepted'
+      } catch (error) {
+        return (error as { category?: string }).category ?? ''
+      }
+    })
+    expect(result).toBe('cancelled')
   })
 })

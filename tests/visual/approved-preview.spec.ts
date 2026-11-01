@@ -1,3 +1,4 @@
+import { previewHost } from './helpers/testServers'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -43,7 +44,7 @@ test.describe('approved canonical previews', () => {
       })
 
       expect(approval.status).toBe('approved')
-      await page.goto(`http://127.0.0.1:4174/?preview=${approval.pageId}&capture=1&scenario=ready`)
+      await page.goto(`${previewHost}/?preview=${approval.pageId}&capture=1&scenario=ready`)
       await expect(page.locator(`[data-preview-id="${approval.pageId}"]`)).toBeVisible()
       await expect(page.getByText(approval.readyText, { exact: false }).first()).toBeVisible()
       await page.evaluate(() => document.fonts.ready.then(() => undefined))

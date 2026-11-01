@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { resourceRegistry as overviewResources } from './overview/iam-resource.registry'
 
 const vmsFeatureRoutes: RouteRecordRaw[] = (
   [
@@ -38,6 +39,8 @@ export const vmsRoutes: RouteRecordRaw[] = [
     component: () => import('./overview/pages/VmsOverviewPage.vue'),
     meta: {
       title: 'VMS 车辆管理',
+      resourceCode: overviewResources.overview.resource_code,
+      resource_element: overviewResources.overview.elements.page.resource_element,
       subsystem: 'vms',
       permission: 'vms:overview:view',
       breadcrumb: ['VMS 车辆管理', '工作台'],

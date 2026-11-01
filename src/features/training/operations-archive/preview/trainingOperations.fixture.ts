@@ -1,3 +1,4 @@
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 import type {
   TrainingEmployeeArchiveDto,
   TrainingEmployeeTaskRecordDto,
@@ -426,10 +427,10 @@ export const trainingOperationsFixture: TrainingOperationsFixture = {
     {
       id: 205,
       trainingId: 101,
-      name: '国庆节前安全临时培训',
+      name: '国庆节前安全培训',
       planName: '2026 年度驾驶员安全培训计划',
       period: 'TEMP-202609-01',
-      taskType: 'TEMPORARY',
+      taskType: TRAINING_TASK_TYPES.OTHER,
       startAt: '2026-09-24 08:00',
       endAt: '2026-09-28 18:00',
       status: 'NOT_STARTED',
@@ -450,7 +451,7 @@ export const trainingOperationsFixture: TrainingOperationsFixture = {
       name: '新员工与返岗安全培训',
       planName: '新员工与返岗安全常设培训',
       period: '长期开放',
-      taskType: 'TEMPORARY',
+      taskType: TRAINING_TASK_TYPES.OTHER,
       startAt: '2026-09-01 00:00',
       isLongRunning: true,
       contentVersion: 3,

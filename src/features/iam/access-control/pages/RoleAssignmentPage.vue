@@ -5,10 +5,10 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   currentTenantId,
   foundationApi,
-  mapTenant,
   mapUserQuery,
 } from '@features/iam/foundation/public'
 import { notification } from '@shared/services/notification'
+import { currentTenantOption, requireCurrentTenantId } from '../api/accessControlSession'
 import { mapAssignment, mapRole } from '../adapters/accessControlAdapter'
 import { accessControlApi } from '../api/accessControlApi'
 import { accessControlErrorMessage, positiveRouteId } from '../api/accessControlSession'
@@ -68,7 +68,7 @@ async function loadTenantOptions(tenantId: number) {
       member.isTenantAdmin && member.effectiveness === 'EFFECTIVE' && effectiveAdminCount <= 1,
     version: member.version,
   }))
-  roles.value = roleResponse.items.map(mapRole)
+  roles.value = roleResponse.items.map(mapRole).filter((role) => role.tenantId === tenantId)
 }
 
 async function queryAssignments(query = activeQuery) {
@@ -93,7 +93,7 @@ async function queryAssignments(query = activeQuery) {
       keyword: resolvedQuery.keyword.trim(),
       status: resolvedQuery.status,
     })
-    records.value = response.items.map(mapAssignment)
+    records.value = response.items.map(mapAssignment).filter((item) => item.tenantId === resolvedQuery.tenantId)
     total.value = response.total
     state.value = records.value.length ? 'ready' : 'empty'
   } catch (error) {
@@ -107,13 +107,9 @@ async function load() {
   state.value = 'loading'
   try {
     const tenantId = activeQuery.tenantId || currentTenantId()
-    const tenantResponse = await foundationApi.queryTenants({ page_index: 1, page_size: 1000 })
+    requireCurrentTenantId(tenantId)
     await loadTenantOptions(tenantId)
-    tenants.value = tenantResponse.items.map(mapTenant).map((tenant) => ({
-      id: tenant.id,
-      code: tenant.code,
-      name: tenant.name,
-    }))
+    tenants.value = [currentTenantOption()]
     activeQuery = {
       ...activeQuery,
       tenantId,

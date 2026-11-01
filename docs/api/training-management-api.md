@@ -52,7 +52,7 @@
 
 | 字段              | 类型                                | 规则                                                  |
 | ----------------- | ----------------------------------- | ----------------------------------------------------- |
-| `task_type`       | `MONTHLY \| QUARTERLY \| TEMPORARY` | 长期任务必须是 `TEMPORARY`                            |
+| `task_type`       | `MONTHLY \| QUARTERLY \| TEMPORARY` | 前端“其他任务”对应`TRAINING_TASK_TYPES.OTHER`；当前协议值仍为`TEMPORARY`，长期任务必须使用该值 |
 | `period_key`      | `string`                            | 月度/季度任务显式提交；`TEMPORARY` 留空并由服务端生成 |
 | `is_long_running` | `bool`                              | 仅常设计划的 `TEMPORARY` 任务可为 `true`              |
 | `start_at`        | `datetime`                          | 必需                                                  |

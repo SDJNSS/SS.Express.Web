@@ -1,0 +1,220 @@
+schemaVersion: '0.1'
+page:
+  id: iam-user-effective-permissions
+  name: 用户有效权限
+  feature: iam/permission-governance
+  type: WorkspacePage
+  patternKey: WorkspacePageTemplate
+  revision: 4
+sources:
+  inputMode: prd-only
+  prd:
+    - id: permission-v2-prd
+      ref: docs/prd/iam/permission-scheme-v2.md
+      section: 用户有效权限
+      purpose: 定义用户当前 Tenant 的来源角色、有效Permission及包内 Permission／Resource 只读核查
+  api:
+    - id: user-effective-permission-api
+      ref: src/features/iam/permission-governance/api/permissionGovernanceApi.ts
+      section: endpoints
+      operation: POST /iam-admin/PermissionApp/Query; POST /iam-admin/CurrentPermissionResource/QueryUserPermissions
+      purpose: 绑定 App 目录与同一授权快照内的角色、Permission、Permission、Resource 来源链
+    - id: membership-user-api
+      ref: src/features/iam/foundation/api/foundationApi.ts
+      section: endpoints
+      operation: POST /iam-admin/Membership/QueryUsers
+      purpose: 在当前 Tenant 中解析目标用户和成员展示上下文
+  permissions:
+    - id: user-effective-permission
+      ref: src/shared/constants/iamPermissions.ts
+      section: IAM_PERMISSION_GOVERNANCE_RESOURCES.members
+      operation: IAM.MEMBERS.EFFECTIVE_PERMISSIONS
+      purpose: 使用稳定前端 ButtonPage 资源码控制只读有效权限路由
+  ux:
+    - id: permission-ux
+      ref: UX-CONTRACT.md
+      section: Permission and clipboard
+      purpose: 约束只读有效权限、来源解释和无权限反馈
+    - id: async-ux
+      ref: UX-CONTRACT.md
+      section: Async and resilience
+      purpose: 约束跨用户和 Tenant 查询隔离、失败与重试
+    - id: navigation-ux
+      ref: UX-CONTRACT.md
+      section: Navigation and responsive behavior
+      purpose: 约束Permission树展开、搜索和压缩视口滚动
+  references:
+    - id: role-authorization-sibling
+      ref: docs/page-specs/iam-role-authorization.yaml
+      origin: project
+      kind: document
+      purpose: 与角色授权共用 Permission → Resource 层级，但整页保持只读
+implementation:
+  canonicalEntry: src/features/iam/permission-governance/components/UserEffectivePermissionsPageView.vue
+  previewEntry: src/features/iam/permission-governance/public.preview.ts
+  previewBinding: src/features/iam/permission-governance/preview/PermissionGovernancePreviewPage.vue
+  productionBinding: src/features/iam/permission-governance/pages/UserEffectivePermissionsPage.vue
+  productionRoute: /iam/members/effective-permissions
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: member-context, role: summary, order: 2 }
+    - { id: source-roles, role: data, order: 3 }
+    - { id: permissions, role: data, order: 4 }
+    - { id: permission-detail, role: detail, order: 5 }
+    - { id: feedback, role: feedback, order: 6 }
+  components:
+    - {
+        id: app-page,
+        componentKey: shared.app-page,
+        regionId: header,
+        purpose: 使用统一内容区和滚动边界,
+      }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 承载返回用户列表和刷新结果动作,
+      }
+    - {
+        id: source-role-table,
+        componentKey: shared.data-table,
+        regionId: source-roles,
+        purpose: 展示当前 Tenant 下有效来源角色,
+      }
+    - {
+        id: effective-permission-tree,
+        componentKey: feature.iam.permission-governance.permission-permission-tree,
+        regionId: permissions,
+        purpose: 只读展示 Permission、Permission 与 Resource 层级,
+      }
+    - {
+        id: permission-inspector,
+        componentKey: feature.iam.permission-governance.resource-inspector,
+        regionId: permission-detail,
+        purpose: 展示Permission、Permission、资源和全部来源角色,
+      }
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 展示当前 Tenant 用户、来源角色和有效Permission树
+    ruleRef: permission-v2-prd
+  - id: loading
+    scopeRef: permissions
+    observableResult: 查询期间清除上一用户或上一 Tenant 的权限结果并保持结构稳定
+    ruleRef: async-ux
+  - id: readonly
+    scopeRef: permissions
+    observableResult: Permission、Permission 和 Resource 均没有勾选、保存、增删或用户直授权入口
+    ruleRef: permission-v2-prd
+  - id: no-roles
+    scopeRef: source-roles
+    observableResult: 当前 Tenant 无有效角色时说明权限来源为空
+    ruleRef: permission-v2-prd
+  - id: empty
+    scopeRef: permissions
+    observableResult: 用户无有效Permission时显示明确空状态而非授权入口
+    ruleRef: permission-v2-prd
+  - id: retryable-error
+    scopeRef: feedback
+    observableResult: 查询失败默认拒绝且不复用其他用户或 Tenant 的缓存结果
+    ruleRef: async-ux
+interactions:
+  - id: search-effective-permissions
+    trigger: 输入Permission或 Permission 名称
+    targetRef: permissions
+    observableResult: 模糊筛选有效Permission并保留命中 Permission／Resource 的祖先路径，不改变权限结果
+    ruleRef: navigation-ux
+  - id: inspect-effective-permission
+    trigger: 展开Permission或 Permission 并点击节点名称
+    targetRef: permission-detail
+    observableResult: 只读查看 Permission 的前端资源、后端 Function 和全部来源角色／Permission
+    ruleRef: permission-v2-prd
+  - id: retry-query
+    trigger: 点击刷新或重新加载
+    targetRef: feedback
+    observableResult: 使用同一用户和当前 Tenant 重新查询权威有效权限
+    ruleRef: async-ux
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [
+        same-permission-hierarchy,
+        effective-result-readonly,
+        permission-source-traceable,
+        preview-isolated,
+      ]
+  - id: empty-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [effective-result-readonly]
+  - id: error-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: retryable-error
+    acceptanceRefs: [safe-query-failure]
+exceptions: []
+issues:
+  blockers: []
+  deferred:
+    - id: production-deployment-deferred
+      description: 正式用户有效权限快照 DTO、稳定前端资源码与 Production Binding 已闭合；生产环境部署和真实身份端到端联调由发布流程继续跟踪
+      affectedScopes: [production-regression]
+      owner: Web 与 IAM 发布
+      resolutionTarget: 发布窗口完成生产部署和真实环境回归
+  outOfScope:
+    - id: no-user-direct-grant
+      description: 用户有效权限页全量只读，不提供用户直授权、Permission绑定或 Permission 修改入口
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-data-scope
+      description: 本次不新增业务数据范围配置
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - id: same-permission-hierarchy
+    sourceRef: permission-v2-prd
+    observableResult: 页面使用与角色授权相同的 Permission → Resource 展示层级
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: effective-result-readonly
+    sourceRef: permission-v2-prd
+    observableResult: 页面整页只读，不出现任何节点勾选、保存、增删或用户直授权入口
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: readonly
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: permission-source-traceable
+    sourceRef: permission-v2-prd
+    observableResult: 每项有效权限可查看全部来源角色和Permission；移除单一来源后仍有效时可解释其余来源
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: inspect-effective-permission
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: safe-query-failure
+    sourceRef: async-ux
+    observableResult: 失败状态不泄露或沿用其他用户、其他 Tenant 的权限结果，并提供重试
+    affectedScopes: [preview-interaction]
+    stateRef: retryable-error
+    interactionRef: retry-query
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: permission-ux
+    observableResult: Candidate Preview 只使用确定性 Fixture，不访问 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: production-effective-permission-bound
+    sourceRef: user-effective-permission-api
+    observableResult: 正式路由在当前 Tenant 读取目标用户与同一 authorization_version 下的完整有效权限来源快照，并保持整页只读
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-permission-governance-previews.spec.ts,
+      tests/visual/iam-permission-governance-production.spec.ts,
+    ]

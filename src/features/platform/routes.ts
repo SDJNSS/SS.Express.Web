@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { resourceRegistry as dashboardResources } from './dashboard/iam-resource.registry'
 
 export const platformRoutes: RouteRecordRaw[] = [
   {
@@ -7,6 +8,8 @@ export const platformRoutes: RouteRecordRaw[] = [
     component: () => import('./dashboard/pages/PlatformWelcomePage.vue'),
     meta: {
       title: '欢迎',
+      resourceCode: dashboardResources.welcome.resource_code,
+      resource_element: dashboardResources.welcome.elements.page.resource_element,
       subsystem: 'dms',
       permission: 'dms:welcome:view',
       hidden: true,
@@ -19,6 +22,8 @@ export const platformRoutes: RouteRecordRaw[] = [
     component: () => import('./dashboard/pages/PlatformDashboardPage.vue'),
     meta: {
       title: '物流运营总览',
+      resourceCode: dashboardResources.dashboard.resource_code,
+      resource_element: dashboardResources.dashboard.elements.page.resource_element,
       subsystem: 'dms',
       permission: 'dms:dashboard:view',
       permissionFallback: 'platform-welcome',

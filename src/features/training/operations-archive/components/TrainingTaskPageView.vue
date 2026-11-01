@@ -72,7 +72,7 @@ const columns: DataTableColumn[] = [
   { label: '锁定', width: 86, slot: 'locked' },
   { label: '应培训 / 完成', width: 132, slot: 'progress' },
   { label: '完成率', width: 96, slot: 'rate' },
-  { label: '操作', width: 224, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 const employeeColumns: DataTableColumn[] = [
   { prop: 'employeeCode', label: '员工编号', width: 130 },

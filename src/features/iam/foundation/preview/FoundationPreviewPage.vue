@@ -7,10 +7,67 @@ import OrganizationManagementPageView from '../components/OrganizationManagement
 import PositionManagementPageView from '../components/PositionManagementPageView.vue'
 import TenantContextPageView from '../components/TenantContextPageView.vue'
 import TenantManagementPageView from '../components/TenantManagementPageView.vue'
-import type { FoundationPreviewState, OrganizationNode } from '../types/foundation'
+import type {
+  FoundationPreviewState,
+  OrganizationNode,
+  MembershipRecord,
+} from '../types/foundation'
 import { foundationFixture } from './foundation.fixture'
 import TenantSwitchPreviewSurface from './TenantSwitchPreviewSurface.vue'
 import type { OrganizationLeaderLoader } from '../types/organizationLeader'
+
+import type { MemberRoleSnapshot } from '../types/memberRoles'
+
+// Preview-only data; production supplies API callbacks instead.
+const previewMemberships = ref(structuredClone(foundationFixture.memberships))
+const previewRoles = new Map<number, MemberRoleSnapshot>()
+async function loadPreviewRoles(member: MembershipRecord): Promise<MemberRoleSnapshot> {
+  return structuredClone(
+    previewRoles.get(member.id) ?? {
+      tenantUserId: member.id,
+      memberVersion: member.version,
+      effective: true,
+      roles: member.roles.map((roleName, index) => ({
+        roleId: 1000 + index,
+        roleName,
+        roleCode: `PREVIEW-${index}`,
+        effective: true,
+        removable: true,
+        reason: '',
+      })),
+      candidates: [
+        { id: 1, name: '培训运营（预览）' },
+        { id: 2, name: '组织维护（预览）' },
+      ],
+    },
+  )
+}
+async function updatePreviewRoles(
+  snapshot: MemberRoleSnapshot,
+  ids: number[],
+  operation: 'assign' | 'revoke',
+) {
+  const roles =
+    operation === 'assign'
+      ? [
+          ...snapshot.roles,
+          ...ids.map((id) => ({
+            roleId: id,
+            roleName: snapshot.candidates.find((role) => role.id === id)?.name ?? '',
+            roleCode: 'PREVIEW',
+            effective: true,
+            removable: true,
+            reason: '',
+          })),
+        ]
+      : snapshot.roles.filter((role) => !ids.includes(role.roleId))
+  previewRoles.set(snapshot.tenantUserId, JSON.parse(JSON.stringify({ ...snapshot, roles })))
+  previewMemberships.value = previewMemberships.value.map((member) =>
+    member.id === snapshot.tenantUserId
+      ? { ...member, roles: roles.map((role) => role.roleName) }
+      : member,
+  )
+}
 
 const params = new URLSearchParams(window.location.search)
 const previewId = params.get('preview') ?? 'iam-group-profile'
@@ -45,7 +102,7 @@ const loadPreviewLeaderOptions: OrganizationLeaderLoader = async ({
     )
     .map((member) => ({
       id: member.id,
-      label: member.realName || member.userName,
+      label: member.realName || '未设置姓名',
       description: member.userName,
     }))
     .filter((item) => `${item.label} ${item.description}`.includes(keyword))
@@ -149,11 +206,14 @@ function submitTenantContext() {
 
   <MembershipManagementPageView
     v-else-if="previewId === 'iam-membership-management'"
-    :records="foundationFixture.memberships"
+    :records="previewMemberships"
     :organization-options="organizationOptions"
     :position-options="positionOptions"
-    :tenant-options="foundationFixture.tenantOptions"
+    :tenant-options="[fixtureTenant]"
     :state="state"
+    :can-access-effective-permissions="true"
+    :load-member-roles="loadPreviewRoles"
+    :update-member-roles="updatePreviewRoles"
     @action="announce"
     @retry="retry"
   />

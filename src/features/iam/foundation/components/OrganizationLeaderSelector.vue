@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import PagedEntitySelect from '@shared/components/PagedEntitySelect.vue'
 import type { OrganizationLeaderLoader } from '../types/organizationLeader'
 
 defineProps<{
+  resource_element?: ResourceElement | undefined
+
   modelValue?: number | undefined
   selectedLabel?: string | undefined
   scopeKey: string
@@ -15,8 +18,9 @@ const emit = defineEmits<{ 'update:modelValue': [value: number | undefined] }>()
 </script>
 
 <template>
-  <div class="organization-leader-selector">
+  <div v-bind="resourceElementAttributes(resource_element)" class="organization-leader-selector">
     <PagedEntitySelect
+      :resource_element="resource_element"
       :model-value="modelValue"
       :selected-label="selectedLabel"
       :scope-key="scopeKey"

@@ -6,7 +6,7 @@ page:
     feature: training/operations-archive,
     type: DetailPage,
     patternKey: DetailPageTemplate,
-    revision: 2,
+    revision: 3,
   }
 sources:
   inputMode: prd-only
@@ -281,6 +281,13 @@ issues:
   }
 acceptance:
   [
+    {
+      id: compact-row-actions,
+      sourceRef: project-ux,
+      observableResult: 保留既有业务操作，操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    },
     {
       id: task-detail,
       sourceRef: training-operations-prd,

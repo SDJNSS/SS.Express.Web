@@ -11,12 +11,15 @@ import axios, {
 import { apiConfig } from './apiConfig'
 import { clearStoredAccessToken, getStoredAccessToken, setStoredAccessToken } from './authSession'
 import { createRequestId } from './requestIdentity'
+import { assertTenantRequest, TenantContextError } from './tenantContext'
+import { getStoredAuthSession } from './authSession'
 
 export interface ApiEnvelope<T> {
   code: string | number
   message: string
   data?: T
   requestId?: string
+  reason_code?: string
   status?: string
 }
 
@@ -27,12 +30,14 @@ interface ApiErrorDetails {
   status?: number | undefined
   code?: string | undefined
   requestId?: string | undefined
+  reasonCode?: string | undefined
 }
 
 export class ApiError extends Error {
   readonly status: number | undefined
   readonly code: string | undefined
   readonly requestId: string | undefined
+  readonly reasonCode: string | undefined
 
   constructor(
     message: string,
@@ -44,6 +49,7 @@ export class ApiError extends Error {
     this.status = details.status
     this.code = details.code
     this.requestId = details.requestId
+    this.reasonCode = details.reasonCode
   }
 }
 
@@ -52,12 +58,17 @@ export type RequestAuthMode = 'required' | 'optional' | 'none'
 export interface ApiRequestConfig<RequestData = unknown> extends AxiosRequestConfig<RequestData> {
   authMode?: RequestAuthMode
   retryAuth?: boolean
+  tenantScoped?: boolean
 }
 
 interface InternalApiRequestConfig extends InternalAxiosRequestConfig {
   authMode?: RequestAuthMode
   retryAuth?: boolean
   authenticationRetried?: boolean
+  tenantScoped?: boolean
+  contextToken?: string | null
+  contextTenantId?: number | undefined
+  contextSessionVersion?: string | undefined
 }
 
 export interface HttpAuthAdapter {
@@ -129,6 +140,7 @@ function errorMessage(error: AxiosError<ApiEnvelope<unknown>>, fallback: string)
 
 function normalizeHttpError(error: unknown): ApiError {
   if (error instanceof ApiError) return error
+  if (error instanceof TenantContextError) return new ApiError(error.message, 'cancelled')
   if (isCancel(error)) return new ApiError('请求已取消', 'cancelled')
   if (!isAxiosError<ApiEnvelope<unknown>>(error)) {
     return new ApiError('系统繁忙，请稍后重试', 'system')
@@ -137,22 +149,31 @@ function normalizeHttpError(error: unknown): ApiError {
 
   const status = error.response.status
   const requestId = responseRequestId(error)
+  const reasonCode = error.response.data?.reason_code
+  const reason = typeof reasonCode === 'string' ? { reasonCode } : {}
   const code = String(error.response.data?.code ?? status)
   if (status === 401) {
     return new ApiError('登录状态已失效，请重新登录', 'authentication', {
       status,
       code,
       requestId,
+      ...reason,
     })
   }
   if (status === 403) {
-    return new ApiError('当前账号无权执行此操作', 'permission', { status, code, requestId })
+    return new ApiError(errorMessage(error, '当前账号无权执行此操作'), 'permission', {
+      status,
+      code,
+      requestId,
+      ...reason,
+    })
   }
   if (status === 400 || status === 422) {
     return new ApiError(errorMessage(error, '提交内容不符合要求'), 'validation', {
       status,
       code,
       requestId,
+      ...reason,
     })
   }
   if (status >= 500) {
@@ -160,12 +181,14 @@ function normalizeHttpError(error: unknown): ApiError {
       status,
       code,
       requestId,
+      ...reason,
     })
   }
   return new ApiError(errorMessage(error, '请求处理失败，请稍后重试'), 'business', {
     status,
     code,
     requestId,
+    ...reason,
   })
 }
 
@@ -196,6 +219,9 @@ const httpClient: AxiosInstance = axios.create({
 
 httpClient.interceptors.request.use((requestConfig) => {
   const config = requestConfig as InternalApiRequestConfig
+  if ('contextToken' in config && !isCurrentContext(config)) {
+    return Promise.reject(new ApiError('会话已变化，旧请求已取消', 'cancelled'))
+  }
   const url = config.url?.trim()
   if (
     !url ||
@@ -214,6 +240,12 @@ httpClient.interceptors.request.use((requestConfig) => {
   }
   const token = authAdapter.getAccessToken()
   const authMode = config.authMode ?? 'required'
+  if (config.tenantScoped) assertTenantRequest(config.data)
+  if (authMode !== 'none') {
+    config.contextToken = token
+    config.contextTenantId = getStoredAuthSession()?.currentTenantId
+    config.contextSessionVersion = getStoredAuthSession()?.sessionVersion
+  }
   if (authMode === 'required' && !token) {
     return Promise.reject(new ApiError('请先登录后再继续操作', 'authentication'))
   }
@@ -225,6 +257,9 @@ httpClient.interceptors.request.use((requestConfig) => {
 
 httpClient.interceptors.response.use(
   (response) => {
+    if (!isCurrentContext(response.config as InternalApiRequestConfig)) {
+      throw new ApiError('会话已变化，旧响应已忽略', 'cancelled')
+    }
     if (authAdapter.getAccessToken()) sessionExpiredNotified = false
     return response
   },
@@ -232,6 +267,9 @@ httpClient.interceptors.response.use(
     if (!isAxiosError<ApiEnvelope<unknown>>(error)) return Promise.reject(normalizeHttpError(error))
 
     const config = error.config as InternalApiRequestConfig | undefined
+    if (config && !isCurrentContext(config)) {
+      return Promise.reject(new ApiError('会话已变化，旧响应已忽略', 'cancelled'))
+    }
     const mayRefresh =
       error.response?.status === 401 &&
       config &&
@@ -244,8 +282,20 @@ httpClient.interceptors.response.use(
       config.authenticationRetried = true
       try {
         const accessToken = await refreshAccessToken()
+        const currentToken = authAdapter.getAccessToken()
+        const stored = getStoredAuthSession()
+        // Concurrent requests can observe the same refresh result after the first retry
+        // has already installed it. A tenant/session change is never a valid refresh.
+        if (
+          stored?.currentTenantId !== config.contextTenantId ||
+          stored?.sessionVersion !== config.contextSessionVersion ||
+          (currentToken !== config.contextToken && currentToken !== accessToken)
+        ) {
+          return Promise.reject(new ApiError('会话已变化，停止重试旧请求', 'cancelled'))
+        }
         if (accessToken) {
           authAdapter.setAccessToken(accessToken)
+          config.contextToken = accessToken
           config.headers = AxiosHeaders.from(config.headers)
           config.headers.set('Authorization', `Bearer ${accessToken}`)
           return httpClient.request(config)
@@ -259,6 +309,33 @@ httpClient.interceptors.response.use(
     return Promise.reject(normalizeHttpError(error))
   },
 )
+
+function isCurrentContext(config: InternalApiRequestConfig): boolean {
+  return (
+    !('contextToken' in config) ||
+    (config.contextToken === authAdapter.getAccessToken() &&
+      config.contextTenantId === getStoredAuthSession()?.currentTenantId &&
+      config.contextSessionVersion === getStoredAuthSession()?.sessionVersion)
+  )
+}
+
+function envelopeFailure(
+  envelope: ApiEnvelope<unknown>,
+  status: number,
+  authMode?: RequestAuthMode,
+): ApiError {
+  const code = String(envelope.code)
+  const details = { status, code, requestId: envelope.requestId, reasonCode: envelope.reason_code }
+  // IAM BizException can return HTTP 200 with its ErrorCodeEnum in the envelope.
+  if (code === '403') {
+    return new ApiError(envelope.message || '当前账号无权执行此操作', 'permission', details)
+  }
+  if (code === '1002') {
+    if (authMode !== 'none') expireSession()
+    return new ApiError('登录状态已失效，请重新登录', 'authentication', details)
+  }
+  return new ApiError(envelope.message || '业务处理失败', 'business', details)
+}
 
 export async function requestApi<ResponseData, RequestData = unknown>(
   config: ApiRequestConfig<RequestData>,
@@ -274,11 +351,7 @@ export async function requestApi<ResponseData, RequestData = unknown>(
 
   const code = String(response.data.code)
   if (!apiConfig.successCodes.has(code)) {
-    throw new ApiError(response.data.message || '业务处理失败', 'business', {
-      status: response.status,
-      code,
-      requestId: response.data.requestId,
-    })
+    throw envelopeFailure(response.data, response.status, config.authMode)
   }
   if (!('data' in response.data)) {
     throw new ApiError('接口成功响应缺少 data 字段', 'system', {
@@ -294,6 +367,20 @@ export async function requestRaw<ResponseData, RequestData = unknown>(
   config: ApiRequestConfig<RequestData>,
 ): Promise<ResponseData> {
   const response = await httpClient.request<ResponseData>(config)
+  let body: unknown = response.data
+  if (body instanceof Blob && body.type.includes('application/json')) {
+    try {
+      body = JSON.parse(await body.text()) as unknown
+    } catch {
+      // A non-envelope file remains raw data.
+    }
+    if (!isCurrentContext(response.config as InternalApiRequestConfig)) {
+      throw new ApiError('会话已变化，旧响应已忽略', 'cancelled')
+    }
+  }
+  if (isApiEnvelope(body) && !apiConfig.successCodes.has(String(body.code))) {
+    throw envelopeFailure(body, response.status, config.authMode)
+  }
   return response.data
 }
 

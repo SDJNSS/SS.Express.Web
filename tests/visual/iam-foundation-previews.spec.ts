@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const previewHost = 'http://127.0.0.1:4174'
+import { previewHost } from './helpers/testServers'
 
 const candidatePages = [
   { id: 'iam-group-profile', heading: '集团信息' },
@@ -65,7 +65,7 @@ test.describe('IAM organization identity and tenant foundation candidates', () =
     })
 
     await page.goto(`${previewHost}/?preview=iam-tenant-management&capture=1`)
-    await page.getByRole('button', { name: 'HMXTSD' }).click()
+    await page.getByRole('button', { name: '汉明巡天山东', exact: true }).click()
     await expect(page.getByText('联系与访问标识')).toBeVisible()
     await expect(page.getByText('hmxtsd.ss-express.cn')).toBeVisible()
     await page.getByRole('button', { name: '关闭' }).click()
@@ -102,16 +102,19 @@ test.describe('IAM organization identity and tenant foundation candidates', () =
     await expect(page.getByRole('heading', { name: '身份数据范围' })).toHaveCount(0)
     await expect(page.getByText('当前 Tenant', { exact: true })).toHaveCount(0)
     await expect(page.getByLabel('查询对象')).toHaveCount(0)
-    await expect(page.getByLabel('Tenant', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Tenant', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('columnheader', { name: '手机号' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: '邮箱' })).toBeVisible()
     await expect(page.getByRole('button', { name: '更多', exact: true })).toHaveCount(0)
     await expect(
-      page.getByRole('button', { name: '角色与权限', exact: true }).first(),
-    ).toBeVisible()
+      page.locator('.el-table').getByRole('button', { name: '分配角色', exact: true }),
+    ).toHaveCount(0)
+    await expect(
+      page.locator('.el-table').getByRole('button', { name: '有效权限', exact: true }),
+    ).toHaveCount(0)
     await expect(page.getByRole('button', { name: '数据权限', exact: true })).toHaveCount(0)
     const actionGrid = page
-      .locator('.el-table .row-action-grid')
+      .locator('.el-table td.data-table__actions .row-action-grid')
       .filter({ hasText: '详情' })
       .first()
     const actionLayout = await actionGrid.evaluate((element) => {
@@ -120,25 +123,23 @@ test.describe('IAM organization identity and tenant foundation candidates', () =
         rowGap: getComputedStyle(element).rowGap,
       }
     })
-    expect(actionLayout.columns).toBe(3)
+    expect(actionLayout.columns).toBe(2)
     expect(actionLayout.rowGap).toBe('0px')
-    await page.getByRole('button', { name: '编辑用户' }).first().click()
-    const editUserDrawer = page.getByRole('dialog', { name: '编辑全局用户' })
+    await page.getByRole('button', { name: '详情', exact: true }).first().click()
+    const detail = page.getByRole('dialog', { name: /身份详情/ })
+    await detail.getByRole('button', { name: '编辑基本信息', exact: true }).click()
+    const editUserDrawer = page.getByRole('dialog', { name: '编辑基本信息' })
     await expect(editUserDrawer).toBeVisible()
     const versionToken = editUserDrawer.getByLabel('版本令牌', { exact: true })
     await expect(versionToken).toBeDisabled()
     await expect(versionToken).toHaveValue('9')
     await expect(editUserDrawer.getByLabel('用户 ID', { exact: true })).toBeDisabled()
-    for (const field of [
-      '登录账号',
-      '姓名',
-      '昵称',
-      '手机号',
-      '邮箱',
-      '用户类型',
-      '头像',
-      '管理备注',
-    ]) {
+    await expect(editUserDrawer.getByLabel('登录账号', { exact: true })).toHaveJSProperty(
+      'readOnly',
+      true,
+    )
+    await expect(editUserDrawer.getByLabel('昵称', { exact: true })).toHaveCount(0)
+    for (const field of ['姓名', '手机号', '邮箱', '用户类型', '头像', '管理备注']) {
       await expect(editUserDrawer.getByLabel(field, { exact: true })).toBeEnabled()
     }
     await page.screenshot({
@@ -146,6 +147,7 @@ test.describe('IAM organization identity and tenant foundation candidates', () =
       animations: 'disabled',
     })
     await editUserDrawer.getByRole('button', { name: '取消' }).click()
+    await detail.locator('.el-drawer__close-btn').click()
     await page.getByRole('button', { name: '新增 Tenant 成员' }).click()
     await expect(page.getByText('本流程不采集、生成或提交初始密码')).toBeVisible()
     await page.getByLabel('登录账号', { exact: true }).fill('preview.member')
@@ -169,37 +171,15 @@ test.describe('IAM organization identity and tenant foundation candidates', () =
     await expect(page.getByText('当前 Tenant 上下文保持可用')).toBeVisible()
   })
 
-  test('defaults the Tenant multi-select to every option and allows an empty query', async ({
-    page,
-  }) => {
+  test('员工候选页只展示当前租户且没有跨租户筛选', async ({ page }) => {
     await page.goto(`${previewHost}/?preview=iam-membership-management&capture=1`)
-    const tenantSelect = page.getByLabel('Tenant', { exact: true })
-    const optionNames = [
-      '汉明巡天山东 · HMXTSD',
-      '陆链华东运营中心 · LL-HUADONG',
-      '陆链华南运营中心 · LL-HUANAN',
-    ]
-    await tenantSelect.press('ArrowDown')
-    for (const name of optionNames) {
-      await expect(page.getByRole('option', { name })).toHaveAttribute('aria-selected', 'true')
-    }
-    for (const name of optionNames) {
-      await page.getByRole('option', { name }).click()
-    }
-    await page.keyboard.press('Escape')
-
+    await expect(page.getByLabel('Tenant', { exact: true })).toHaveCount(0)
     const queryButton = page.getByRole('button', { name: '查询', exact: true })
     await expect(queryButton).toBeEnabled()
     await queryButton.click()
     await expect(page.locator('p.sr-only[role="status"]')).toContainText('用户与成员查询条件已生效')
-
-    await page.getByRole('button', { name: '重置', exact: true }).click()
-    await tenantSelect.press('ArrowDown')
-    for (const name of optionNames) {
-      await expect(page.getByRole('option', { name })).toHaveAttribute('aria-selected', 'true')
-    }
+    await expect(page.getByRole('button', { name: '编辑租户归属' })).toHaveCount(0)
   })
-
   test('exposes stable loading, empty and retryable failure states', async ({ page }) => {
     for (const scenario of ['loading', 'empty', 'retryable-error']) {
       await page.goto(`${previewHost}/?preview=iam-tenant-context&capture=1&scenario=${scenario}`)

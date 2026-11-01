@@ -1,0 +1,237 @@
+schemaVersion: '0.1'
+page:
+  id: iam-dictionary-management
+  name: 字典管理
+  feature: iam/dictionaries
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 4
+sources:
+  inputMode: prd-only
+  prd:
+    - {
+        id: dictionary-prd,
+        ref: docs/prd/iam/dictionary-management.md,
+        purpose: 按页面及按钮资源读取平台字典，写按钮仅授予SA的维护需求,
+      }
+  api:
+    - {
+        id: dictionary-api,
+        ref: docs/api/iam-dictionaries.md,
+        operation: POST /iam-admin/Dictionary,
+        purpose: 后端已交付十二个端点，本页使用查询创建编辑及四个独立启停端点，真实联调待完成,
+      }
+  permissions:
+    - {
+        id: dictionary-resource-plan,
+        ref: src/features/iam/dictionaries/iam-resource.registry.ts,
+        purpose: 已审核页面及八个写按钮正式资源声明，启停独立精确判权，入库授权由维护会话处理,
+      }
+  ux:
+    - {
+        id: dictionary-ux,
+        ref: UX-CONTRACT.md,
+        purpose: 紧凑列表、可回退抽屉、错误草稿和危险操作确认,
+      }
+  references:
+    - {
+        id: dictionary-sibling,
+        ref: docs/page-specs/iam-system-resource-catalog.yaml,
+        origin: project,
+        kind: approved-page,
+        purpose: 复用 IAM 目录列表及右侧编辑抽屉语言,
+      }
+implementation:
+  canonicalEntry: src/features/iam/dictionaries/components/DictionaryManagementPageView.vue
+  previewEntry: src/features/iam/dictionaries/public.preview.ts
+  previewBinding: src/features/iam/dictionaries/preview/DictionaryManagementPreviewPage.vue
+  productionBinding: src/features/iam/dictionaries/pages/DictionaryManagementPage.vue
+  productionRoute: /iam/dictionaries
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: search, role: search, order: 2 }
+    - { id: results, role: data, order: 3 }
+    - { id: values, role: detail, order: 4 }
+    - { id: form, role: form, order: 5 }
+  components:
+    - { id: page, componentKey: shared.app-page, regionId: header, purpose: 可滚动的自然页面布局 }
+    - {
+        id: header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 标题及平台共享边界,
+      }
+    - {
+        id: search,
+        componentKey: shared.search-panel,
+        regionId: search,
+        purpose: 编码精确及名称等关键词查询,
+      }
+    - {
+        id: table,
+        componentKey: shared.data-table,
+        regionId: results,
+        purpose: 名称和编码打开字典值抽屉,
+      }
+    - {
+        id: values,
+        componentKey: shared.detail-drawer,
+        regionId: values,
+        purpose: 字典值独立搜索分页新增编辑启停，区分自身状态与业务可用性,
+      }
+    - {
+        id: form,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 字典及值编辑和未保存保护,
+      }
+states:
+  - {
+      id: ready,
+      isDefault: true,
+      scopeRef: page,
+      observableResult: 授权用户看到平台字典列表，各写入口按按钮资源显示，无删除入口,
+      ruleRef: dictionary-prd,
+    }
+  - {
+      id: loading,
+      scopeRef: results,
+      observableResult: 加载遮罩，无初始化假错误,
+      ruleRef: dictionary-ux,
+    }
+  - {
+      id: empty,
+      scopeRef: results,
+      observableResult: 空列表允许创建或清空筛选,
+      ruleRef: dictionary-prd,
+    }
+  - {
+      id: retryable-error,
+      scopeRef: results,
+      observableResult: 保留筛选并提供显式重试,
+      ruleRef: dictionary-ux,
+    }
+  - {
+      id: access-denied,
+      scopeRef: page,
+      observableResult: 缺少页面查询资源时不加载数据，缺写按钮资源时隐藏相应写操作,
+      ruleRef: dictionary-resource-plan,
+    }
+interactions:
+  - {
+      id: query,
+      trigger: 查询或重置或翻页,
+      targetRef: results,
+      observableResult: 应用已提交的筛选条件，不把第一页当全量,
+      ruleRef: dictionary-api,
+    }
+  - {
+      id: values,
+      trigger: 点击字典编码或名称,
+      targetRef: values,
+      observableResult: 值列表独立筛选分页新增编辑启停，父字典停用时仍可维护,
+      ruleRef: dictionary-prd,
+    }
+  - {
+      id: maintain,
+      trigger: 新建编辑或独立启停,
+      targetRef: form,
+      observableResult: 稳定编码原始版本JSON校验及失败保留，启停只改目标状态而非父子其他对象或删除数据,
+      ruleRef: dictionary-api,
+    }
+mockScenarios:
+  - {
+      id: ready,
+      isDefault: true,
+      fixtureRef: src/features/iam/dictionaries/preview/createDictionaryPreviewPort.ts,
+      stateRef: ready,
+      acceptanceRefs: [dictionary-crud, isolated-preview],
+    }
+  - {
+      id: loading,
+      fixtureRef: src/features/iam/dictionaries/preview/createDictionaryPreviewPort.ts,
+      stateRef: loading,
+    }
+  - {
+      id: empty,
+      fixtureRef: src/features/iam/dictionaries/preview/createDictionaryPreviewPort.ts,
+      stateRef: empty,
+    }
+  - {
+      id: retryable-error,
+      fixtureRef: src/features/iam/dictionaries/preview/createDictionaryPreviewPort.ts,
+      stateRef: retryable-error,
+    }
+  - {
+      id: missing-read,
+      fixtureRef: src/features/iam/dictionaries/preview/createDictionaryPreviewPort.ts,
+      stateRef: access-denied,
+    }
+exceptions: []
+issues:
+  blockers: []
+  deferred:
+    - {
+        id: live-resource-activation,
+        description: 本轮不写资源数据库或角色授权；实际访问需维护方登记和授权，写按钮仅授予SA，真实环境验收单独记录,
+        affectedScopes: [production-regression],
+        owner: 后端与资源维护会话,
+      }
+  outOfScope:
+    - {
+        id: database-maintenance,
+        description: 不写数据库、不维护资源或角色授权,
+        affectedScopes: [production-binding],
+        owner: 系统资源维护会话,
+      }
+acceptance:
+  - {
+      id: dictionary-crud,
+      sourceRef: dictionary-prd,
+      observableResult: 编码名称打开值抽屉，字典和值新增编辑启停、版本及影响确认可用，无删除入口,
+      affectedScopes: [preview-interaction],
+      interactionRef: maintain,
+      testRef: tests/visual/iam-dictionary-preview.spec.ts,
+    }
+  - {
+      id: independent-status,
+      sourceRef: dictionary-api,
+      observableResult: 启停权限独立，父停用不改子状态但值不可用，启用值不启用父字典，管理默认仍展示停用数据,
+      affectedScopes: [preview-interaction],
+      interactionRef: maintain,
+      testRef: tests/visual/iam-dictionary-status.spec.ts,
+    }
+  - {
+      id: isolated-preview,
+      sourceRef: dictionary-resource-plan,
+      observableResult: 页面与八个写按钮分别按资源判权，具备查询资源但无写按钮时可正常只读，无生产API请求,
+      affectedScopes: [preview-interaction],
+      stateRef: access-denied,
+      testRef: tests/visual/iam-dictionary-preview.spec.ts,
+    }
+  - {
+      id: production-binding,
+      sourceRef: dictionary-api,
+      observableResult: 正式路由仅使用当前页面及按钮资源，无is_sa字段可正常查询，后端SA拒绝正常展示，原始版本回传且未知写入不重放，URL查询和分页可回退恢复,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/iam-dictionary-production.spec.ts,
+    }
+  - {
+      id: compact-layout,
+      sourceRef: dictionary-ux,
+      observableResult: 三桌面视口布局紧凑、内容自然滚动、无页面级横向溢出,
+      affectedScopes: [preview-visual],
+      testRef: tests/visual/iam-dictionary-preview.spec.ts,
+    }
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-dictionary-preview.spec.ts,
+      tests/visual/iam-dictionary-recovery.spec.ts,
+      tests/visual/iam-dictionary-status.spec.ts,
+      tests/visual/iam-dictionary-production.spec.ts,
+    ]

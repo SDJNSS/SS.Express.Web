@@ -1,0 +1,65 @@
+{
+  "$schema": "../schemas/iam-resource-state-policy.schema.json",
+  "schema_version": "1.0",
+  "manifest_schema_version": "2.0",
+  "registered_resources": {
+    "lifecycle": "active",
+    "implementation_status": "implemented",
+    "reason": "真实生产 route、registry 与资源元素一致的现役页面/按钮声明；implemented 只证明已登记实现，不证明全部业务完成、V2 守卫已切换或在线授权已验收。",
+    "runtime_authorization_model_source": "owner_registry.authorization_model"
+  },
+  "unknown_resource_handling": "reject-unless-explicitly-declared-unimplemented",
+  "readiness_requires": {
+    "lifecycle": "active",
+    "implementation_status": "implemented",
+    "online_authorization_proven": false
+  },
+  "structural_modules": [
+    {
+      "app_code": "DMS",
+      "resource_code": "DMS",
+      "remarks": "用途：组织平台 Welcome 与物流总览入口的结构 Module，无独立业务 API；场景：还原平台导航父级，不因拥有此节点获得后代页面或操作权限。",
+      "lifecycle": "active",
+      "implementation_status": "implemented",
+      "source_file": "scripts/generate-resource-catalog.mjs",
+      "reason": "DMS 默认 Module，是平台 Welcome/Dashboard 资源的结构父级；没有独立页面及页面守卫，不应因没有页面 registry 被标记为待迁移。"
+    },
+    {
+      "app_code": "IAM",
+      "resource_code": "IAM",
+      "remarks": "用途：组织身份、租户、组织岗位、员工、角色与权限治理菜单，无独立业务 API；场景：还原 IAM 导航分组，不代表自动拥有成员、授权或高危操作能力。",
+      "lifecycle": "active",
+      "implementation_status": "implemented",
+      "source_file": "scripts/generate-resource-catalog.mjs",
+      "reason": "IAM 默认 Module，是身份基础页及权限治理页的结构父级；implemented 指目录结构已声明，不指 Legacy 页面守卫已迁移。"
+    },
+    {
+      "app_code": "IAM",
+      "resource_code": "IAM.TRAINING",
+      "remarks": "用途：组织培训素材、考试规则、计划执行、档案和统计菜单，无独立业务 API；场景：导航到当前租户已授权的培训功能，不代表已完成学习或考试。",
+      "lifecycle": "active",
+      "implementation_status": "implemented",
+      "source_file": "scripts/generate-resource-catalog.mjs",
+      "reason": "IAM 培训中心 Module，是正式培训功能页的结构父级；并非独立业务页面，不要求独立页面 registry。"
+    },
+    {
+      "app_code": "TMS",
+      "resource_code": "TMS",
+      "remarks": "用途：组织运输管理导航，无独立业务 API；场景：承载运输总览与后续业务菜单，不表示订单、调度、行程等未实现入口已经可操作。",
+      "lifecycle": "active",
+      "implementation_status": "implemented",
+      "source_file": "scripts/generate-resource-catalog.mjs",
+      "reason": "TMS 默认 Module，是运输总览 Menu 的结构父级；不表示订单、调度、行程等占位功能已经实现。"
+    },
+    {
+      "app_code": "VMS",
+      "resource_code": "VMS",
+      "remarks": "用途：组织车务管理导航，无独立业务 API；场景：承载车务总览及后续菜单，不恢复已退役车辆样本，也不隐式授权后代。",
+      "lifecycle": "active",
+      "implementation_status": "implemented",
+      "source_file": "scripts/generate-resource-catalog.mjs",
+      "reason": "VMS 默认 Module，是车辆总览 Menu 的结构父级；不恢复已归档车辆样本或未实现业务入口。"
+    }
+  ],
+  "unimplemented_resources": []
+}

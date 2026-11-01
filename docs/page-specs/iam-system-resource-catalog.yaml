@@ -1,0 +1,204 @@
+schemaVersion: '0.1'
+page:
+  id: iam-system-resource-catalog
+  name: 系统资源目录
+  feature: iam/permission-governance
+  type: ListPage
+  patternKey: ListPageTemplate
+  revision: 5
+sources:
+  inputMode: prd-only
+  prd:
+    - id: permission-v2-prd
+      ref: docs/prd/iam/permission-scheme-v2.md
+      section: 系统资源目录
+      purpose: 定义 iam_resource 原始数据目录、筛选、列表和纯资源详情边界
+  api:
+    - id: system-resource-api
+      ref: src/features/iam/permission-governance/api/permissionGovernanceApi.ts
+      section: endpoints
+      operation: POST /iam-admin/PermissionApp/Query; POST /iam-admin/PermissionResource/Query; POST /iam-admin/PermissionResource/Get; POST /iam-admin/PermissionResource/Create; POST /iam-admin/PermissionResource/Update
+      purpose: 绑定 App、分页资源、详情与新增编辑；Create 人工空编码自动生成待后端配合
+  permissions:
+    - id: system-resource-permission
+      ref: src/shared/constants/iamPermissions.ts
+      section: IAM_PERMISSION_GOVERNANCE_RESOURCES.systemResources
+      operation: IAM.SYSTEM_RESOURCES
+      purpose: 使用稳定前端 Menu 资源码控制页面路由和可见性，服务端继续执行最终鉴权
+  ux:
+    - id: dataset-ux
+      ref: UX-CONTRACT.md
+      section: Dataset navigation
+      purpose: 约束筛选、列表、分页和结果反馈
+    - id: permission-ux
+      ref: UX-CONTRACT.md
+      section: Permission and clipboard
+      purpose: 约束权限资源可见性及危险动作说明
+  references:
+    - id: application-resource-sibling
+      ref: docs/page-specs/iam-application-resources.yaml
+      origin: project
+      kind: approved-page
+      purpose: 延续 IAM 资源浏览工作区的视觉语言，但不复用旧授权聚合语义
+implementation:
+  canonicalEntry: src/features/iam/permission-governance/components/SystemResourceCatalogPageView.vue
+  previewEntry: src/features/iam/permission-governance/public.preview.ts
+  previewBinding: src/features/iam/permission-governance/preview/PermissionGovernancePreviewPage.vue
+  productionBinding: src/features/iam/permission-governance/pages/SystemResourceCatalogPage.vue
+  productionRoute: /iam/system-resources
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: filters, role: search, order: 2 }
+    - { id: results, role: data, order: 3 }
+    - { id: detail, role: detail, order: 4 }
+    - { id: feedback, role: feedback, order: 5 }
+    - { id: form, role: form, order: 6 }
+  components:
+    - { id: app-page, componentKey: shared.app-page, regionId: header, purpose: 使用统一内容区边界 }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 承载页面标题与目录级动作,
+      }
+    - {
+        id: search-panel,
+        componentKey: shared.search-panel,
+        regionId: filters,
+        purpose: 按 App、类型、名称或编码和状态筛选,
+      }
+    - {
+        id: resource-table,
+        componentKey: shared.data-table,
+        regionId: results,
+        purpose: 直接展示 iam_resource 行数据且不增加所属页面派生列,
+      }
+    - {
+        id: resource-detail,
+        componentKey: shared.detail-drawer,
+        regionId: detail,
+        purpose: 只展示资源自身字段和适用技术字段,
+      }
+    - {
+        id: resource-form,
+        componentKey: shared.form-drawer,
+        regionId: form,
+        purpose: 新增编辑资源、校验及脏表单保护,
+      }
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 展示可筛选的 iam_resource 列表、资源自身字段和状态
+    ruleRef: permission-v2-prd
+  - id: loading
+    scopeRef: results
+    observableResult: 保持列表骨架并阻止旧查询结果被误认为当前结果
+    ruleRef: dataset-ux
+  - id: empty
+    scopeRef: results
+    observableResult: 无资源时说明系统资源目录尚未登记数据
+    ruleRef: permission-v2-prd
+  - id: filter-empty
+    scopeRef: results
+    observableResult: 无匹配项时保留筛选条件并提供清空入口
+    ruleRef: dataset-ux
+  - id: retryable-error
+    scopeRef: feedback
+    observableResult: 查询失败时保留筛选上下文并提供重试
+    ruleRef: dataset-ux
+interactions:
+  - id: filter-resources
+    trigger: 提交或重置目录筛选条件
+    targetRef: results
+    observableResult: 按当前条件刷新资源列表并重置分页
+    ruleRef: dataset-ux
+  - id: inspect-resource
+    trigger: 点击资源名称或详情动作
+    targetRef: detail
+    observableResult: 打开详情并只展示 iam_resource 原始字段、父资源 ID、路由组件或 API Method／Path 和维护信息
+    ruleRef: permission-v2-prd
+  - id: maintain-resource
+    trigger: 点击新增资源或列表及详情的编辑入口
+    targetRef: form
+    observableResult: 精确按钮判权；编码不允许填写，编辑前 Get 回读版本；按资源类型校验合法父级、路由与接口字段，提交失败保留输入，结果未知仅原请求重试；成功保留筛选分页并刷新
+    ruleRef: system-resource-api
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: ready
+    acceptanceRefs: [raw-resource-catalog-only, resource-detail-is-pure, preview-isolated]
+  - id: empty-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [raw-resource-catalog-only]
+exceptions: []
+issues:
+  blockers:
+    - id: manual-resource-code-generation
+      description: 后端 Create 当前要求非空 resource_code；用户已确认通知后端支持人工新增自动生成，前端不提供编码输入或随机身份。未联调确认前不宣称新增端到端完成
+      affectedScopes: [production-regression]
+      owner: IAM 后端
+      resolutionTarget: Create 支持人工空编码并回读生成编码后完成真实接口联调
+  deferred:
+    - id: production-deployment-deferred
+      description: 正式 API、DTO、稳定前端资源码与 Production Binding 已闭合；生产环境部署和真实身份端到端联调由发布流程继续跟踪
+      affectedScopes: [production-regression]
+      owner: Web 与 IAM 发布
+      resolutionTarget: 发布窗口完成生产部署和真实环境回归
+  outOfScope:
+    - id: no-reference-aggregation
+      description: 本页不展示所属页面派生列，也不聚合关联 Function、Permission、权限包或角色引用
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-role-authorization
+      description: 本页维护全局资源事实目录，不承担 Permission 配置、权限包配置或角色授权
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - {
+      id: compact-row-actions,
+      sourceRef: dataset-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
+  - id: raw-resource-catalog-only
+    sourceRef: permission-v2-prd
+    observableResult: 列表直接呈现 iam_resource 资源事实，不出现“所属页面”列或权限引用统计
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: resource-detail-is-pure
+    sourceRef: permission-v2-prd
+    observableResult: 详情只展示资源自身字段和适用技术字段，不展示关联 Function、Permission、权限包或角色引用
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: inspect-resource
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: permission-ux
+    observableResult: Candidate Preview 只使用确定性 Fixture，不访问 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: production-resource-api-bound
+    sourceRef: system-resource-api
+    observableResult: 正式路由通过系统目录与资源 Query/Get 端点加载资源列表，并以资源 ID 读取纯资源详情
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    interactionRef: inspect-resource
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+  - id: resource-create-edit
+    sourceRef: system-resource-api
+    observableResult: 新增及编辑独立 Button 资源与 resource_element 已登记；无编辑权限不展示入口；无编码输入，保留原始 Int64 ID 和版本，Update body 与 header 复用 request_id，失败保留输入且取消放弃不会丢失填写
+    affectedScopes: [preview-interaction, production-binding, production-regression]
+    interactionRef: maintain-resource
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-permission-governance-previews.spec.ts,
+      tests/visual/iam-permission-governance-production.spec.ts,
+    ]

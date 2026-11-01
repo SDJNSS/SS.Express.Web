@@ -52,6 +52,10 @@ test.describe('AppShell content contract', () => {
   }) => {
     await useAuthenticatedSession(page)
     await page.route('**/iam-admin/**', async (route) => {
+      if (new URL(route.request().url()).pathname.endsWith('/Auth/CurrentProfile')) {
+        await route.fallback()
+        return
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

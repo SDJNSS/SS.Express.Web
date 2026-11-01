@@ -51,6 +51,7 @@ export interface FixedPaperQuestion {
   status: TrainingStatus
   score: number
   order: number
+  questionUpdatedAt?: string
 }
 
 export interface RandomPaperRule {
@@ -58,6 +59,7 @@ export interface RandomPaperRule {
   count: number
   scorePerQuestion: number
   availableCount: number
+  totalScore?: number | undefined
 }
 
 export interface PaperRecord extends AuditFields {
@@ -72,6 +74,8 @@ export interface PaperRecord extends AuditFields {
   randomizeOptionOrder: boolean
   fixedQuestions: FixedPaperQuestion[]
   randomRules: RandomPaperRule[]
+  configurationValid?: boolean
+  configurationInvalidReason?: string
 }
 
 export interface ExamConfigurationRecord extends AuditFields {

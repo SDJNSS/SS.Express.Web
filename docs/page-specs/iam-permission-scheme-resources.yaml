@@ -1,0 +1,249 @@
+schemaVersion: '0.1'
+page:
+  id: iam-permission-scheme-resources
+  name: 权限功能配置
+  feature: iam/permission-governance
+  type: WorkspacePage
+  patternKey: WorkspacePageTemplate
+  revision: 3
+sources:
+  inputMode: prd-only
+  prd:
+    - id: permission-v2-prd
+      ref: docs/prd/iam/permission-scheme-v2.md
+      section: 权限功能配置
+      purpose: 定义一个前端资源与一个或多个后端 Function 组成 iam_permission 的配置流程
+  api:
+    - id: permission-composition-api
+      ref: src/features/iam/permission-governance/api/permissionGovernanceApi.ts
+      section: endpoints
+      operation: POST /iam-admin/AuthorizationCatalog/QuerySystems; POST /iam-admin/PermissionScheme/Get; POST /iam-admin/PermissionResource/Query; POST /iam-admin/PermissionScheme/SaveTree
+      purpose: 绑定 Permission 详情、同 App 资源候选与语义化资源组合保存端点
+  permissions:
+    - id: permission-composition-permission
+      ref: src/shared/constants/iamPermissions.ts
+      section: IAM_PERMISSION_GOVERNANCE_RESOURCES.permissions
+      operation: IAM.PERMISSIONS.CONFIGURATION; IAM.PERMISSIONS.CONFIGURATION.SAVE
+      purpose: 分离功能配置路由可访问性与保存动作的稳定前端资源
+  ux:
+    - id: permission-ux
+      ref: UX-CONTRACT.md
+      section: Permission and clipboard
+      purpose: 约束权限编辑、资源类型边界和危险变更说明
+    - id: async-ux
+      ref: UX-CONTRACT.md
+      section: Async and resilience
+      purpose: 约束版本冲突、结果未知、失败保留和服务端回读
+    - id: navigation-ux
+      ref: UX-CONTRACT.md
+      section: Navigation and responsive behavior
+      purpose: 约束树形工作区和压缩视口滚动
+  references:
+    - id: application-resource-sibling
+      ref: docs/page-specs/iam-application-resources.yaml
+      origin: project
+      kind: approved-page
+      purpose: 延续 IAM 资源选择工作区视觉，但使用前端父资源与后端 Function 的明确两级语义
+implementation:
+  canonicalEntry: src/features/iam/permission-governance/components/PermissionSchemeResourcesPageView.vue
+  previewEntry: src/features/iam/permission-governance/public.preview.ts
+  previewBinding: src/features/iam/permission-governance/preview/PermissionGovernancePreviewPage.vue
+  productionBinding: src/features/iam/permission-governance/pages/PermissionConfigurationPage.vue
+  productionRoute: /iam/permissions/configuration
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: permission-context, role: summary, order: 2 }
+    - { id: frontend-resource, role: navigation, order: 3 }
+    - { id: backend-functions, role: data, order: 4 }
+    - { id: inspector, role: detail, order: 5 }
+    - { id: changes, role: summary, order: 6 }
+    - { id: feedback, role: feedback, order: 7 }
+  components:
+    - {
+        id: app-page,
+        componentKey: shared.app-page,
+        regionId: header,
+        purpose: 使用统一内容区和滚动边界,
+      }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 承载返回权限管理、保存和页面标题,
+      }
+    - {
+        id: frontend-resource-selector,
+        componentKey: feature.iam.permission-governance.permission-resource-tree,
+        regionId: frontend-resource,
+        purpose: 只选择当前 App 的一个前端资源作为 Permission 父节点,
+      }
+    - {
+        id: function-selector,
+        componentKey: feature.iam.permission-governance.permission-resource-tree,
+        regionId: backend-functions,
+        purpose: 只选择当前 App 的后端 Function 作为子节点,
+      }
+    - {
+        id: resource-inspector,
+        componentKey: feature.iam.permission-governance.resource-inspector,
+        regionId: inspector,
+        purpose: 展示前端资源或 Function 自身字段与组合位置,
+      }
+    - {
+        id: save-confirmation,
+        componentKey: shared.confirm-action,
+        regionId: feedback,
+        purpose: 确认父资源、Function 新增移除及版本摘要后保存,
+      }
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 显示 Permission 名称、唯一所属 App、一个前端父资源和后端 Function 子节点
+    ruleRef: permission-v2-prd
+  - id: loading
+    scopeRef: backend-functions
+    observableResult: 保持工作区结构且不显示其他 Permission 或 App 的选择状态
+    ruleRef: async-ux
+  - id: empty-parent
+    scopeRef: frontend-resource
+    observableResult: 尚未选择前端资源时引导先选择父节点，Function 选择不可提交
+    ruleRef: permission-v2-prd
+  - id: empty-functions
+    scopeRef: backend-functions
+    observableResult: 已选择父资源但尚无 Function 时明确要求至少选择一个后端 Function
+    ruleRef: permission-v2-prd
+  - id: dirty
+    scopeRef: changes
+    observableResult: 未保存的父资源变化和 Function 新增移除数量持续可见
+    ruleRef: permission-v2-prd
+  - id: version-conflict
+    scopeRef: feedback
+    observableResult: 版本冲突保留本地修改意图并要求重新核对
+    ruleRef: async-ux
+  - id: unknown-result
+    scopeRef: feedback
+    observableResult: 保存超时时标记结果未知并禁止盲目重复提交
+    ruleRef: async-ux
+  - id: retryable-error
+    scopeRef: feedback
+    observableResult: 明确失败保留修改和上下文并允许安全重试
+    ruleRef: async-ux
+interactions:
+  - id: select-frontend-resource
+    trigger: 从当前 App 资源中选择父节点
+    targetRef: frontend-resource
+    observableResult: 只允许选择一个前端资源作为 Permission 父节点，后端 Function 不能成为父节点
+    ruleRef: permission-v2-prd
+  - id: search-functions
+    trigger: 输入 Function 名称、编码或 API Path 片段
+    targetRef: backend-functions
+    observableResult: 模糊筛选当前 App 后端 Function 并保留选择，不显示其他类型资源
+    ruleRef: permission-v2-prd
+  - id: select-backend-functions
+    trigger: 勾选或取消勾选 Function
+    targetRef: changes
+    observableResult: 只修改当前 Permission 的后端 Function 子节点，不改变 iam_resource 父子关系
+    ruleRef: permission-v2-prd
+  - id: inspect-resource
+    trigger: 点击前端资源或 Function 名称
+    targetRef: inspector
+    observableResult: 展示资源详情，名称点击不触发勾选或展开收起
+    ruleRef: navigation-ux
+  - id: save-permission-composition
+    trigger: 点击保存并确认变更摘要
+    targetRef: feedback
+    observableResult: 保存一个前端父资源和一个或多个后端 Function，成功后回读；冲突或结果未知时不伪造成功
+    ruleRef: async-ux
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [
+        single-app-context,
+        typed-parent-child-selection,
+        permission-example-visible,
+        change-impact-visible,
+        preview-isolated,
+      ]
+  - id: empty-parent-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: empty-parent
+    acceptanceRefs: [typed-parent-child-selection]
+  - id: conflict-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: version-conflict
+    acceptanceRefs: [resilient-save]
+exceptions: []
+issues:
+  blockers: []
+  deferred:
+    - id: production-deployment-deferred
+      description: 正式资源组合 DTO、字符串 VersionToken、稳定前端资源码与 Production Binding 已闭合；生产环境部署和真实身份端到端联调由发布流程继续跟踪
+      affectedScopes: [production-regression]
+      owner: Web 与 IAM 发布
+      resolutionTarget: 发布窗口完成生产部署和真实环境回归
+  outOfScope:
+    - id: no-app-selector
+      description: Permission 的 App 已由基本信息确定，本页不再展示或切换覆盖 App
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-resource-creation
+      description: 本页只引用 iam_resource 中已有前端资源和 Function，不创建资源
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-data-scope
+      description: 本次不新增业务数据范围配置
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - id: single-app-context
+    sourceRef: permission-v2-prd
+    observableResult: 页面名称为权限功能配置，只显示 Permission 唯一所属 App，不显示左侧方案覆盖 App 区域
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: typed-parent-child-selection
+    sourceRef: permission-v2-prd
+    observableResult: 父节点只能选择一个前端资源，子节点只能选择一个或多个后端 Function
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: select-backend-functions
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: permission-example-visible
+    sourceRef: permission-v2-prd
+    observableResult: Candidate 以“用户编辑 Button → 用户查询 Function／用户保存 Function”或“用户列表 Menu → 用户列表查询 Function”完整呈现组合语义
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: change-impact-visible
+    sourceRef: permission-v2-prd
+    observableResult: 保存前持续显示父资源变化和 Function 新增／移除摘要
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: dirty
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: resilient-save
+    sourceRef: async-ux
+    observableResult: 成功后按服务端结果回读；版本冲突保留修改意图，超时区分结果未知与明确失败
+    affectedScopes: [preview-interaction, production-binding, production-regression]
+    interactionRef: save-permission-composition
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: permission-ux
+    observableResult: Candidate Preview 只使用确定性 Fixture，不访问 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: production-composition-api-bound
+    sourceRef: permission-composition-api
+    observableResult: 正式路由按 permissionId 和 tenantId 读取 Permission，并只查询其所属 App 的活动资源候选以装配权限功能配置
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-permission-governance-previews.spec.ts,
+      tests/visual/iam-permission-governance-production.spec.ts,
+    ]

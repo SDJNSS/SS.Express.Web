@@ -18,6 +18,7 @@ const collapsed = ref(false)
 const searchKeyword = ref('')
 const userInitial = computed(() => session.user.name.trim().charAt(0).toUpperCase() || '用')
 const {
+  shellBranding,
   currentApp,
   currentSystemId,
   currentSystemLabel,
@@ -59,6 +60,10 @@ function submitGlobalSearch() {
 }
 
 function handleUserCommand(command: string) {
+  if (command === 'organization') {
+    void router.push({ name: 'iam-select-tenant' })
+    return
+  }
   if (command === 'logout') {
     session.expireSession()
     void router.replace('/login')
@@ -66,7 +71,6 @@ function handleUserCommand(command: string) {
   }
   const messages: Record<string, string> = {
     settings: '个人设置功能正在建设中',
-    organization: '组织切换功能正在建设中',
   }
   notification.info(messages[command] ?? '该操作正在建设中')
 }
@@ -76,7 +80,9 @@ function handleUserCommand(command: string) {
   <AppShell
     v-model:collapsed="collapsed"
     v-model:search-value="searchKeyword"
-    product-name="陆链控制台"
+    :product-name="shellBranding.brandName"
+    :platform-name="shellBranding.platformName"
+    :brand-logo-url="shellBranding.logoUrl"
     :current-system-id="currentSystemId"
     :current-system-label="currentSystemLabel"
     :systems="shellSystems"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { plansElements } from '../iam-resource.registry'
 import { computed, reactive, ref, watch } from 'vue'
 
 import AppPage from '@shared/components/AppPage.vue'
@@ -96,7 +97,7 @@ const columns: DataTableColumn[] = [
   { prop: 'currentEmployees', label: '当前员工', width: 100, align: 'right' },
   { prop: 'taskCount', label: '任务数', width: 84, align: 'right' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 158 },
-  { label: '操作', width: 224, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 function asPlan(row: Record<string, unknown>) {
@@ -189,12 +190,13 @@ watch(
 </script>
 
 <template>
-  <AppPage class="training-operations-page">
+  <AppPage :resource_element="plansElements.page" class="training-operations-page">
     <ListPageTemplate>
       <template #header
         ><PageHeader title="培训计划" description="统一维护年度计划与长期有效的常设计划"
           ><template #actions
             ><el-button
+              v-resource-element="plansElements.create"
               v-permission="TRAINING_PERMISSIONS.plans.create"
               type="primary"
               @click="openForm('create')"
@@ -204,7 +206,12 @@ watch(
         ></template
       >
       <template #search
-        ><SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        ><SearchPanel
+          :resource_element="plansElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="计划类型"
             ><el-select v-model="query.planType" clearable placeholder="全部类型"
               ><el-option label="年度计划" value="ANNUAL" /><el-option
@@ -235,6 +242,7 @@ watch(
       ></template>
       <template #toolbar
         ><TableToolbar
+          :resource_element="plansElements.query"
           title="培训计划"
           :total="effectiveTotal"
           :refreshing="state === 'loading'"
@@ -254,23 +262,30 @@ watch(
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="emit('retry')">重新加载</el-button></template
+          ><el-button
+            v-resource-element="plansElements.query"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          ></template
         ></el-alert
       >
       <DataTable
         :data="visibleRecords as unknown as Record<string, unknown>[]"
         :columns="columns"
         :loading="state === 'loading'"
-        @row-click="openDetail(asPlan($event))"
       >
         <template #name="{ row }"
           ><button
+            v-resource-element="plansElements.detail"
+            v-permission="TRAINING_PERMISSIONS.plans.detail"
             class="training-operations-link"
             type="button"
             @click.stop="openDetail(asPlan(row))"
           >
-            {{ asPlan(row).name }}
-          </button></template
+            {{ asPlan(row).name }}</button
+          ><span class="training-plan-title-fallback">{{ asPlan(row).name }}</span></template
         >
         <template #planType="{ row }"
           ><StatusTag
@@ -293,13 +308,7 @@ watch(
         <template #actions="{ row }"
           ><RowActionGrid :aria-label="`${asPlan(row).name} 的操作`">
             <el-button
-              v-permission="TRAINING_PERMISSIONS.plans.detail"
-              link
-              type="primary"
-              @click.stop="openDetail(asPlan(row))"
-              >详情</el-button
-            >
-            <el-button
+              v-resource-element="plansElements.detail"
               v-permission="TRAINING_PERMISSIONS.plans.queryEmployees"
               link
               type="primary"
@@ -307,6 +316,7 @@ watch(
               >计划员工</el-button
             >
             <el-button
+              v-resource-element="plansElements.edit"
               v-permission="TRAINING_PERMISSIONS.plans.update"
               link
               type="primary"
@@ -315,22 +325,17 @@ watch(
             >
             <el-button
               v-if="asPlan(row).status === 'DRAFT'"
+              v-resource-element="plansElements.publish"
               v-permission="TRAINING_PERMISSIONS.plans.publish"
               link
               type="primary"
               @click.stop="openConfirm('publish', asPlan(row))"
               >发布</el-button
             >
-            <el-button
-              v-else
-              v-permission="TRAINING_PERMISSIONS.plans.detail"
-              link
-              type="primary"
-              @click.stop="openDetail(asPlan(row))"
-              >任务列表</el-button
-            >
+
             <el-button
               v-if="asPlan(row).status === 'DRAFT'"
+              v-resource-element="plansElements.delete"
               v-permission="TRAINING_PERMISSIONS.plans.delete"
               link
               type="danger"
@@ -344,6 +349,7 @@ watch(
         ><AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="plansElements.query"
           :total="effectiveTotal"
           @change="changePage"
       /></template>
@@ -351,6 +357,7 @@ watch(
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? plansElements.create : plansElements.edit"
       :title="formMode === 'create' ? '新建培训计划' : `编辑培训计划 · ${selected.name}`"
       :size="720"
       :submitting="submitting"
@@ -414,6 +421,7 @@ watch(
 
     <FormDialog
       v-model="confirmVisible"
+      :resource_element="confirmAction === 'publish' ? plansElements.publish : plansElements.delete"
       :title="confirmAction === 'publish' ? '发布培训计划' : '删除草稿计划'"
       :confirm-type="confirmAction === 'delete' ? 'danger' : 'primary'"
       :confirm-button-text="confirmAction === 'publish' ? '确认发布' : '确认删除'"
@@ -446,4 +454,13 @@ watch(
 
 <style scoped lang="scss">
 @use '../styles/training-operations.scss';
+
+// A denied ButtonPage must remove navigation, not the plan's identity text.
+.training-plan-title-fallback {
+  display: none;
+}
+
+button[hidden] + .training-plan-title-fallback {
+  display: inline;
+}
 </style>

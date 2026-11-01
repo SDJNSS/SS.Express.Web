@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     modelValue: boolean
     title: string
     size?: string | number
   }>(),
-  { size: 640 },
+  { resource_element: undefined, size: 640 },
 )
 
 const emit = defineEmits<{
@@ -15,6 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <el-drawer
+    v-bind="resourceElementAttributes(resource_element)"
     :model-value="modelValue"
     :title="title"
     :size="size"

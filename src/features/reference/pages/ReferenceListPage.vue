@@ -55,11 +55,11 @@ const rows: ReferenceRow[] = [
 
 const columns: DataTableColumn[] = [
   { prop: 'code', label: '编号', minWidth: 150, sortable: true },
-  { prop: 'name', label: '名称', minWidth: 220 },
+  { prop: 'name', label: '名称', minWidth: 220, slot: 'name' },
   { prop: 'owner', label: '负责人', width: 120 },
   { label: '状态', width: 100, slot: 'status' },
   { prop: 'updatedAt', label: '更新时间', width: 170, sortable: true },
-  { label: '操作', width: 130, slot: 'actions' },
+  { label: '操作', slot: 'actions' },
 ]
 
 async function search() {
@@ -108,6 +108,11 @@ function asReference(row: Record<string, unknown>): ReferenceRow {
       </template>
       <div class="reference-table__body">
         <DataTable :data="rows" :columns="columns" :loading="loading" selection>
+          <template #name="{ row }"
+            ><el-button link type="primary" @click="$router.push('/reference/detail')">{{
+              asReference(row).name
+            }}</el-button></template
+          >
           <template #status="{ row }"
             ><StatusTag
               :label="asReference(row).status === 'active' ? '正常' : '待处理'"
@@ -115,9 +120,6 @@ function asReference(row: Record<string, unknown>): ReferenceRow {
           /></template>
           <template #actions>
             <RowActionGrid aria-label="参考记录操作">
-              <el-button link type="primary" @click="$router.push('/reference/detail')"
-                >详情</el-button
-              >
               <el-button link type="primary">编辑</el-button>
             </RowActionGrid>
           </template>

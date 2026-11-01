@@ -6,7 +6,9 @@ test.describe('authenticated route outcomes', () => {
   test('sends an authenticated user without the hidden training Page permission to 403', async ({
     page,
   }) => {
-    await useAuthenticatedSession(page)
+    await useAuthenticatedSession(page, {
+      excludedMenuPaths: ['/iam/training/plans/:planId/tasks/:taskId'],
+    })
     await page.route('**/api/iam-admin/TrainingTask/Detail', (route) =>
       route.fulfill({
         contentType: 'application/json',

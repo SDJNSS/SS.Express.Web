@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ss-express:iam-maintenance:resource-state-policy:1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "manifest_schema_version",
+    "registered_resources",
+    "unknown_resource_handling",
+    "readiness_requires",
+    "structural_modules",
+    "unimplemented_resources"
+  ],
+  "properties": {
+    "$schema": { "const": "../schemas/iam-resource-state-policy.schema.json" },
+    "schema_version": { "const": "1.0" },
+    "manifest_schema_version": { "const": "2.0" },
+    "registered_resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lifecycle",
+        "implementation_status",
+        "reason",
+        "runtime_authorization_model_source"
+      ],
+      "properties": {
+        "lifecycle": { "const": "active" },
+        "implementation_status": { "const": "implemented" },
+        "reason": { "$ref": "#/$defs/text" },
+        "runtime_authorization_model_source": { "const": "owner_registry.authorization_model" }
+      }
+    },
+    "unknown_resource_handling": { "const": "reject-unless-explicitly-declared-unimplemented" },
+    "readiness_requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle", "implementation_status", "online_authorization_proven"],
+      "properties": {
+        "lifecycle": { "const": "active" },
+        "implementation_status": { "const": "implemented" },
+        "online_authorization_proven": { "const": false }
+      }
+    },
+    "structural_modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "app_code",
+          "resource_code",
+          "lifecycle",
+          "implementation_status",
+          "source_file",
+          "remarks",
+          "reason"
+        ],
+        "properties": {
+          "app_code": { "$ref": "#/$defs/text" },
+          "resource_code": { "$ref": "#/$defs/text" },
+          "lifecycle": { "enum": ["active", "deprecated"] },
+          "implementation_status": { "const": "implemented" },
+          "source_file": { "const": "scripts/generate-resource-catalog.mjs" },
+          "remarks": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "reason": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "unimplemented_resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "app_code",
+          "resource_code",
+          "resource_type",
+          "lifecycle",
+          "implementation_status",
+          "remarks",
+          "reason"
+        ],
+        "properties": {
+          "app_code": { "$ref": "#/$defs/text" },
+          "resource_code": { "$ref": "#/$defs/text" },
+          "resource_type": { "enum": ["module", "menu", "button", "button_page"] },
+          "lifecycle": { "enum": ["active", "deprecated"] },
+          "implementation_status": { "enum": ["placeholder", "pending-migration"] },
+          "remarks": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "reason": { "$ref": "#/$defs/text" }
+        }
+      }
+    }
+  },
+  "$defs": { "text": { "type": "string", "minLength": 1, "pattern": "\\S" } }
+}

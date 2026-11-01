@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const previewHost = 'http://127.0.0.1:4174'
+import { previewHost } from './helpers/testServers'
 
 test.describe('IAM login candidate preview', () => {
   test('renders the standalone auth pattern and supports local-only form interactions', async ({

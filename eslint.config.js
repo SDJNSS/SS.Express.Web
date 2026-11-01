@@ -6,6 +6,7 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   {
     ignores: [
+      'archive/**',
       'dist/**',
       'dist-ui/**',
       'node_modules/**',
@@ -31,6 +32,8 @@ export default tseslint.config(
       'no-undef': 'off',
       'vue/multi-word-component-names': 'off',
       'vue/attributes-order': 'warn',
+      // The resource SDK uses the external maintenance contract's exact field name.
+      'vue/prop-name-casing': ['warn', 'camelCase', { ignoreProps: ['resource_element'] }],
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },

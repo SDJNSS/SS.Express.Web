@@ -1,0 +1,273 @@
+{
+  "schema_version": "1.0",
+  "scope": "iam-foundation-six-routes",
+  "supported_stage": "declared-legacy",
+  "activation_switch": "not-implemented",
+  "legacy_v2_union": "forbidden",
+  "required_gates": [
+    "exact-page-and-button-guards",
+    "controlled-v2-initialization",
+    "ordinary-user-positive-negative-verification"
+  ],
+  "pages": [
+    {
+      "route_path": "/iam/group",
+      "resource_code": "IAM.GROUP",
+      "registry_file": "src/features/iam/foundation/iam-resource.registry.ts",
+      "registry_key": "group",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.group.view",
+      "view_files": ["src/features/iam/foundation/components/GroupProfilePageView.vue"],
+      "control_bindings": [
+        {
+          "element_key": "edit",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.group.update",
+          "mapping_status": "observed-only"
+        }
+      ]
+    },
+    {
+      "route_path": "/iam/tenants",
+      "resource_code": "IAM.TENANTS",
+      "registry_file": "src/features/iam/foundation/iam-resource.registry.ts",
+      "registry_key": "tenants",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.tenants.view",
+      "view_files": ["src/features/iam/foundation/components/TenantManagementPageView.vue"],
+      "control_bindings": [
+        {
+          "element_key": "create",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.tenants.create",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "edit",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.tenants.update",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "status",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.tenants.changeStatus",
+          "mapping_status": "observed-only"
+        }
+      ]
+    },
+    {
+      "route_path": "/iam/organizations",
+      "resource_code": "IAM.ORGANIZATIONS",
+      "registry_file": "src/features/iam/foundation/iam-resource.registry.ts",
+      "registry_key": "organizations",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.organizations.view",
+      "view_files": ["src/features/iam/foundation/components/OrganizationManagementPageView.vue"],
+      "control_bindings": [
+        {
+          "element_key": "create",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.organizations.create",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "edit",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.organizations.update",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "status",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.organizations.changeStatus",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "move",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.organizations.move",
+          "mapping_status": "observed-only"
+        }
+      ]
+    },
+    {
+      "route_path": "/iam/positions",
+      "resource_code": "IAM.POSITIONS",
+      "registry_file": "src/features/iam/foundation/iam-resource.registry.ts",
+      "registry_key": "positions",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.positions.view",
+      "view_files": ["src/features/iam/foundation/components/PositionManagementPageView.vue"],
+      "control_bindings": [
+        {
+          "element_key": "create",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.positions.create",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "edit",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.positions.update",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "status",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.positions.changeStatus",
+          "mapping_status": "observed-only"
+        }
+      ]
+    },
+    {
+      "route_path": "/iam/members",
+      "resource_code": "IAM.MEMBERS",
+      "registry_file": "src/features/iam/foundation/iam-resource.registry.ts",
+      "registry_key": "members",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.members.view",
+      "view_files": [
+        "src/features/iam/foundation/components/MembershipManagementPageView.vue",
+        "src/features/iam/foundation/components/MemberRolesDrawer.vue",
+        "src/features/iam/foundation/components/MemberAdminDialog.vue",
+        "src/features/iam/foundation/components/MemberRelationDrawer.vue"
+      ],
+      "control_bindings": [
+        {
+          "element_key": "create",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.create",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "editUser",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.updateUser",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "editMember",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.update",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "memberStatus",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.changeStatus",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "organization",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.saveOrganization",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "position",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.savePosition",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "assignRole",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.assignRole",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "revokeRole",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.revokeRole",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "roles",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.queryPermissions",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "appointAdmin",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.appointAdmin",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "cancelAdmin",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.cancelAdmin",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "endOrganization",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.endOrganization",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "endPosition",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.members.endPosition",
+          "mapping_status": "observed-only"
+        }
+      ]
+    },
+    {
+      "route_path": "/iam/roles",
+      "resource_code": "IAM.ROLES",
+      "registry_file": "src/features/iam/access-control/iam-resource.registry.ts",
+      "registry_key": "roles",
+      "stage": "declared-legacy",
+      "runtime_authorization_model": "legacy",
+      "activation_allowed": false,
+      "gate_evidence": {
+        "exact-page-and-button-guards": "not-implemented",
+        "controlled-v2-initialization": "not-verified",
+        "ordinary-user-positive-negative-verification": "not-verified"
+      },
+      "route_source": "src/features/iam/routes.ts",
+      "route_permission_symbol": "IAM_PERMISSIONS.roles.view",
+      "view_files": ["src/features/iam/access-control/components/RoleManagementPageView.vue"],
+      "control_bindings": [
+        {
+          "element_key": "create",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.roles.create",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "edit",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.roles.update",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "status",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.roles.changeStatus",
+          "mapping_status": "observed-only"
+        },
+        {
+          "element_key": "assignments",
+          "legacy_permission_symbol": "IAM_PERMISSIONS.roles.queryAssignments",
+          "mapping_status": "observed-only"
+        }
+      ]
+    }
+  ]
+}

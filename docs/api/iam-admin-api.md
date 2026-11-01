@@ -8,7 +8,7 @@
 
 > 2026-09-16 用户确认的字段扩展：集团/Tenant 的读写模型增加 `logo_file_id: string`；用户读写模型（含创建 Tenant 首名管理员及创建成员时的 `new_user`）增加 `avatar_file_id: string`。保存 DMS 上传返回的文件 ID；IAM 集团、Tenant、用户信息接口直接返回 `logo_url` / `avatar_url` 用于展示，前端不再调用 DMS `GetAccessUrl`。有文件 ID 时保存仅提交该引用，不回写展示 URL；无文件 ID 的历史 URL 继续兼容。详见 [DMS 文件接入](dmss.md)。下方旧 Schema 未逐表重复扩展，以本补充为准，后端上线情况仍需联调确认。
 
-> 2026-09-08：角色管理、功能权限、数据权限和角色分配的最新版受控契约已迁移至 `docs/api/iam-access-control-api.md`；应用与权限资源契约见 `docs/api/iam-application-resources-api.md`。本文件继续作为 IAM 基础资料及其他接口的受控来源。
+> 2026-09-08：角色管理、功能权限、数据权限和角色分配的受控契约见 `docs/api/iam-access-control-api.md`，其中旧权限树内容现已退役；旧应用与权限资源契约已归档至 `archive/iam-permission-v1/2026-09-27/docs/api/iam-application-resources-api.md`。本文件继续作为 IAM 基础资料及其他接口的受控来源。
 
 > 2026-09-11：并发控制字段 `version`、`role_version`、`member_version`、`session_version`、`user_version` 即使在下方旧 Schema 中仍标注为 `integer(int64)`，实际 JSON 契约已迁移为字符串；前端必须以 `VersionToken` 原样接收和提交。普通 ID、分页、排序等数值字段不受影响。
 

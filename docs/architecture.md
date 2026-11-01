@@ -40,8 +40,11 @@ src/
 
 ## HTTP 与接口路径
 
+IAM 授权统一绑定当前 Tenant。集团共享记录、Tenant 目录以及系统资源目录的对象范围不代表全局授权；它们仍通过 CurrentApps、CurrentAppMenus、CurrentPageResources 和后端 Function 判权。Tenant 目录维护按目标 `id` 操作，查询可以返回非本人所属租户；本人切换候选只使用登录/切换响应中的 `available_tenants`。普通员工、组织、岗位、角色和培训业务继续限定当前 Tenant。
+
 - `src/shared/api/apiConfig.ts` 是 API Host、超时、凭据模式和成功码的唯一运行时配置入口；环境变量样例由根目录 `.env.example` 维护。
 - `src/shared/api/httpClient.ts` 是唯一 Axios Instance，统一负责 Authorization、Request ID、并发 Token 刷新、401 会话失效和错误标准化。
+- 权限治理新契约的 Int64 ID 在请求、响应及页面选择中保留十进制字符串，不转换为 Number。`shared/utils/entityId.ts` 统一无损规范化、比较及排序；Feature API 按显式 ID 字段清单在边界兼容旧安全整数响应。版本、Request ID、文件引用等不透明字符串不参与转换。当前会话仍使用旧认证契约的安全数字 Tenant ID；共享租户校验比较规范化后的身份，真实跨 Tenant 请求仍在发送前拦截。
 - `src/shared/api/apiPath.ts` 负责定义和填充相对接口路径。业务 Endpoint 常量归属 `src/features/<subsystem>/<feature>/api/`，不得把所有子系统路径集中到 Shared。
 - Feature 的 Vue、Page 与 Composable 不得直接调用 Axios/Fetch；只能通过本 Feature `api/` 暴露的函数访问后端。
 - 开发环境使用 `DEV_API_TARGET` 将 `VITE_API_BASE_URL` 对应的相对前缀代理到后端；生产环境由部署网关处理相对路径，或显式提供受信任的 `VITE_API_BASE_URL`。
@@ -73,11 +76,15 @@ src/features/<subsystem>/<feature>/
 12. 标准业务页面必须组合 `src/shared/components/page-templates` 中的有限 Pattern；全页业务组件仅允许使用静态检查脚本登记的标准实现。
 13. `pnpm standards:check` 与 `pnpm prototype:check` 属于合并门禁，禁止通过局部关闭规则绕过。
 14. `AppLayout` 是认证后生产 `AppShell` 的唯一装配点；Feature 页面只交付 `AppPage + content PageTemplate` 内容树。认证前路由只允许 Registry 登记的 standalone Pattern。页面不得自行建立视口级宽高或第二个 App Shell，容器适配由共享 Pattern、静态审计和三视口 Playwright 共同保证。
-15. 权限资源目录可维护 `App → Module → Menu → Page → Function` 完整层级，但框架运行时必须区分导航与操作授权：顶部 App 来自 IAM `CurrentApps`；`CurrentAppMenus(app_id)` **只返回 `App → Module → Menu`**，是左侧导航、App 首入口和所属 Menu 解析的唯一来源，不提供 Page 或 Function。隐藏 Page 由前端静态路由登记，并显式归属唯一 Menu；其列表、详情、编辑等入口以及路由访问统一使用所属 Menu 的 `CurrentFunctions(menu_id)` 返回的稳定 `:view` Function `permission_code`。写操作继续使用 `:update` 或对应专用 Function。资源目录中的 Page `permission_code` 不作为运行时按钮编号，也不得代替 `:view` Function。`CurrentFunctions` 只能在所属 Menu 解析成功后调用，禁止空参提前调用或跨 Menu 沿用旧权限。`app/config/subsystems.ts` 只保存已知 App 的本地名称与图标回退，不保存首页或菜单顺序，也不得作为授权数据源。框架类 Page Contract 可通过受审计的 `app-layout-production-owner` 例外将 Production Binding 指向唯一 `src/app/layouts/AppLayout.vue`，并用一个真实业务路由作为生产代表入口。
-16. IAM 角色功能权限与用户角色与权限是两个独立 Page，可复用 `access-control/components/FunctionPermissionPanel.vue` 这一无路由依赖的权限树工作区。生产路由页必须显式注入 `subjectType` 与 `canEdit`：角色场景固定为 `role`，仅在有效 Function 包含 `iam:roles:function-permissions:update` 时允许编辑；用户页面的 Function 页签固定为 `member` 且 `canEdit=false`，页面先用 `user_id + tenant_id` 解析 `tenant_user_id`，再查询该 Tenant 成员的有效角色权限，不提供用户直授或保存入口。用户页面的角色页签可以在同一成员上下文中分配或撤销角色，但该能力不得渗入只读 Function 工作区。共享组件禁止读取 URL、路由名称或查询参数推断业务场景与权限。前端门禁只负责可发现性和误操作防护，服务端仍执行最终授权并在无权时返回 403。
+15. 权限治理采用 V2：前端目录 App → Module → Menu → Button / ButtonPage；后端 Function 独立登记（source=backend、parent_id=0），不得挂到页面目录中。Permission 组合唯一业务前端资源与后端 Function，Role 明确关联 Permission；parent_permission_id 只用于展示，default_selected_with_parent 只用于人工主动勾选，不产生运行时继承。导航使用 CurrentPermissionResource/CurrentApps、CurrentAppMenus；菜单顺序来自服务端。2026-09-29 起，已登记页面统一按 CurrentPageResources(page_resource_code) 获取精确页面/按钮权限，不再调用 CurrentFunctions。旧 UI 判断常量由本页限定的显式适配表投影，不读取或合并 V1 权限；维护 rollout 元数据仍待专项复核，不代表已通过线上授权验收。当前接口契约见 docs/api/iam-shell-context.md。
+16. 五个活动权限页面的唯一正式目录为 src/features/iam/permission-governance/pages/。旧应用资源、角色功能权限、角色数据权限、用户角色与权限页已退役，位于 archive/iam-permission-v1/2026-09-27/；归档目录禁止被生产、Preview、资源初始化扫描。用户角色分配保留在 foundation/components/MemberRolesDrawer.vue，由 /iam/members 按钮打开，不增加独立路由；支持按当前成员分配、移除角色，管理员身份仍由租户归属功能维护。用户有效权限页只读。角色管理与角色成员页仍有效，不能整目录排除 access-control。退役清单 standards/iam-retirements.json 不授权删除数据库记录；pnpm iam:retirement:check 检查旧入口没有复活。
 17. 尚未实现的生产入口必须同时使用 `FeatureScaffoldPage` 与 `meta.implementationStatus = 'placeholder'`。生产环境的服务端菜单适配、App 首入口解析和 Overview 卡片不暴露这类入口；直接访问仍保留，用明确的“功能开发中”状态说明现状。该字段不是权限凭证，也不能单独证明页面属于纯占位；资源审计只有在占位组件及依赖证据仍有效时才排除业务资源。真实实现接管路由时必须删除标记。
 18. `src/features/reference/**` 是可复用的标准页面示例源码，不属于生产业务资源；`/reference/*` 仅在 `import.meta.env.DEV` 为真时注册。生产占位页不得输出指向 Reference 的悬空链接。
 
 ## 扩展新子系统
+
+新增或修改正式页面及通信行为时，同步维护 Feature 的静态资源注册表、resource_element、Permission 模板。独立生产发现与变更审查规则见 `standards/iam/README.md`；`iam:maintenance:check` 属于 Lint/CI 门禁。当前未迁移范围显式列出，不等同全站授权已就绪。
+
+正式资源同时维护简要 `remarks`（用途与使用场景），由注册表传递到 `data-resource-description` 和维护清单；结构 Module 从资源状态策略读取。说明不能代替具体控件事件、实际 API、权限或敏感操作确认。协议及元数据审查见 `standards/resource-elements.md`。
 
 新增例如 WMS 时：创建 `features/wms/<feature>`，导出 `wmsRoutes`，在 `app/config/subsystems.ts` 注册入口和导航，再由 `app/router` 聚合。无需改动其他子系统内部文件。

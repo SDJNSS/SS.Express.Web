@@ -7,6 +7,7 @@ import PaperManagementPageView from '../components/PaperManagementPageView.vue'
 import QuestionBankPageView from '../components/QuestionBankPageView.vue'
 import type { TrainingPreviewState } from '../types/trainingContent'
 import { trainingContentFixture } from './trainingContent.fixture'
+import { paperQuestionChoices, generatePaperFixture } from './paperSelection.fixture'
 
 const params = new URLSearchParams(window.location.search)
 const previewId = params.get('preview') ?? 'training-course-management'
@@ -69,7 +70,8 @@ function retry() {
   <PaperManagementPageView
     v-else-if="previewId === 'training-paper-management'"
     :records="trainingContentFixture.papers"
-    :questions="trainingContentFixture.questions"
+    :questions="paperQuestionChoices"
+    :generate-preview="generatePaperFixture"
     :state="state"
     @action="announce"
     @retry="retry"

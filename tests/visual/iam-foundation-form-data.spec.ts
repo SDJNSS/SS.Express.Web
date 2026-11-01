@@ -120,7 +120,7 @@ test('position details and create forms do not display sample business values', 
     }),
   )
   await page.goto('/iam/positions')
-  await page.getByRole('button', { name: '详情', exact: true }).click()
+  await page.getByRole('button', { name: '实际岗位', exact: true }).click()
   const detail = page.getByRole('dialog', { name: '实际岗位 · 岗位详情', exact: true })
   await expect(detail).toContainText('接口返回的实际岗位备注')
   await expect(detail).toContainText('华东运营中心')

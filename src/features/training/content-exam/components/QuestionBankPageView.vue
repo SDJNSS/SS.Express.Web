@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { questionsElements } from '../iam-resource.registry'
 import { computed, reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useTrainingContentView } from '../composables/useTrainingContentView'
@@ -77,12 +78,13 @@ function paginate() {
 }
 
 const columns: DataTableColumn[] = [
+  { prop: 'id', label: '题目 ID', width: 92 },
   { prop: 'stem', label: '题干摘要', minWidth: 440, fixed: 'left', slot: 'stem' },
   { label: '题型', width: 124, slot: 'type' },
   { label: '选项数', width: 92, align: 'right', slot: 'optionCount' },
   { label: '状态', width: 92, slot: 'status' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 168 },
-  { label: '操作', width: 190, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -103,7 +105,7 @@ const labelsUnique = computed(
   () => new Set(form.options.map((item) => item.label.trim())).size === form.options.length,
 )
 const answerValid = computed(() =>
-  form.type === 'MULTIPLE_CHOICE' ? correctCount.value >= 2 : correctCount.value === 1,
+  form.type === 'MULTIPLE_CHOICE' ? correctCount.value >= 1 : correctCount.value === 1,
 )
 const formValid = computed(
   () =>
@@ -146,7 +148,7 @@ function defaultOptions(type: QuestionType): QuestionOption[] {
   return Array.from({ length: count }, (_, index) => ({
     label: String.fromCharCode(65 + index),
     content: '',
-    isCorrect: type === 'MULTIPLE_CHOICE' ? index < 2 : index === 0,
+    isCorrect: index === 0,
     order: index + 1,
   }))
 }
@@ -305,7 +307,7 @@ function confirmStatus() {
 </script>
 
 <template>
-  <AppPage class="training-page question-bank-page">
+  <AppPage :resource_element="questionsElements.page" class="training-page question-bank-page">
     <ListPageTemplate>
       <el-alert
         v-if="actionError && !formVisible && !statusVisible"
@@ -325,6 +327,7 @@ function confirmStatus() {
         <PageHeader title="题库管理" description="维护考试题目、选项、正确答案与解析">
           <template #actions>
             <el-button
+              v-resource-element="questionsElements.create"
               type="primary"
               :disabled="!allowed('create') || submitting"
               @click="openForm('create')"
@@ -335,10 +338,16 @@ function confirmStatus() {
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="questionsElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="题干关键词"
             ><el-input
               v-model="query.keyword"
+              v-resource-element="questionsElements.query"
               clearable
               placeholder="输入题干关键词"
               @keyup.enter="handleSearchKeyup"
@@ -362,6 +371,7 @@ function confirmStatus() {
 
       <template #toolbar>
         <TableToolbar
+          :resource_element="questionsElements.query"
           title="题目列表"
           :total="runtime?.total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -384,7 +394,13 @@ function confirmStatus() {
         show-icon
       >
         <template #default
-          ><el-button link type="primary" @click="refresh">重新加载</el-button></template
+          ><el-button
+            v-resource-element="questionsElements.query"
+            link
+            type="primary"
+            @click="refresh"
+            >重新加载</el-button
+          ></template
         >
       </el-alert>
 
@@ -392,10 +408,10 @@ function confirmStatus() {
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading' || submitting"
-        @row-click="openDetail(asQuestion($event))"
       >
         <template #stem="{ row }"
           ><button
+            v-resource-element="questionsElements.detail"
             class="training-page__link"
             type="button"
             @click.stop="openDetail(asQuestion(row))"
@@ -416,10 +432,8 @@ function confirmStatus() {
         /></template>
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asQuestion(row).stem} 的操作`">
-            <el-button link type="primary" @click.stop="openDetail(asQuestion(row))"
-              >详情</el-button
-            >
             <el-button
+              v-resource-element="questionsElements.edit"
               link
               type="primary"
               :disabled="!allowed('update') || submitting"
@@ -427,6 +441,7 @@ function confirmStatus() {
               >编辑</el-button
             >
             <el-button
+              v-resource-element="questionsElements.status"
               link
               :type="asQuestion(row).status === 'ACTIVE' ? 'warning' : 'primary'"
               :disabled="!allowed('status') || submitting"
@@ -441,6 +456,7 @@ function confirmStatus() {
         ><AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="questionsElements.query"
           :total="runtime?.total ?? visibleRecords.length"
           @change="paginate"
       /></template>
@@ -448,6 +464,7 @@ function confirmStatus() {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="questionsElements.detail"
       :title="selected ? `题目详情 · #${selected.id}` : '题目详情'"
       :size="760"
     >
@@ -504,6 +521,7 @@ function confirmStatus() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? questionsElements.create : questionsElements.edit"
       :title="formMode === 'create' ? '新建题目' : `编辑题目 · #${selected?.id ?? ''}`"
       :size="840"
       :submitting="submitting"
@@ -556,12 +574,15 @@ function confirmStatus() {
               <p>
                 {{
                   form.type === 'MULTIPLE_CHOICE'
-                    ? '至少 3 个选项、至少 2 个正确答案'
+                    ? '至少 3 个选项、一个或多个正确答案'
                     : '至少 2 个选项、恰好 1 个正确答案'
                 }}
               </p>
             </div>
-            <el-button v-if="form.type !== 'TRUE_FALSE'" @click="addOption"
+            <el-button
+              v-if="form.type !== 'TRUE_FALSE'"
+              v-resource-element="questionsElements.local"
+              @click="addOption"
               ><Icon icon="mdi:plus" width="18" aria-hidden="true" />增加选项</el-button
             >
           </div>
@@ -594,6 +615,7 @@ function confirmStatus() {
               </div>
               <el-button
                 v-if="form.type !== 'TRUE_FALSE'"
+                v-resource-element="questionsElements.local"
                 link
                 type="danger"
                 :disabled="form.options.length <= minimumOptions"
@@ -631,6 +653,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="typeDialogVisible"
+      :resource_element="questionsElements.local"
       title="切换题型并重置选项？"
       confirm-button-text="确认切换"
       confirm-type="warning"
@@ -648,6 +671,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="statusModel"
+      :resource_element="questionsElements.status"
       :title="selected?.status === 'ACTIVE' ? '停用题目' : '启用题目'"
       :confirm-button-text="selected?.status === 'ACTIVE' ? '确认停用' : '确认启用'"
       :confirm-type="selected?.status === 'ACTIVE' ? 'warning' : 'primary'"
@@ -670,6 +694,7 @@ function confirmStatus() {
     </FormDialog>
     <FormDialog
       v-model="discardVisible"
+      :resource_element="questionsElements.local"
       title="放弃未保存的修改？"
       confirm-button-text="放弃修改"
       confirm-type="warning"

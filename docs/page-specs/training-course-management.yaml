@@ -5,7 +5,7 @@ page:
   feature: training/content-exam
   type: ListPage
   patternKey: ListPageTemplate
-  revision: 2
+  revision: 8
 sources:
   inputMode: prd-only
   prd:
@@ -16,6 +16,13 @@ sources:
         purpose: 定义课程查询、详情、创建编辑、复制、上传与状态流转,
       }
   api:
+    - {
+        id: course-video-api,
+        ref: docs/api/dms-files.md,
+        section: 同步视频标准化（2026-10-23）,
+        operation: 'POST /dms/File/Upload|ValidateVideo|GetAccessUrl',
+        purpose: 等待同步标准化和校验后使用稳定文件引用，详情及课程新建编辑中自动展示临时封面及播放地址并按租约续签,
+      }
     - {
         id: training-content-api,
         ref: docs/api/training-content-exam-api.md,
@@ -32,8 +39,8 @@ sources:
       }
     - {
         id: iam-runtime-permission,
-        ref: docs/api/iam-admin-api.md,
-        section: Permission CurrentFunctions,
+        ref: docs/api/iam-shell-context.md,
+        section: 页面与按钮权限,
         purpose: 定义正式运行时功能权限发现机制,
       }
   ux:
@@ -133,8 +140,15 @@ interactions:
       id: edit-course,
       trigger: 点击新建或编辑课程,
       targetRef: form,
-      observableResult: 展示完整课程字段、视频上传状态和双时长校验,
+      observableResult: 单片不超过200MB与10分钟；选择时检查大小并尽力读取原片时长，无法识别保留说明并以转换后服务端时长复核；上传及校验成功才可保存，自动展示标准化视频预览供保存前核对，编辑已有课程可播放当前视频,
       ruleRef: training-prd,
+    }
+  - {
+      id: preview-course-video,
+      trigger: 打开课程详情自动加载或点击重新加载视频,
+      targetRef: detail,
+      observableResult: 自动取链、显示有效临时缩略图但不自动播放；封面不可用仍可播放，续签保留进度；旧视频提示未标准化，没有画面明确提示，关闭移除媒体和封面并取消请求,
+      ruleRef: course-video-api,
     }
   - {
       id: copy-course,
@@ -195,11 +209,39 @@ issues:
       }
   outOfScope:
     - {
-        id: online-video-preview,
-        description: 管理端在线视频播放不是本组 P0，当前仅展示视频资源摘要,
-        affectedScopes: [preview-visual, production-binding],
+        id: employee-learning-writes,
+        description: 管理端视频预览不写入员工学习时长或完成记录；格式转码及真实存储部署由后端配合,
+        affectedScopes: [production-binding],
       }
 acceptance:
+  - {
+      id: permission-loading,
+      sourceRef: iam-runtime-permission,
+      observableResult: 权限未就绪或属于其他页时保持加载且不请求业务；路由提交后用最终条件只查询一次，真实拒绝及查询失败仍拦截或可重试，旧响应不覆盖新上下文,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/training-permission-loading.spec.ts,
+    }
+  - {
+      id: editor-video-preview,
+      sourceRef: training-prd,
+      observableResult: 课程新建编辑统一上传后预览，转换校验完成前不预览新原片；成功自动取链展示缩略图和标准视频但不自动播放，失败可重试预览且不重复上传；关闭或更换文件释放旧媒体，保存仍只提交文件ID；超限不提交课程，无法预读时长不冒充预检通过,
+      affectedScopes: [preview-interaction, production-binding, production-regression],
+      testRef: tests/visual/training-content-production.spec.ts,
+    }
+  - {
+      id: video-preview-lifecycle,
+      sourceRef: course-video-api,
+      observableResult: 只读用户打开详情自动看到缩略图或首帧且不出声；封面失败不阻断播放，按较早有效租约续签保留进度，无循环请求；旧视频不冒充已转码，关闭清理；无员工学习写请求，三视口及缩短高度不遮挡,
+      affectedScopes: [preview-interaction, production-binding, production-regression],
+      testRef: tests/visual/training-content-production.spec.ts,
+    }
+  - {
+      id: compact-row-actions,
+      sourceRef: list-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
   - {
       id: production-api-binding,
       sourceRef: training-content-api,
@@ -228,4 +270,5 @@ verification:
     [
       tests/visual/training-content-exam-previews.spec.ts,
       tests/visual/training-content-production.spec.ts,
+      tests/visual/training-permission-loading.spec.ts,
     ]

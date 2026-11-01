@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dashboardElements } from '../iam-resource.registry'
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { EChartsCoreOption } from 'echarts/core'
@@ -21,13 +22,13 @@ const { data, loading, refresh, isWelcomeOnlySession, welcomeDisplayName } = use
 const chartTheme = createChartTheme()
 
 const taskColumns: DataTableColumn[] = [
-  { prop: 'orderNo', label: '运输单号', minWidth: 142 },
+  { prop: 'orderNo', label: '运输单号', minWidth: 142, slot: 'orderNo' },
   { prop: 'customer', label: '客户', minWidth: 108 },
   { prop: 'route', label: '线路', minWidth: 120 },
   { prop: 'vehicle', label: '承运车辆', minWidth: 150 },
   { prop: 'eta', label: '计划到达', minWidth: 112 },
   { label: '状态', width: 88, slot: 'status' },
-  { label: '操作', width: 108, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const vehicleChartOption = computed<EChartsCoreOption>(() => ({
@@ -86,7 +87,11 @@ function createOrder() {
 </script>
 
 <template>
-  <AppPage v-if="isWelcomeOnlySession" class="welcome-page">
+  <AppPage
+    v-if="isWelcomeOnlySession"
+    :resource_element="dashboardElements.page"
+    class="welcome-page"
+  >
     <PageHeader title="欢迎页" description="欢迎进入陆链统一物流平台" />
 
     <section class="welcome-page__panel surface" aria-labelledby="welcome-title">
@@ -104,7 +109,7 @@ function createOrder() {
     </section>
   </AppPage>
 
-  <AppPage v-else class="dashboard-page">
+  <AppPage v-else :resource_element="dashboardElements.page" class="dashboard-page">
     <DashboardPageTemplate>
       <template #header>
         <PageHeader
@@ -112,7 +117,11 @@ function createOrder() {
           description="汇总运输、车辆与权限态势，快速定位今日运营重点"
         >
           <template #actions>
-            <el-button type="primary" @click="createOrder">
+            <el-button
+              v-resource-element="dashboardElements.local"
+              type="primary"
+              @click="createOrder"
+            >
               <Icon icon="mdi:plus" width="18" aria-hidden="true" />
               新建运输单
             </el-button>
@@ -161,7 +170,7 @@ function createOrder() {
           <article class="dashboard-panel surface">
             <header class="panel-header">
               <h2>今日重点</h2>
-              <el-button link type="primary"
+              <el-button v-resource-element="dashboardElements.local" link type="primary"
                 >更多 <Icon icon="mdi:chevron-right" width="17"
               /></el-button>
             </header>
@@ -188,23 +197,32 @@ function createOrder() {
                   <el-option label="运输中" value="transit" />
                   <el-option label="待调度" value="pending" />
                 </el-select>
-                <el-button :loading="loading" @click="refresh">刷新</el-button>
+                <el-button
+                  v-resource-element="dashboardElements.local"
+                  :loading="loading"
+                  @click="refresh"
+                  >刷新</el-button
+                >
               </div>
             </header>
             <div class="task-table">
               <DataTable :data="data.tasks" :columns="taskColumns" height="100%">
+                <template #orderNo="{ row }"
+                  ><el-button
+                    v-resource-element="dashboardElements.local"
+                    link
+                    type="primary"
+                    @click.stop="notification.info(`查看 ${asTask(row).orderNo}`)"
+                    >{{ asTask(row).orderNo }}</el-button
+                  ></template
+                >
                 <template #status="{ row }">
                   <StatusTag :label="asTask(row).status" :tone="asTask(row).statusTone" />
                 </template>
                 <template #actions="{ row }">
                   <RowActionGrid :aria-label="`${asTask(row).orderNo} 的操作`">
                     <el-button
-                      link
-                      type="primary"
-                      @click.stop="notification.info(`查看 ${asTask(row).orderNo}`)"
-                      >详情</el-button
-                    >
-                    <el-button
+                      v-resource-element="dashboardElements.local"
                       link
                       type="primary"
                       @click.stop="notification.info(`跟踪 ${asTask(row).orderNo}`)"
@@ -219,7 +237,11 @@ function createOrder() {
           <article class="dashboard-panel surface">
             <header class="panel-header">
               <h2>车辆状态分布</h2>
-              <el-button link type="primary" @click="$router.push('/vms/overview')"
+              <el-button
+                v-resource-element="dashboardElements.vehicles"
+                link
+                type="primary"
+                @click="$router.push('/vms/overview')"
                 >车辆管理 <Icon icon="mdi:chevron-right" width="17"
               /></el-button>
             </header>

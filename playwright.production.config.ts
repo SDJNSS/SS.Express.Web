@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
+import { productionHost, productionPort } from './tests/visual/helpers/testServers'
+
 export default defineConfig({
   testDir: './tests/production',
   fullyParallel: false,
@@ -8,7 +10,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4180',
+    baseURL: productionHost,
     browserName: 'chromium',
     colorScheme: 'light',
     locale: 'zh-CN',
@@ -18,11 +20,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'pnpm exec vite preview --host 127.0.0.1 --port 4180 --strictPort',
-    url: 'http://127.0.0.1:4180',
-    reuseExistingServer: !process.env.CI,
+    command: `pnpm exec vite preview --host 127.0.0.1 --port ${productionPort} --strictPort`,
+    url: productionHost,
+    reuseExistingServer: false,
     timeout: 120_000,
-    stdout: 'ignore',
+    stdout: 'pipe',
     stderr: 'pipe',
   },
 })

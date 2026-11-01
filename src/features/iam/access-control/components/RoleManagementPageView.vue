@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { rolesElements } from '../iam-resource.registry'
+import { resourceElementAttributes } from '@shared/services/resourceElement'
 import { computed, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -27,6 +29,7 @@ const props = defineProps<{
   tenants: TenantOption[]
   state: AccessControlPreviewState
   total?: number
+  canAccessAuthorization?: boolean
   queryRoles?: (query: RoleQueryValue) => Promise<void>
   submitRole?: (value: RoleFormValue, mode: 'create' | 'edit', record?: RoleRecord) => Promise<void>
   submitStatus?: (record: RoleRecord, targetStatus: 'ACTIVE' | 'DISABLED') => Promise<void>
@@ -75,15 +78,15 @@ const formDirty = computed(() => {
 })
 
 const columns: DataTableColumn[] = [
-  { prop: 'roleCode', label: '角色编码', minWidth: 170, fixed: 'left', slot: 'code' },
-  { prop: 'roleName', label: '角色名称', minWidth: 160 },
+  { prop: 'roleCode', label: '角色编码', minWidth: 170, fixed: 'left' },
+  { prop: 'roleName', label: '角色名称', minWidth: 160, slot: 'name' },
   { label: '角色类型', width: 118, slot: 'type' },
   { label: '状态', width: 90, slot: 'status' },
   { label: '当前有效性', width: 118, slot: 'effective' },
   { label: '控制范围', width: 112, slot: 'control' },
   { prop: 'sortOrder', label: '排序', width: 76, align: 'right' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 168 },
-  { label: '操作', width: 196, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -171,7 +174,7 @@ async function saveRole() {
   emit(
     'action',
     formMode.value === 'create'
-      ? '自定义角色候选已创建；下一步可配置功能权限'
+      ? '自定义角色候选已创建；下一步可配置权限包授权'
       : '角色展示信息候选已保存',
   )
 }
@@ -201,7 +204,7 @@ async function confirmStatus() {
 function openRelated(target: 'function' | 'assignments', record: RoleRecord) {
   if (props.navigate) props.navigate(target, record)
   else
-    emit('action', `进入 ${record.roleName} 的${target === 'function' ? '功能权限' : '成员分配'}`)
+    emit('action', `进入 ${record.roleName} 的${target === 'function' ? '角色授权' : '成员分配'}`)
 }
 
 function openFunctionPermissionsFromForm() {
@@ -234,27 +237,25 @@ watch(
 </script>
 
 <template>
-  <AppPage class="role-page">
+  <AppPage :resource_element="rolesElements.page" class="role-page">
     <ListPageTemplate>
       <template #header>
         <PageHeader
           title="角色管理"
-          description="维护目标 Tenant 的自定义角色；系统角色与集团控制角色按权限只读"
+          description="维护当前 Tenant 的自定义角色；系统角色与集团控制角色按权限只读"
         />
       </template>
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
-          <el-form-item label="目标 Tenant"
-            ><el-select v-model="query.tenantId"
-              ><el-option
-                v-for="tenant in tenants"
-                :key="tenant.id"
-                :label="`${tenant.name} · ${tenant.code}`"
-                :value="tenant.id" /></el-select
-          ></el-form-item>
+        <SearchPanel
+          :resource_element="rolesElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="关键词"
             ><el-input
               v-model="query.keyword"
+              v-resource-element="rolesElements.query"
               clearable
               placeholder="角色编码、名称或说明"
               @keyup.enter="search"
@@ -273,6 +274,7 @@ watch(
           ></el-form-item>
           <template #footer-leading>
             <el-button
+              v-resource-element="rolesElements.create"
               v-permission="IAM_PERMISSIONS.roles.create"
               type="primary"
               @click="openForm('create')"
@@ -284,6 +286,7 @@ watch(
       </template>
       <template #toolbar
         ><TableToolbar
+          :resource_element="rolesElements.query"
           title="角色列表"
           :total="total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -302,18 +305,29 @@ watch(
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="emit('retry')">重新加载</el-button></template
+          ><el-button
+            v-resource-element="rolesElements.query"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          ></template
         ></el-alert
       >
       <DataTable
+        :resource_element="rolesElements.detail"
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading'"
-        @row-click="openDetail(asRole($event))"
       >
-        <template #code="{ row }"
-          ><button class="role-page__link" type="button" @click.stop="openDetail(asRole(row))">
-            {{ asRole(row).roleCode }}
+        <template #name="{ row }"
+          ><button
+            v-resource-element="rolesElements.detail"
+            class="role-page__link"
+            type="button"
+            @click.stop="openDetail(asRole(row))"
+          >
+            {{ asRole(row).roleName }}
           </button></template
         >
         <template #type="{ row }"
@@ -339,8 +353,8 @@ watch(
         >
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asRole(row).roleName} 的操作`">
-            <el-button link type="primary" @click.stop="openDetail(asRole(row))">详情</el-button>
             <el-button
+              v-resource-element="rolesElements.edit"
               v-permission="IAM_PERMISSIONS.roles.update"
               link
               type="primary"
@@ -349,13 +363,15 @@ watch(
               >编辑</el-button
             >
             <el-button
-              v-permission="IAM_PERMISSIONS.roles.queryFunctionPermissions"
+              v-if="canAccessAuthorization"
+              v-resource-element="rolesElements.authorization"
               link
               type="primary"
               @click.stop="openRelated('function', asRole(row))"
-              >功能权限</el-button
+              >角色授权</el-button
             >
             <el-button
+              v-resource-element="rolesElements.assignments"
               v-permission="IAM_PERMISSIONS.roles.queryAssignments"
               link
               type="primary"
@@ -363,6 +379,7 @@ watch(
               >角色成员</el-button
             >
             <el-button
+              v-resource-element="rolesElements.status"
               v-permission="IAM_PERMISSIONS.roles.changeStatus"
               link
               :type="asRole(row).status === 'ACTIVE' ? 'warning' : 'success'"
@@ -377,6 +394,7 @@ watch(
         ><AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="rolesElements.query"
           :total="total ?? visibleRecords.length"
           @change="changePage"
       /></template>
@@ -384,6 +402,7 @@ watch(
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="rolesElements.detail"
       :title="`${selected?.roleName ?? ''} · 角色详情`"
       size="680"
     >
@@ -432,11 +451,13 @@ watch(
         </el-descriptions>
         <div class="role-detail__actions">
           <el-button
-            v-permission="IAM_PERMISSIONS.roles.queryFunctionPermissions"
+            v-if="canAccessAuthorization"
+            v-resource-element="rolesElements.authorization"
             type="primary"
             @click="openRelated('function', selected)"
-            >查看/配置功能权限</el-button
+            >查看/配置角色授权</el-button
           ><el-button
+            v-resource-element="rolesElements.assignments"
             v-permission="IAM_PERMISSIONS.roles.queryAssignments"
             @click="openRelated('assignments', selected)"
             >查看成员分配</el-button
@@ -447,6 +468,7 @@ watch(
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? rolesElements.create : rolesElements.edit"
       :title="formMode === 'create' ? '新建自定义角色' : `编辑 ${selected?.roleName ?? ''}`"
       :confirm-button-text="formMode === 'create' ? '创建角色' : '保存角色'"
       :submitting="submitting"
@@ -461,14 +483,6 @@ watch(
         show-icon
       />
       <el-form class="role-form" label-position="top" novalidate>
-        <el-form-item label="所属 Tenant"
-          ><el-select v-model="form.tenantId" :disabled="formMode === 'create'"
-            ><el-option
-              v-for="tenant in tenants"
-              :key="tenant.id"
-              :label="`${tenant.name} · ${tenant.code}`"
-              :value="tenant.id" /></el-select
-        ></el-form-item>
         <el-form-item v-if="formMode === 'edit'" label="角色编码">
           <el-input :model-value="selected?.roleCode ?? ''" disabled />
         </el-form-item>
@@ -498,18 +512,19 @@ watch(
         /></el-form-item>
       </el-form>
       <div v-if="formMode === 'edit'" class="role-form__related-action">
-        <span v-permission="IAM_PERMISSIONS.roles.queryFunctionPermissions">
+        <span v-if="canAccessAuthorization">
           <el-tooltip
             :disabled="!formDirty"
-            content="角色资料有未保存修改，请先保存或还原后再进入功能权限。"
+            content="角色资料有未保存修改，请先保存或还原后再进入角色授权。"
             placement="top"
           >
             <span>
               <el-button
+                v-resource-element="rolesElements.authorization"
                 :disabled="formDirty || submitting"
                 @click="openFunctionPermissionsFromForm"
               >
-                查看/配置功能权限
+                查看/配置角色授权
               </el-button>
             </span>
           </el-tooltip>
@@ -519,6 +534,7 @@ watch(
     </FormDrawer>
 
     <el-dialog
+      v-bind="resourceElementAttributes(rolesElements.status)"
       v-model="statusVisible"
       :title="`${selected?.status === 'ACTIVE' ? '停用' : '启用'}自定义角色`"
       width="560"
@@ -534,8 +550,10 @@ watch(
         {{ selected?.version }}。
       </p>
       <template #footer
-        ><el-button @click="statusVisible = false">取消</el-button
+        ><el-button v-resource-element="rolesElements.local" @click="statusVisible = false"
+          >取消</el-button
         ><el-button
+          v-resource-element="rolesElements.status"
           v-permission="IAM_PERMISSIONS.roles.changeStatus"
           :type="selected?.status === 'ACTIVE' ? 'warning' : 'success'"
           :loading="submitting"

@@ -1,5 +1,7 @@
 import type { Page } from '@playwright/test'
 
+import { pageResourcesFixture, resourceCodeForRoute } from './pageResources'
+
 interface ShellMenuItem {
   label: string
   path: string
@@ -8,6 +10,8 @@ interface ShellMenuItem {
 }
 
 interface ShellContextMockOptions {
+  appIdFormat?: 'number' | 'string'
+  currentTenantId?: number
   hiddenMenuPaths?: string[]
   excludedMenuPaths?: string[]
   excludedFunctionPermissions?: string[]
@@ -110,69 +114,11 @@ const shellMenus: Record<string, ShellMenuItem[]> = {
   ],
 }
 
-const shellFunctionPermissions: Record<string, string[]> = {
-  '/iam/group': ['iam:group:view', 'iam:group:update'],
-  '/iam/tenants': [
-    'iam:tenants:view',
-    'iam:tenants:create',
-    'iam:tenants:update',
-    'iam:tenants:change-status',
-  ],
-  '/iam/organizations': [
-    'iam:organizations:view',
-    'iam:organizations:create',
-    'iam:organizations:update',
-    'iam:organizations:move',
-    'iam:organizations:change-status',
-  ],
-  '/iam/positions': [
-    'iam:positions:view',
-    'iam:positions:create',
-    'iam:positions:update',
-    'iam:positions:change-status',
-  ],
-  '/iam/members': [
-    'iam:members:view',
-    'iam:members:create',
-    'iam:members:update',
-    'iam:members:update-user',
-    'iam:members:update-user-tenants',
-    'iam:members:change-status',
-    'iam:members:change-user-status',
-    'iam:members:save-organization',
-    'iam:members:save-position',
-    'iam:members:permissions:view',
-    'iam:members:permissions:assign-role',
-    'iam:members:permissions:revoke-role',
-  ],
-  '/iam/roles': [
-    'iam:roles:view',
-    'iam:roles:create',
-    'iam:roles:update',
-    'iam:roles:change-status',
-    'iam:roles:function-permissions:view',
-    'iam:roles:function-permissions:update',
-    'iam:role-data-permissions:view',
-    'iam:role-data-permissions:update',
-    'iam:role-assignments:view',
-    'iam:role-assignments:assign',
-    'iam:role-assignments:revoke',
-    'iam:role-assignments:manage-admin',
-  ],
-  '/iam/application-resources': [
-    'iam:application-resources:view',
-    'iam:application-resources:create',
-    'iam:application-resources:update',
-    'iam:application-resources:change-status',
-    'iam:application-resources:delete',
-  ],
-}
-
 function apiSuccess(data: unknown): string {
   return JSON.stringify({ status: 'success', code: 1, message: '', data })
 }
 
-function mockQueryUsersPage(pageSize: number, tenantAdminIdentity = true) {
+export function mockQueryUsersPage(pageSize: number, tenantAdminIdentity = true) {
   const userVersion = '63924670932147368'
   const memberVersion = '63924670932147368'
   return {
@@ -296,7 +242,6 @@ export async function mockShellContextApis(
 ): Promise<void> {
   const hiddenMenuPaths = new Set(options.hiddenMenuPaths ?? [])
   const excludedMenuPaths = new Set(options.excludedMenuPaths ?? [])
-  const excludedFunctionPermissions = new Set(options.excludedFunctionPermissions ?? [])
   const firstMenuPathByApp = options.firstMenuPathByApp ?? {}
   const moduleRoutePathByApp = options.moduleRoutePathByApp ?? {}
   const apps = [
@@ -305,7 +250,7 @@ export async function mockShellContextApis(
     ['TMS', 'TMS 运输管理', 'mdi:truck-delivery-outline', '/tms'],
     ['VMS', 'VMS 车辆管理', 'mdi:car-cog', '/vms'],
   ].map(([appCode, appName, icon, routePrefix], index) => ({
-    id: index + 1,
+    id: options.appIdFormat === 'string' ? String(index + 1) : index + 1,
     app_code: appCode,
     app_name: appName,
     description: '',
@@ -320,67 +265,25 @@ export async function mockShellContextApis(
     updated_at: '2026-09-04T00:00:00Z',
     updated_by: 'admin',
   }))
-  const menusById = new Map<number, Record<string, unknown>>()
+  await page.route('**/api/iam-admin/CurrentPermissionResource/CurrentPageResources', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: apiSuccess(
+        pageResourcesFixture(route.request().postDataJSON().page_resource_code, options),
+      ),
+    }),
+  )
 
-  await page.route('**/api/iam-admin/Permission/CurrentApps', async (route) => {
-    await route.fulfill({ contentType: 'application/json', body: apiSuccess({ apps }) })
-  })
-
-  await page.route('**/api/iam-admin/Permission/CurrentFunctions', async (route) => {
-    const request = route.request().postDataJSON() as { menu_id?: number }
-    const menuId = request.menu_id ?? 0
-    const menu = menusById.get(menuId)
-    if (!menu) {
-      await route.fulfill({
-        status: 400,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'error', code: 400, message: 'menu_id is required' }),
-      })
-      return
-    }
-    const menuPath = String(menu.route_path ?? '')
-    const permissionCodes = (shellFunctionPermissions[menuPath] ?? []).filter(
-      (permissionCode) => !excludedFunctionPermissions.has(permissionCode),
-    )
-    const functions = permissionCodes.map((permissionCode, index) => ({
-      id: menuId * 100 + index + 1,
-      app_id: menu.app_id,
-      parent_id: menuId,
-      resource_code: `${String(menu.resource_code)}.FUNCTION.${index + 1}`,
-      resource_name: permissionCode,
-      resource_type: 'function',
-      route_path: '',
-      component: '',
-      permission_code: permissionCode,
-      icon: '',
-      http_method: '',
-      api_path: '',
-      is_visible: false,
-      sort_order: index + 1,
-      status: 'active',
-      remarks: '',
-      is_currently_effective: true,
-      invalid_reason: '',
-      can_maintain: true,
-      version: '1',
-      created_at: '2026-09-04T00:00:00Z',
-      created_by: 'admin',
-      updated_at: '2026-09-04T00:00:00Z',
-      updated_by: 'admin',
-    }))
+  await page.route('**/api/iam-admin/CurrentPermissionResource/CurrentApps', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
-      body: apiSuccess({
-        menu,
-        functions,
-        permission_codes: permissionCodes,
-      }),
+      body: apiSuccess({ apps, authorization_version: '1' }),
     })
   })
 
-  await page.route('**/api/iam-admin/Permission/CurrentAppMenus', async (route) => {
-    const request = route.request().postDataJSON() as { app_id?: number }
-    const app = apps.find((item) => item.id === request.app_id) ?? apps[0]!
+  await page.route('**/api/iam-admin/CurrentPermissionResource/CurrentAppMenus', async (route) => {
+    const request = route.request().postDataJSON() as { app_id?: number | string }
+    const app = apps.find((item) => String(item.id) === String(request.app_id)) ?? apps[0]!
     const appCode = app.app_code
     const moduleId = 101 + apps.indexOf(app)
     const appMenus = (shellMenus[appCode] ?? []).filter((item) => !excludedMenuPaths.has(item.path))
@@ -398,7 +301,7 @@ export async function mockShellContextApis(
         id: menuId,
         app_id: app.id,
         parent_id: moduleId,
-        resource_code: `${appCode}.${index + 1}`,
+        resource_code: resourceCodeForRoute(item.path) || `${appCode}.${index + 1}`,
         resource_name: item.label,
         resource_type: 'menu',
         route_path: item.path,
@@ -420,39 +323,41 @@ export async function mockShellContextApis(
         updated_at: '2026-09-04T00:00:00Z',
         updated_by: 'admin',
       }
-      menusById.set(menuId, menu)
       return menu
     })
     await route.fulfill({
       contentType: 'application/json',
       body: apiSuccess({
         app,
+        authorization_version: '1',
         modules: [
           {
-            id: moduleId,
-            app_id: app.id,
-            parent_id: 0,
-            resource_code: `${appCode}.MAIN`,
-            resource_name: `${app.app_name}导航`,
-            resource_type: 'module',
-            route_path: moduleRoutePathByApp[appCode] ?? '',
-            component: '',
-            permission_code: '',
-            icon: app.icon,
-            http_method: '',
-            api_path: '',
-            is_visible: false,
-            sort_order: 1,
-            status: 'active',
-            remarks: '',
-            is_currently_effective: true,
-            invalid_reason: '',
-            can_maintain: true,
-            version: '63924670932147368',
-            created_at: '2026-09-04T00:00:00Z',
-            created_by: 'admin',
-            updated_at: '2026-09-04T00:00:00Z',
-            updated_by: 'admin',
+            resource: {
+              id: moduleId,
+              app_id: app.id,
+              parent_id: 0,
+              resource_code: `${appCode}.MAIN`,
+              resource_name: `${app.app_name}导航`,
+              resource_type: 'module',
+              route_path: moduleRoutePathByApp[appCode] ?? '',
+              component: '',
+              permission_code: '',
+              icon: app.icon,
+              http_method: '',
+              api_path: '',
+              is_visible: false,
+              sort_order: 1,
+              status: 'active',
+              remarks: '',
+              is_currently_effective: true,
+              invalid_reason: '',
+              can_maintain: true,
+              version: '63924670932147368',
+              created_at: '2026-09-04T00:00:00Z',
+              created_by: 'admin',
+              updated_at: '2026-09-04T00:00:00Z',
+              updated_by: 'admin',
+            },
             menus,
           },
         ],
@@ -460,10 +365,28 @@ export async function mockShellContextApis(
     })
   })
 
-  await page.route('**/api/iam-admin/Membership/QueryUsers', async (route) => {
+  await page.route('**/api/iam-admin/Auth/CurrentProfile', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
-      body: apiSuccess(mockQueryUsersPage(20, options.tenantAdminIdentity)),
+      body: apiSuccess({
+        user_id: 1001,
+        user_name: '林嘉',
+        real_name: '林嘉',
+        nick_name: '林嘉',
+        display_name: '林嘉',
+        avatar_url: '',
+        avatar_file_id: '',
+        tenant_id: 1,
+        tenant_code: 'PLATFORM',
+        tenant_name: '华东运营中心',
+        tenant_user_id: 1001,
+        tenant_user_code: 'OPS001',
+        is_tenant_admin: options.tenantAdminIdentity ?? true,
+        organization_id: 10,
+        organization_name: '华东运营中心',
+        position_id: 20,
+        position_name: '运营经理',
+      }),
     })
   })
 }
@@ -592,7 +515,7 @@ export async function useAuthenticatedSession(
   await mockShellContextApis(page, options)
   await mockFoundationReadApis(page, options)
   await page.addInitScript(
-    ({ tenantAdminIdentity }) => {
+    ({ tenantAdminIdentity, currentTenantId }) => {
       const identity =
         tenantAdminIdentity === null
           ? {}
@@ -606,7 +529,7 @@ export async function useAuthenticatedSession(
       window.sessionStorage.setItem('login_display_title', '运营经理')
       window.sessionStorage.setItem('login_tenant_name', '华东运营中心')
       window.sessionStorage.setItem('login_tenant_code', 'PLATFORM')
-      window.sessionStorage.setItem('login_tenant_id', '1')
+      window.sessionStorage.setItem('login_tenant_id', String(currentTenantId ?? 1))
       window.sessionStorage.setItem(
         'login_available_tenants',
         JSON.stringify([
@@ -649,6 +572,9 @@ export async function useAuthenticatedSession(
         ]),
       )
     },
-    { tenantAdminIdentity: options.tenantAdminIdentity ?? null },
+    {
+      tenantAdminIdentity: options.tenantAdminIdentity ?? null,
+      currentTenantId: options.currentTenantId ?? 1,
+    },
   )
 }

@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { papersElements } from '../iam-resource.registry'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useTrainingContentView } from '../composables/useTrainingContentView'
-import type { ContentRuntime, PaperForm } from '../types/trainingContentRuntime'
+import type {
+  ContentRuntime,
+  PaperForm,
+  PaperPreviewGenerator,
+} from '../types/trainingContentRuntime'
+import { usePaperComposition } from '../composables/usePaperComposition'
+import { equalQuestionScore, scoreUnits } from '../adapters/paperComposition'
+import PaperQuestionPicker from './PaperQuestionPicker.vue'
+import PaperQuestionGroups from './PaperQuestionGroups.vue'
 
 import AppPage from '@shared/components/AppPage.vue'
 import AppPagination from '@shared/components/AppPagination.vue'
@@ -32,6 +41,7 @@ const props = defineProps<{
   questions: QuestionRecord[]
   runtime?: ContentRuntime<PaperRecord, PaperForm>
   state: TrainingPreviewState
+  generatePreview?: PaperPreviewGenerator
 }>()
 
 const emit = defineEmits<{
@@ -52,6 +62,13 @@ const modeDialogVisible = ref(false)
 const pendingMode = ref<PaperMode>()
 const confirmedMode = ref<PaperMode>('FIXED')
 const submitting = ref(false)
+const pickerVisible = ref(false)
+const replacingId = ref<number>()
+const generationLoading = ref(false)
+const generationError = ref('')
+const resetPreviewVisible = ref(false)
+let generation = 0
+let generationController: AbortController | undefined
 
 const form = reactive<{
   name: string
@@ -76,6 +93,24 @@ const form = reactive<{
 const { actionError, discardVisible, confirmDiscard, formDirty, lockedModel, run, load } =
   useTrainingContentView(() => props.runtime, query, page, pageSize, form, formVisible, submitting)
 const statusModel = lockedModel(statusVisible)
+const composition = usePaperComposition(form)
+const { randomGenerated, scoreNotice, groups } = composition
+const selectionElement = computed(() =>
+  formMode.value === 'create' ? papersElements.createSelection : papersElements.editSelection,
+)
+const selectedHasQuestions = computed(() => !!selected.value?.fixedQuestions.length)
+watch(formVisible, (visible) => {
+  if (!visible) {
+    ++generation
+    generationController?.abort()
+    pickerVisible.value = false
+    generationLoading.value = false
+  }
+})
+onBeforeUnmount(() => {
+  ++generation
+  generationController?.abort()
+})
 function allowed(action: 'create' | 'update' | 'status') {
   return !props.runtime || props.runtime.allowed(action)
 }
@@ -94,7 +129,7 @@ const columns: DataTableColumn[] = [
   { prop: 'totalScore', label: '总分', width: 92, align: 'right' },
   { label: '状态', width: 92, slot: 'status' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 168 },
-  { label: '操作', width: 190, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -109,64 +144,28 @@ const visibleRecords = computed(() => {
   )
 })
 
-const optionKeyword = ref('')
-function searchOptions(index = 1) {
-  void run(async () => {
-    await props.runtime?.searchOptions?.(optionKeyword.value, index)
-  })
-}
-const activeQuestions = computed(() => {
-  const options = props.questions.filter((item) => item.status === 'ACTIVE')
-  return [
-    ...options,
-    ...form.fixedQuestions
-      .filter((item) => !options.some((option) => option.id === item.questionId))
-      .map((item) => ({ id: item.questionId, stem: item.stem })),
-  ]
-})
-const selectedQuestionIds = computed<number[]>({
-  get: () => form.fixedQuestions.map((item) => item.questionId),
-  set: (ids) => {
-    form.fixedQuestions = ids.map((id, index) => {
-      const current = form.fixedQuestions.find((item) => item.questionId === id)
-      const question = props.questions.find((item) => item.id === id)
-      return (
-        current ?? {
-          questionId: id,
-          stem: question?.stem ?? '',
-          type: question?.type ?? 'SINGLE_CHOICE',
-          status: question?.status ?? 'ACTIVE',
-          score: 10,
-          order: index + 1,
-        }
-      )
-    })
-    form.fixedQuestions.forEach((item, index) => (item.order = index + 1))
-  },
-})
-
 const computedScore = computed(() => {
-  if (form.mode === 'FIXED')
-    return form.fixedQuestions.reduce((total, item) => total + Number(item.score || 0), 0)
-  return form.randomRules.reduce(
-    (total, item) => total + item.count * Number(item.scorePerQuestion || 0),
-    0,
+  if (form.mode === 'FIXED' || randomGenerated.value) return composition.totalScore.value
+  return (
+    form.randomRules.reduce(
+      (total, item) => total + (item.count ? (scoreUnits(item.totalScore) ?? 0) : 0),
+      0,
+    ) / 100
   )
 })
 const scoreMatched = computed(
-  () =>
-    computedScore.value > 0 &&
-    Math.round(computedScore.value * 100) === Math.round(form.totalScore * 100),
+  () => computedScore.value > 0 && scoreUnits(computedScore.value) === scoreUnits(form.totalScore),
 )
 const randomRuleValid = computed(
   () =>
     form.randomRules.some((item) => item.count > 0) &&
+    form.randomRules.reduce((sum, rule) => sum + rule.count, 0) <= 1000 &&
     form.randomRules.every(
       (item) =>
         Number.isInteger(item.count) &&
         item.count >= 0 &&
         item.count <= item.availableCount &&
-        (item.count === 0 || item.scorePerQuestion > 0),
+        (item.count === 0 || equalQuestionScore(item.totalScore, item.count) !== undefined),
     ),
 )
 const formValid = computed(
@@ -175,9 +174,11 @@ const formValid = computed(
     form.name.trim().length <= 200 &&
     form.totalScore > 0 &&
     scoreMatched.value &&
-    (form.mode === 'FIXED'
-      ? form.fixedQuestions.length > 0 && form.fixedQuestions.every((item) => item.score > 0)
-      : randomRuleValid.value),
+    !generationLoading.value &&
+    !pickerVisible.value &&
+    (form.mode === 'FIXED' || randomGenerated.value) &&
+    composition.valid.value &&
+    (!props.runtime || form.fixedQuestions.every((q) => !!q.questionUpdatedAt)),
 )
 
 function asPaper(row: Record<string, unknown>) {
@@ -282,7 +283,9 @@ function initializeForm(mode: 'create' | 'edit', record?: PaperRecord) {
         ? record.randomRules.map((item) => ({ ...item }))
         : defaultRules(),
   })
-  optionKeyword.value = ''
+  composition.reset()
+  pickerVisible.value = false
+  generationError.value = ''
   if (props.runtime)
     form.randomRules.forEach((rule) => {
       rule.availableCount = props.runtime?.questionCounts?.[rule.type] ?? 0
@@ -303,21 +306,79 @@ function confirmModeChange() {
   confirmedMode.value = pendingMode.value
   form.mode = pendingMode.value
   if (pendingMode.value === 'FIXED') form.randomRules = defaultRules()
-  else form.fixedQuestions = []
+  form.fixedQuestions = []
+  composition.reset()
   pendingMode.value = undefined
   modeDialogVisible.value = false
   emit('action', '组卷模式已切换，另一模式的未保存配置已清空')
 }
 
-function moveQuestion(index: number, offset: number) {
-  const target = index + offset
-  if (target < 0 || target >= form.fixedQuestions.length) return
+function moveQuestion(id: number, offset: number) {
+  const index = form.fixedQuestions.findIndex((q) => q.questionId === id)
   const current = form.fixedQuestions[index]
+  if (!current) return
+  const group = form.fixedQuestions.filter((q) => q.type === current.type)
+  const neighbor = group[group.indexOf(current) + offset]
+  const target = form.fixedQuestions.findIndex((q) => q.questionId === neighbor?.questionId)
+  if (target < 0 || target >= form.fixedQuestions.length) return
   const next = form.fixedQuestions[target]
   if (!current || !next) return
   form.fixedQuestions.splice(index, 1, next)
   form.fixedQuestions.splice(target, 1, current)
   form.fixedQuestions.forEach((item, itemIndex) => (item.order = itemIndex + 1))
+}
+
+function openPicker(id?: number) {
+  if (submitting.value || generationLoading.value) return
+  replacingId.value = id
+  pickerVisible.value = true
+}
+async function generatePaperPreview() {
+  if (
+    (props.runtime ? !props.runtime.generatePaperPreview : !props.generatePreview) ||
+    !randomRuleValid.value ||
+    !scoreMatched.value ||
+    generationLoading.value
+  )
+    return
+  const started = ++generation
+  generationLoading.value = true
+  generationError.value = ''
+  generationController?.abort()
+  generationController = new AbortController()
+  try {
+    const rules = form.randomRules.map((rule) => ({ ...rule }))
+    const result = props.runtime
+      ? await props.runtime.generatePaperPreview!(
+          rules,
+          form.totalScore,
+          formMode.value === 'create' ? 'create' : 'update',
+          generationController.signal,
+        )
+      : await props.generatePreview!(rules)
+    if (started !== generation || !formVisible.value) return
+    composition.generated(result)
+  } catch (reason) {
+    if (started === generation)
+      generationError.value = reason instanceof Error ? reason.message : '组卷预览失败，请重试'
+  } finally {
+    if (started === generation) generationLoading.value = false
+  }
+}
+function resetRandomPreview() {
+  form.fixedQuestions = []
+  composition.reset()
+  resetPreviewVisible.value = false
+}
+function clearZeroCountScore(rule: RandomPaperRule) {
+  if (!rule.count) {
+    rule.scorePerQuestion = 0
+    rule.totalScore = undefined
+  } else rule.scorePerQuestion = equalQuestionScore(rule.totalScore, rule.count) ?? 0
+}
+function updateRuleScore(rule: RandomPaperRule, value: number | undefined) {
+  rule.totalScore = rule.count ? value : undefined
+  rule.scorePerQuestion = equalQuestionScore(rule.totalScore, rule.count) ?? 0
 }
 
 function savePaper() {
@@ -338,6 +399,22 @@ function savePaper() {
   window.setTimeout(() => {
     submitting.value = false
     formVisible.value = false
+    selected.value = {
+      ...selected.value,
+      ...structuredClone({
+        ...form,
+        fixedQuestions: form.fixedQuestions.map((q) => ({ ...q })),
+        randomRules: form.randomRules.map((r) => ({ ...r })),
+      }),
+      id: selected.value?.id ?? 9999,
+      status: selected.value?.status ?? 'DRAFT',
+      createdAt: '',
+      createdBy: 'Preview',
+      updatedAt: '',
+      updatedBy: 'Preview',
+      version: '',
+    }
+    detailVisible.value = true
     emit(
       'action',
       formMode.value === 'create'
@@ -368,7 +445,7 @@ function confirmStatus() {
 </script>
 
 <template>
-  <AppPage class="training-page paper-management-page">
+  <AppPage :resource_element="papersElements.page" class="training-page paper-management-page">
     <ListPageTemplate>
       <el-alert
         v-if="actionError && !formVisible && !statusVisible"
@@ -388,6 +465,7 @@ function confirmStatus() {
         <PageHeader title="试卷管理" description="以固定或随机模式配置题目、分值与随机策略">
           <template #actions
             ><el-button
+              v-resource-element="papersElements.create"
               type="primary"
               :disabled="!allowed('create') || submitting"
               @click="openForm('create')"
@@ -398,10 +476,16 @@ function confirmStatus() {
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="papersElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="试卷名称"
             ><el-input
               v-model="query.keyword"
+              v-resource-element="papersElements.query"
               clearable
               placeholder="输入试卷名称"
               @keyup.enter="handleSearchKeyup"
@@ -423,6 +507,7 @@ function confirmStatus() {
 
       <template #toolbar
         ><TableToolbar
+          :resource_element="papersElements.query"
           title="试卷列表"
           :total="runtime?.total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -443,7 +528,9 @@ function confirmStatus() {
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="refresh">重新加载</el-button></template
+          ><el-button v-resource-element="papersElements.query" link type="primary" @click="refresh"
+            >重新加载</el-button
+          ></template
         ></el-alert
       >
 
@@ -451,10 +538,14 @@ function confirmStatus() {
         :data="visibleRecords"
         :columns="columns"
         :loading="state === 'loading' || submitting"
-        @row-click="openDetail(asPaper($event))"
       >
         <template #name="{ row }"
-          ><button class="training-page__link" type="button" @click.stop="openDetail(asPaper(row))">
+          ><button
+            v-resource-element="papersElements.detail"
+            class="training-page__link"
+            type="button"
+            @click.stop="openDetail(asPaper(row))"
+          >
             {{ asPaper(row).name }}
           </button></template
         >
@@ -468,14 +559,15 @@ function confirmStatus() {
         /></template>
         <template #actions="{ row }"
           ><RowActionGrid :aria-label="`${asPaper(row).name} 的操作`"
-            ><el-button link type="primary" @click.stop="openDetail(asPaper(row))">详情</el-button
             ><el-button
+              v-resource-element="papersElements.edit"
               link
               type="primary"
               :disabled="!allowed('update') || submitting"
               @click.stop="openForm('edit', asPaper(row))"
               >编辑</el-button
             ><el-button
+              v-resource-element="papersElements.status"
               link
               :type="asPaper(row).status === 'ACTIVE' ? 'warning' : 'primary'"
               :disabled="!allowed('status') || submitting"
@@ -490,6 +582,7 @@ function confirmStatus() {
         ><AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="papersElements.query"
           :total="runtime?.total ?? visibleRecords.length"
           @change="paginate"
       /></template>
@@ -497,6 +590,7 @@ function confirmStatus() {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="papersElements.detail"
       :title="selected ? `试卷详情 · ${selected.name}` : '试卷详情'"
       :size="860"
     >
@@ -528,20 +622,20 @@ function confirmStatus() {
         <section class="training-form-section">
           <div class="training-form-section__heading">
             <div>
-              <h3>{{ selected.mode === 'FIXED' ? '固定题目与分值' : '随机抽题规则' }}</h3>
+              <h3>已确认题目与分值</h3>
               <p>计算总分必须与目标总分一致。</p>
             </div>
           </div>
           <table class="training-rule-table">
             <thead>
               <tr>
-                <th>{{ selected.mode === 'FIXED' ? '序号' : '题型' }}</th>
-                <th>{{ selected.mode === 'FIXED' ? '题目' : '题量' }}</th>
-                <th>{{ selected.mode === 'FIXED' ? '题型' : '单题分值' }}</th>
-                <th>{{ selected.mode === 'FIXED' ? '分值' : '小计' }}</th>
+                <th>序号</th>
+                <th>完整题目</th>
+                <th>题型</th>
+                <th>分值</th>
               </tr>
             </thead>
-            <tbody v-if="selected.mode === 'FIXED'">
+            <tbody>
               <tr v-for="item in selected.fixedQuestions" :key="item.questionId">
                 <td>{{ item.order }}</td>
                 <td>{{ item.stem }}</td>
@@ -549,15 +643,14 @@ function confirmStatus() {
                 <td>{{ item.score }}</td>
               </tr>
             </tbody>
-            <tbody v-else>
-              <tr v-for="item in selected.randomRules" :key="item.type">
-                <td>{{ questionTypeLabel(item.type) }}</td>
-                <td>{{ item.count }}</td>
-                <td>{{ item.scorePerQuestion }}</td>
-                <td>{{ item.count * item.scorePerQuestion }}</td>
-              </tr>
-            </tbody>
           </table>
+          <p v-if="!selectedHasQuestions">尚未配置最终题集，请编辑试卷后保存。</p>
+          <el-alert
+            v-if="selected.configurationValid === false"
+            title="试卷配置无效，请编辑并重新确认题集及题型分值后保存。"
+            type="warning"
+            :closable="false"
+          />
         </section>
         <el-alert
           title="试卷修改只影响后续创建的考试；历史考试继续按快照执行。"
@@ -577,6 +670,7 @@ function confirmStatus() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? papersElements.create : papersElements.edit"
       :title="formMode === 'create' ? '新建试卷' : `编辑试卷 · ${selected?.name ?? ''}`"
       :size="980"
       :submitting="submitting"
@@ -586,7 +680,12 @@ function confirmStatus() {
       @confirm="savePaper"
     >
       <el-alert v-if="actionError" :title="actionError" type="error" :closable="false" show-icon />
-      <el-form class="training-form" label-position="top" :disabled="submitting" novalidate>
+      <el-form
+        class="training-form"
+        label-position="top"
+        :disabled="submitting || generationLoading"
+        novalidate
+      >
         <el-alert
           v-if="formMode === 'edit'"
           title="编辑不改变试卷状态；已生成考试继续使用历史快照。"
@@ -617,6 +716,7 @@ function confirmStatus() {
               ><el-input-number
                 v-model="form.totalScore"
                 :min="0.01"
+                :max="1000000"
                 :precision="2"
                 :step="10"
                 controls-position="right" /></el-form-item
@@ -645,86 +745,13 @@ function confirmStatus() {
               <p>新选择仅展示启用题目；编辑时原有停用题目可保留但不可重新选择。</p>
             </div>
           </div>
-          <div v-if="runtime" class="training-form-grid">
-            <el-form-item label="查找启用题目"
-              ><el-input
-                v-model="optionKeyword"
-                clearable
-                placeholder="输入关键词后查询"
-                @keyup.enter="!$event.isComposing && searchOptions()"
-            /></el-form-item>
-            <el-button :loading="runtime.optionsLoading" @click="searchOptions()"
-              >查询题目</el-button
-            >
-          </div>
-          <el-form-item label="选择启用题目" required
-            ><el-select
-              v-model="selectedQuestionIds"
-              multiple
-              filterable
-              collapse-tags
-              placeholder="选择题目"
-              ><el-option
-                v-for="question in activeQuestions"
-                :key="question.id"
-                :label="`#${question.id} · ${question.stem}`"
-                :value="question.id" /></el-select
-          ></el-form-item>
-          <div v-if="runtime" class="training-detail__tags">
-            <span>共 {{ runtime.optionsTotal }} 道 · 第 {{ runtime.optionsPage }} 页</span>
-            <el-button
-              :disabled="submitting || (runtime.optionsPage ?? 1) <= 1"
-              @click="searchOptions((runtime.optionsPage ?? 1) - 1)"
-              >上一页题目</el-button
-            >
-            <el-button
-              :disabled="
-                submitting || (runtime.optionsPage ?? 1) * 20 >= (runtime.optionsTotal ?? 0)
-              "
-              @click="searchOptions((runtime.optionsPage ?? 1) + 1)"
-              >下一页题目</el-button
-            >
-          </div>
-          <table class="training-rule-table">
-            <thead>
-              <tr>
-                <th>顺序</th>
-                <th>题目</th>
-                <th>题型</th>
-                <th>分值</th>
-                <th>排序</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(item, index) in form.fixedQuestions" :key="item.questionId">
-                <td>{{ item.order }}</td>
-                <td>{{ item.stem }}</td>
-                <td>{{ questionTypeLabel(item.type) }}</td>
-                <td>
-                  <el-input-number
-                    v-model="item.score"
-                    :min="0.01"
-                    :precision="2"
-                    controls-position="right"
-                  />
-                </td>
-                <td>
-                  <el-button-group
-                    ><el-button
-                      :disabled="index === 0"
-                      :aria-label="`上移题目 ${item.questionId}`"
-                      @click="moveQuestion(index, -1)"
-                      ><Icon icon="mdi:arrow-up" width="16" aria-hidden="true" /></el-button
-                    ><el-button
-                      :disabled="index === form.fixedQuestions.length - 1"
-                      :aria-label="`下移题目 ${item.questionId}`"
-                      @click="moveQuestion(index, 1)"
-                      ><Icon icon="mdi:arrow-down" width="16" aria-hidden="true" /></el-button
-                  ></el-button-group>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <el-button
+            v-resource-element="
+              formMode === 'create' ? papersElements.createOptions : papersElements.editOptions
+            "
+            @click="openPicker()"
+            >选择题目</el-button
+          >
         </section>
 
         <section v-else class="training-form-section">
@@ -734,14 +761,26 @@ function confirmStatus() {
               <p>题量不得超过当前可用题数，至少一种题型题量大于 0。</p>
             </div>
           </div>
+          <el-alert
+            title="随机仅生成一次初稿；确认后的题集按原样保存，不会在保存或考试时重新抽取。"
+            type="info"
+            :closable="false"
+          />
+          <p v-if="!runtime">Preview 使用隔离样例，不发送业务请求。</p>
+          <el-alert
+            v-if="generationError"
+            :title="generationError"
+            type="error"
+            :closable="false"
+          />
           <table class="training-rule-table">
             <thead>
               <tr>
                 <th>题型</th>
                 <th>可用题数</th>
                 <th>抽取题数</th>
-                <th>单题分值</th>
-                <th>小计</th>
+                <th>题型总分</th>
+                <th>每题分值</th>
               </tr>
             </thead>
             <tbody>
@@ -751,26 +790,76 @@ function confirmStatus() {
                 <td>
                   <el-input-number
                     v-model="rule.count"
+                    :disabled="randomGenerated"
                     :min="0"
-                    :max="rule.availableCount"
+                    :max="randomGenerated ? 1000 : Math.min(1000, rule.availableCount)"
                     :step="1"
                     controls-position="right"
+                    @change="clearZeroCountScore(rule)"
                   />
                 </td>
                 <td>
                   <el-input-number
                     :key="String(rule.count === 0)"
-                    v-model="rule.scorePerQuestion"
-                    :disabled="rule.count === 0"
+                    :model-value="rule.count > 0 ? rule.totalScore : undefined"
+                    :disabled="rule.count === 0 || randomGenerated"
                     :min="0.01"
+                    :max="1000000"
                     :precision="2"
                     controls-position="right"
+                    @update:model-value="updateRuleScore(rule, $event ?? undefined)"
                   />
                 </td>
-                <td>{{ rule.count * rule.scorePerQuestion }}</td>
+                <td>
+                  {{ equalQuestionScore(rule.totalScore, rule.count) ?? '—' }}
+                  <p
+                    v-if="rule.count > 0 && !equalQuestionScore(rule.totalScore, rule.count)"
+                    class="training-page__summary"
+                  >
+                    请设置可精确均分至两位小数的题型总分。
+                  </p>
+                </td>
               </tr>
             </tbody>
           </table>
+          <el-button
+            v-if="!randomGenerated"
+            v-resource-element="
+              formMode === 'create' ? papersElements.createPreview : papersElements.editPreview
+            "
+            :disabled="!randomRuleValid || !scoreMatched"
+            :loading="generationLoading"
+            @click="generatePaperPreview"
+            >组卷预览</el-button
+          >
+          <el-button
+            v-else
+            v-resource-element="
+              formMode === 'create' ? papersElements.createSelection : papersElements.editSelection
+            "
+            @click="resetPreviewVisible = true"
+            >重新设置抽题规则</el-button
+          >
+        </section>
+
+        <section v-if="form.mode === 'FIXED' || randomGenerated" class="training-form-section">
+          <div class="training-form-section__heading">
+            <h3>已选题目 · {{ form.fixedQuestions.length }} 题</h3>
+          </div>
+          <p v-if="scoreNotice" role="status" aria-live="polite">{{ scoreNotice }}</p>
+          <PaperQuestionGroups
+            :groups="groups"
+            :query-element="
+              formMode === 'create' ? papersElements.createOptions : papersElements.editOptions
+            "
+            :resource_element="
+              formMode === 'create' ? papersElements.createSelection : papersElements.editSelection
+            "
+            @total="composition.setTotal"
+            @remove="composition.remove"
+            @replace="openPicker"
+            @move="moveQuestion"
+          />
         </section>
 
         <section class="training-form-section">
@@ -810,8 +899,38 @@ function confirmStatus() {
       </el-form>
     </FormDrawer>
 
+    <PaperQuestionPicker
+      v-if="formVisible"
+      v-model="pickerVisible"
+      :selected="form.fixedQuestions"
+      :replace-id="replacingId"
+      :action="formMode === 'create' ? 'create' : 'update'"
+      :choices="questions"
+      :loader="runtime?.queryQuestions"
+      :resource_element="
+        formMode === 'create' ? papersElements.createOptions : papersElements.editOptions
+      "
+      :selection-element="selectionElement"
+      @confirm="composition.applySelection"
+    />
+
+    <FormDialog
+      v-model="resetPreviewVisible"
+      :resource_element="
+        formMode === 'create' ? papersElements.createSelection : papersElements.editSelection
+      "
+      title="重新设置抽题规则？"
+      confirm-button-text="清空预览并重新设置"
+      confirm-type="warning"
+      @confirm="resetRandomPreview"
+      ><p>
+        将清空当前预览题集及人工调整；重新点击组卷预览才会抽取新题，不影响目标总分。
+      </p></FormDialog
+    >
+
     <FormDialog
       v-model="modeDialogVisible"
+      :resource_element="papersElements.local"
       title="切换组卷模式并清空配置？"
       confirm-button-text="确认切换"
       confirm-type="warning"
@@ -828,6 +947,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="statusModel"
+      :resource_element="papersElements.status"
       :title="selected?.status === 'ACTIVE' ? '停用试卷' : '启用试卷'"
       :confirm-button-text="selected?.status === 'ACTIVE' ? '确认停用' : '确认启用'"
       :confirm-type="selected?.status === 'ACTIVE' ? 'warning' : 'primary'"
@@ -849,6 +969,7 @@ function confirmStatus() {
     >
     <FormDialog
       v-model="discardVisible"
+      :resource_element="papersElements.local"
       title="放弃未保存的修改？"
       confirm-button-text="放弃修改"
       confirm-type="warning"

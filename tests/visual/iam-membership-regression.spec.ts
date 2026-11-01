@@ -249,58 +249,25 @@ test.describe('IAM membership production regression', () => {
 
     await page.goto('/iam/members')
     await expect(page.getByRole('heading', { name: '用户与成员' })).toBeVisible()
-    await expect.poll(() => requests.discoveryRequests.length).toBeGreaterThan(0)
-    expect(requests.discoveryRequests[0]).toMatchObject({
-      tenant_ids: [1],
-      user_name: '林嘉',
-      page_index: 1,
-      page_size: 1,
-    })
+    expect(requests.discoveryRequests).toHaveLength(0)
     await expect
       .poll(() =>
         requests.listRequests.some((request) => {
           const ids = request.tenant_ids as number[] | undefined
-          return ids?.join(',') === '1,3,7'
+          return ids?.join(',') === '1'
         }),
       )
       .toBe(true)
 
     const headers = page.locator('.el-table__header-wrapper').first().getByRole('columnheader')
     await expect(headers.nth(0)).toContainText('用户名称')
-    await expect(headers.nth(1)).toContainText('Tenant')
-    await expect(headers.nth(2)).toContainText('成员编号')
-    await expect(headers.nth(3)).toContainText('昵称')
+    await expect(headers.nth(1)).toContainText('成员编号')
+    await expect(headers.filter({ hasText: /^Tenant$/ })).toHaveCount(0)
+    await expect(headers.filter({ hasText: /^昵称$/ })).toHaveCount(0)
     await expect(page.getByRole('columnheader', { name: '组织/岗位', exact: true })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Tenant 显示名称' })).toHaveCount(0)
 
-    const tenantSelect = page.getByLabel('Tenant', { exact: true })
-    const tenantSelectWrapper = formItem(page.locator('body'), 'Tenant').locator(
-      '.el-select__wrapper',
-    )
-    await expect(tenantSelectWrapper).toContainText(/\+\s*2/)
-    const tenantSelectGeometry = await tenantSelectWrapper.evaluate((element) => ({
-      height: element.getBoundingClientRect().height,
-      controlHeight: Number.parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--size-control'),
-      ),
-    }))
-    expect(tenantSelectGeometry.height).toBeLessThanOrEqual(tenantSelectGeometry.controlHeight + 1)
-    await tenantSelect.press('ArrowDown')
-    for (const name of [
-      '华东运营中心 · PLATFORM',
-      '汉明巡天山东 · HMXTSD',
-      '陆链华东新租户 · LL-HUADONG',
-    ]) {
-      await expect(page.getByRole('option', { name, exact: true })).toHaveAttribute(
-        'aria-selected',
-        'true',
-      )
-    }
-    await expect(
-      page.getByRole('option', { name: /历史租户|其他用户租户|已删除租户/ }),
-    ).toHaveCount(0)
-    await page.keyboard.press('Escape')
-    await expect(tenantSelect).toBeVisible()
+    await expect(page.getByLabel('Tenant', { exact: true })).toHaveCount(0)
 
     await page.screenshot({
       path: testInfo.outputPath('membership-list.png'),
@@ -310,7 +277,7 @@ test.describe('IAM membership production regression', () => {
 
     const row = page.locator('.el-table__body-wrapper .el-table__row').first()
     await expect(row).toContainText('林嘉实名')
-    await expect(row).toContainText('华东昵称')
+    await expect(row).not.toContainText('华东昵称')
     await expect(row.getByRole('button', { name: '组织归属' })).toHaveCount(0)
     await expect(row.getByRole('button', { name: '岗位归属' })).toHaveCount(0)
     await row.locator('td').first().click()
@@ -319,6 +286,9 @@ test.describe('IAM membership production regression', () => {
     await row.getByRole('button', { name: '详情', exact: true }).click()
     const detail = page.getByRole('dialog', { name: /身份详情/ })
     await expect(detail).toBeVisible()
+    await expect(detail).toHaveAccessibleName('林嘉实名 · 身份详情')
+    await expect(detail.getByText('嘉嘉', { exact: true })).toHaveCount(0)
+    await expect(detail.getByText('华东昵称', { exact: true })).toHaveCount(0)
     await expect(detail.getByRole('tab', { name: '跨 Tenant 成员关系' })).toHaveCount(0)
     await detail.getByRole('tab', { name: '租户', exact: true }).click()
     const tenantPanel = detail.locator('.el-tab-pane:visible')
@@ -332,16 +302,18 @@ test.describe('IAM membership production regression', () => {
       .locator('.el-drawer__body')
       .evaluate((element) => element.getBoundingClientRect().width)
     expect(detailWidth).toBeLessThanOrEqual(drawerBodyWidth + 1)
-    const assignmentHeader = tenantPanel.locator('.relation-section__header')
-    await expect(assignmentHeader.locator(':scope > button').first()).toHaveText('编辑租户归属')
+    await expect(tenantPanel.getByRole('button', { name: '编辑租户归属' })).toHaveCount(0)
+    await expect(tenantPanel.getByText('汉明巡天山东')).toHaveCount(0)
     await page.screenshot({
       path: testInfo.outputPath('membership-tenant-tab.png'),
       animations: 'disabled',
     })
     await detail.locator('.el-drawer__close-btn').click()
 
-    await page.getByRole('button', { name: '编辑用户', exact: true }).first().click()
-    const userDrawer = page.getByRole('dialog', { name: '编辑全局用户' })
+    await row.getByRole('button', { name: '详情', exact: true }).click()
+    await detail.getByRole('tab', { name: '身份与成员资料', exact: true }).click()
+    await page.getByRole('button', { name: '编辑基本信息', exact: true }).first().click()
+    const userDrawer = page.getByRole('dialog', { name: '编辑基本信息' })
     await expect(userDrawer.getByLabel('用户 ID', { exact: true })).toBeDisabled()
     await userDrawer.getByRole('button', { name: '取消', exact: true }).click()
 
@@ -407,7 +379,8 @@ test.describe('IAM membership production regression', () => {
     await page.getByRole('button', { name: '新增 Tenant 成员' }).click()
     const drawer = page.getByRole('dialog', { name: '新增 Tenant 成员' })
 
-    for (const label of ['登录账号', '姓名', '昵称', '手机号', '邮箱']) {
+    await expect(drawer.getByLabel('昵称', { exact: true })).toHaveCount(0)
+    for (const label of ['登录账号', '姓名', '手机号', '邮箱']) {
       await expect(drawer.getByLabel(label, { exact: true })).toHaveValue('')
     }
     await expect(formItem(drawer, '用户类型').locator('.el-select__wrapper')).toContainText(
@@ -423,10 +396,8 @@ test.describe('IAM membership production regression', () => {
     await expect(drawer.getByText('请输入登录账号', { exact: true })).toBeVisible()
     await expect(drawer.getByText('请输入姓名', { exact: true })).toBeVisible()
 
-    await chooseSelect(page, drawer, '目标 Tenant', '汉明巡天山东 · HMXTSD')
     await drawer.getByLabel('登录账号', { exact: true }).fill('route.operator')
     await drawer.getByLabel('姓名', { exact: true }).fill('张路')
-    await drawer.getByLabel('昵称', { exact: true }).fill('小路')
     await drawer.getByLabel('手机号', { exact: true }).fill('13900000001')
     await drawer.getByLabel('邮箱', { exact: true }).fill('route.operator@example.com')
     await drawer.locator('input[type=file]').setInputFiles({
@@ -444,10 +415,10 @@ test.describe('IAM membership production regression', () => {
     await drawer.getByRole('button', { name: '下一步', exact: true }).click()
 
     await expect
-      .poll(() => requests.organizationRequests.some((item) => item.tenant_id === 3))
+      .poll(() => requests.organizationRequests.some((item) => item.tenant_id === 1))
       .toBe(true)
     await expect
-      .poll(() => requests.positionRequests.some((item) => item.tenant_id === 3))
+      .poll(() => requests.positionRequests.some((item) => item.tenant_id === 1))
       .toBe(true)
     await expect(drawer.getByLabel('成员编号', { exact: true })).toHaveCount(0)
     await expect(drawer.getByLabel('Tenant 显示名称', { exact: true })).toHaveCount(0)
@@ -462,10 +433,10 @@ test.describe('IAM membership production regression', () => {
       .getByLabel('有效开始时间（Asia/Shanghai）', { exact: true })
       .fill('2026-10-08 09:30:00')
     await drawer.getByLabel('成员备注', { exact: true }).fill('夜班线路')
-    await chooseSelect(page, drawer, '初始组织（可多选）', '山东分拨中心 · SD-HUB', true)
-    await chooseSelect(page, drawer, '主要组织', '山东分拨中心 · SD-HUB')
-    await chooseSelect(page, drawer, '初始岗位（可多选）', '山东调度员 · SD-DISPATCHER', true)
-    await chooseSelect(page, drawer, '主要岗位', '山东调度员 · SD-DISPATCHER')
+    await chooseSelect(page, drawer, '初始组织（可多选）', '华东运营中心 · EAST', true)
+    await chooseSelect(page, drawer, '主要组织', '华东运营中心 · EAST')
+    await chooseSelect(page, drawer, '初始岗位（可多选）', '运营经理 · OPS_MANAGER', true)
+    await chooseSelect(page, drawer, '主要岗位', '运营经理 · OPS_MANAGER')
 
     await drawer.getByRole('button', { name: '上一步', exact: true }).click()
     await expect(drawer.getByLabel('登录账号', { exact: true })).toHaveValue('route.operator')
@@ -475,11 +446,7 @@ test.describe('IAM membership production regression', () => {
     await expect
       .poll(() => avatar.evaluate((element) => (element as HTMLImageElement).naturalWidth))
       .toBeGreaterThan(0)
-    await expect(formItem(drawer, '目标 Tenant').locator('.el-select__wrapper')).toContainText(
-      '汉明巡天山东',
-    )
-
-    await chooseSelect(page, drawer, '目标 Tenant', '华东运营中心 · PLATFORM')
+    await expect(drawer.getByLabel('目标 Tenant', { exact: true })).toHaveCount(0)
     await drawer.getByRole('button', { name: '下一步', exact: true }).click()
     await expect(drawer.getByLabel('成员编号', { exact: true })).toHaveCount(0)
     await expect(drawer.getByLabel('有效开始时间（Asia/Shanghai）', { exact: true })).toHaveValue(
@@ -487,30 +454,19 @@ test.describe('IAM membership production regression', () => {
     )
     await expect(
       formItem(drawer, '初始组织（可多选）').locator('.el-select__wrapper'),
-    ).not.toContainText('山东分拨中心')
+    ).toContainText('华东运营中心')
     await expect(
       formItem(drawer, '初始岗位（可多选）').locator('.el-select__wrapper'),
-    ).not.toContainText('山东调度员')
-
-    await expect
-      .poll(() => requests.organizationRequests.some((item) => item.tenant_id === 1))
-      .toBe(true)
-    await expect
-      .poll(() => requests.positionRequests.some((item) => item.tenant_id === 1))
-      .toBe(true)
-    await chooseSelect(page, drawer, '初始组织（可多选）', '华东运营中心 · EAST', true)
-    await chooseSelect(page, drawer, '主要组织', '华东运营中心 · EAST')
-    await chooseSelect(page, drawer, '初始岗位（可多选）', '运营经理 · OPS_MANAGER', true)
-    await chooseSelect(page, drawer, '主要岗位', '运营经理 · OPS_MANAGER')
+    ).toContainText('运营经理')
     await drawer.getByRole('button', { name: '下一步', exact: true }).click()
 
     const review = drawer.locator('.member-review')
     for (const value of [
       '华东运营中心 · PLATFORM',
       'route.operator',
-      '张路 / 小路',
+      '张路',
       '13900000001 / route.operator@example.com',
-      '由服务端按租户编码与成员 ID / 登录账号自动生成',
+      '由服务端按租户编码与成员 ID 自动生成',
       '2026-10-08 09:30:00 ～ 长期有效',
       '华东运营中心 · EAST（主要）',
       '运营经理 · OPS_MANAGER（主要）',
@@ -547,7 +503,7 @@ test.describe('IAM membership production regression', () => {
       new_user: {
         user_name: 'route.operator',
         real_name: '张路',
-        nick_name: '小路',
+        nick_name: '',
         phone: '13900000001',
         email: 'route.operator@example.com',
         avatar_url: '',

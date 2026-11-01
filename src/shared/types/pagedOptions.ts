@@ -1,5 +1,5 @@
-export interface PagedEntityOption {
-  id: number
+export interface PagedEntityOption<TId extends number | string = number> {
+  id: TId
   label: string
   description?: string
 }
@@ -11,6 +11,6 @@ export interface PagedEntityQuery {
   signal: AbortSignal
 }
 
-export type PagedEntityLoader = (
+export type PagedEntityLoader<TId extends number | string = number> = (
   query: PagedEntityQuery,
-) => Promise<{ items: PagedEntityOption[]; total: number }>
+) => Promise<{ items: PagedEntityOption<TId>[]; total: number }>

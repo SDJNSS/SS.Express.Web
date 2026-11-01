@@ -1,5 +1,8 @@
+import { previewHost, sourceHost } from './helpers/testServers'
 import { expect, test, type Page } from '@playwright/test'
 import { useAuthenticatedSession } from './helpers/authenticatedSession'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const imageBytes = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3ioAAAAASUVORK5CYII=',
@@ -73,13 +76,121 @@ test.describe('DMS file integration', () => {
     },
     {
       path: '/iam/members',
-      open: '编辑用户',
-      save: '保存全局资料',
+      open: '编辑基本信息',
+      save: '保存基本信息',
       endpoint: 'Membership/UpdateUser',
       field: 'avatar_file_id',
       url: 'avatar_url',
     },
   ]) {
+    test(`replaces an existing image after removal and releases save for ${scenario.path}`, async ({
+      page,
+    }, testInfo) => {
+      const pageErrors: string[] = []
+      page.on('pageerror', (error) => pageErrors.push(error.message))
+      await useAuthenticatedSession(page, { appIdFormat: 'string' })
+      const files = await mockFiles(page)
+      const imageUrl = 'https://files.example.test/image.png?signature=iam'
+      const image = { [scenario.field]: 'file_existing', [scenario.url]: imageUrl }
+      const isGroup = scenario.path === '/iam/group'
+      const isTenant = scenario.path === '/iam/tenants'
+      const record = isGroup
+        ? { id: 1, group_name: '已有 Logo 集团', ...image, version: '1' }
+        : isTenant
+          ? {
+              id: 1,
+              tenant_code: 'PLATFORM',
+              tenant_name: '测试租户',
+              tenant_type: 'enterprise',
+              timezone: 'Asia/Shanghai',
+              status: 'ACTIVE',
+              ...image,
+              version: '1',
+            }
+          : {
+              user_id: 1001,
+              tenant_user_id: 1,
+              tenant_id: 1,
+              tenant_code: 'PLATFORM',
+              user_status: 'ACTIVE',
+              member_status: 'ACTIVE',
+              user_version: '1',
+              member_version: '1',
+              user: {
+                id: 1001,
+                user_name: 'image.user',
+                real_name: '头像用户',
+                ...image,
+                version: '1',
+              },
+              organizations: [],
+              positions: [],
+            }
+      const query = isGroup ? 'Group/Info' : isTenant ? 'Tenant/Query' : 'Membership/QueryUsers'
+      await page.route(`**/api/iam-admin/${query}`, (route) =>
+        route.fulfill({
+          contentType: 'application/json',
+          body: success(
+            isGroup ? record : { total: 1, page_index: 1, page_size: 20, items: [record] },
+          ),
+        }),
+      )
+      const pendingUploads: Array<() => void> = []
+      await page.route('**/api/dms/File/Upload', async (route) => {
+        await new Promise<void>((resolve) => {
+          pendingUploads.push(resolve)
+        })
+        await route.fallback()
+      })
+      let saved: Record<string, unknown> | undefined
+      await page.route(`**/api/iam-admin/${scenario.endpoint}`, async (route) => {
+        saved = route.request().postDataJSON() as Record<string, unknown>
+        await route.fulfill({ contentType: 'application/json', body: success(saved) })
+      })
+      await page.goto(`${sourceHost}${scenario.path}`)
+      if (scenario.path === '/iam/members') {
+        await page.getByRole('button', { name: '详情', exact: true }).first().click()
+      }
+      await page.getByRole('button', { name: scenario.open, exact: true }).first().click()
+      const drawer = page.locator('.el-drawer:visible').filter({
+        has: page.getByRole('button', { name: scenario.save, exact: true }),
+      })
+      const save = drawer.getByRole('button', { name: scenario.save, exact: true })
+      await expect(drawer.getByText('文件 ID：file_existing')).toBeVisible()
+      for (let replacement = 1; replacement <= 2; replacement++) {
+        await drawer.locator('.el-upload-list__item').hover()
+        await drawer.locator('.el-upload-list__item-delete').click()
+        await expect(drawer.locator('.el-upload-list__item')).toHaveCount(0)
+        await expect(save).toBeEnabled()
+        await drawer.locator('input[type=file]').setInputFiles(imageFile)
+        await expect.poll(() => pendingUploads.length).toBe(replacement)
+        await expect(save).toBeDisabled()
+        pendingUploads[replacement - 1]?.()
+        await expect(drawer.getByText(`文件 ID：file_image_${replacement}`)).toBeVisible()
+        await expect(drawer.getByText('brand.png：上传完成')).toBeVisible()
+        await expect(drawer.locator('.el-upload-list__item-thumbnail')).toHaveAttribute(
+          'src',
+          /^blob:/,
+        )
+        await expect(save).toBeEnabled()
+      }
+      await expect(page.locator('vite-error-overlay')).toHaveCount(0)
+      expect(new URL(page.url()).pathname).toBe(scenario.path)
+      await page.screenshot({
+        path: join(
+          tmpdir(),
+          `dms-replacement-${scenario.path.split('/').pop()}-${testInfo.project.name}.png`,
+        ),
+        animations: 'disabled',
+      })
+      await save.click()
+      await expect.poll(() => saved?.[scenario.field]).toBe('file_image_2')
+      expect(saved?.[scenario.url]).toBe('')
+      expect(files.accesses).toHaveLength(0)
+      expect(files.uploads[1]?.body).toContain('name="source_app_id"\r\n\r\n2')
+      expect(pageErrors).toEqual([])
+    })
+
     test(`uploads multipart and persists file ID for ${scenario.path}`, async ({
       page,
     }, testInfo) => {
@@ -100,8 +211,13 @@ test.describe('DMS file integration', () => {
         })
       })
       await page.goto(scenario.path)
+      if (scenario.path === '/iam/members') {
+        await page.getByRole('button', { name: '详情', exact: true }).first().click()
+      }
       await page.getByRole('button', { name: scenario.open, exact: true }).first().click()
-      const drawer = page.locator('.el-drawer:visible')
+      const drawer = page.locator('.el-drawer:visible').filter({
+        has: page.getByRole('button', { name: scenario.save, exact: true }),
+      })
       await drawer.locator('input[type=file]').setInputFiles(imageFile)
       await expect(drawer.getByText('brand.png：上传完成')).toBeVisible()
       await expect(drawer.getByText('文件 ID：file_image_1')).toBeVisible()
@@ -187,7 +303,7 @@ test.describe('DMS file integration', () => {
   test('saves Tenant logo and first administrator avatar IDs across wizard steps', async ({
     page,
   }) => {
-    await useAuthenticatedSession(page)
+    await useAuthenticatedSession(page, { appIdFormat: 'string' })
     await mockFiles(page)
     let saved: Record<string, unknown> | undefined
     await page.route('**/api/iam-admin/Tenant/Create', async (route) => {
@@ -239,7 +355,17 @@ test.describe('DMS file integration', () => {
       uploadCount++
       await route.fulfill({
         contentType: 'application/json',
-        body: success({ ...uploaded('file_video'), file_category: 'VIDEO' }),
+        body: success({
+          ...uploaded('file_video'),
+          file_category: 'VIDEO',
+          playback_status: 'ready',
+          playback_profile: 'browser-mp4-v1',
+          thumbnail_status: 'ready',
+          video_codec: 'h264',
+          video_width: 608,
+          video_height: 1080,
+          audio_codec: null,
+        }),
       })
     })
     await page.route('**/api/dms/File/ValidateVideo', async (route) => {
@@ -257,7 +383,7 @@ test.describe('DMS file integration', () => {
         }),
       })
     })
-    await page.goto('/login')
+    await page.goto(`${sourceHost}/login`)
     const result = await page.evaluate(async () => {
       window.sessionStorage.setItem('access_token', 'upload-test')
       const modulePath = '/src/features/dms/files/public.ts'
@@ -278,12 +404,54 @@ test.describe('DMS file integration', () => {
     })
     expect(result.firstError).toContain('视频校验未通过')
     expect(result.result.media_duration_ms).toBe(120123)
+    expect(result.result.playback_status).toBe('ready')
+    expect(result.result.audio_codec).toBeNull()
     expect(uploadCount).toBe(1)
     expect(validationCount).toBe(2)
   })
 
+  test('rejects a populated non-ready video status without polling or validating an unfinished upload', async ({
+    page,
+  }) => {
+    let validations = 0
+    await page.route('**/api/dms/File/Upload', (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: success({
+          ...uploaded('not-ready'),
+          file_category: 'VIDEO',
+          playback_status: 'processing',
+        }),
+      }),
+    )
+    await page.route('**/api/dms/File/ValidateVideo', (route) => {
+      validations++
+      return route.fulfill({ status: 500 })
+    })
+    await page.goto(`${sourceHost}/login`)
+    const message = await page.evaluate(async () => {
+      sessionStorage.setItem('access_token', 'upload-test')
+      const path = '/src/features/dms/files/public.ts'
+      const { createDmsUploadTask } = await import(/* @vite-ignore */ path)
+      const task = createDmsUploadTask({
+        file: new File(['video'], 'clip.mp4', { type: 'video/mp4' }),
+        source_app_id: 1,
+        source_app_code: 'IAM',
+        file_category: 'VIDEO',
+      })
+      try {
+        await task.run()
+        return ''
+      } catch (e) {
+        return (e as Error).message
+      }
+    })
+    expect(message).toContain('视频标准化尚未完成')
+    expect(validations).toBe(0)
+  })
+
   test('preserves the uploaded avatar when creating a new member', async ({ page }) => {
-    await useAuthenticatedSession(page)
+    await useAuthenticatedSession(page, { appIdFormat: 'string' })
     await mockFiles(page)
     let saved: Record<string, unknown> | undefined
     await page.route('**/api/iam-admin/Membership/CreateMember', async (route) => {
@@ -413,6 +581,34 @@ test.describe('DMS file integration', () => {
       const files = await mockFiles(page)
       const imageUrl = `https://files.example.test/${kind}.png?signature=iam`
       const isTenant = kind === 'tenant'
+      if (!isTenant) {
+        await page.route('**/api/iam-admin/Auth/CurrentProfile', async (route) => {
+          expect(route.request().method()).toBe('POST')
+          expect(route.request().postData()).toBeNull()
+          await route.fulfill({
+            contentType: 'application/json',
+            body: success({
+              user_id: 1001,
+              user_name: '林嘉',
+              real_name: '林嘉',
+              nick_name: '林嘉',
+              display_name: '林嘉',
+              avatar_url: imageUrl,
+              avatar_file_id: 'file_user',
+              tenant_id: 1,
+              tenant_code: 'PLATFORM',
+              tenant_name: '华东运营中心',
+              tenant_user_id: 1,
+              tenant_user_code: 'HD0001',
+              is_tenant_admin: true,
+              organization_id: 10,
+              organization_name: '华东运营中心',
+              position_id: 20,
+              position_name: '运营经理',
+            }),
+          })
+        })
+      }
       const endpoint = isTenant ? 'Tenant/Query' : 'Membership/QueryUsers'
       const record = isTenant
         ? {
@@ -506,7 +702,13 @@ test.describe('DMS file integration', () => {
       if (!isTenant) {
         await expect(page.locator('.app-shell__avatar-image')).toHaveAttribute('src', imageUrl)
       }
-      await page.getByRole('button', { name: '详情', exact: true }).first().click()
+      await (
+        isTenant
+          ? page.locator('.el-table__body-wrapper .tenant-page__link')
+          : page.getByRole('button', { name: '详情', exact: true })
+      )
+        .first()
+        .click()
       const drawer = page.locator('.el-drawer:visible')
       const detailImage = isTenant ? '.tenant-detail__logo img' : '.membership-detail__hero img'
       await expect(drawer.locator(detailImage)).toHaveAttribute('src', imageUrl)
@@ -517,14 +719,14 @@ test.describe('DMS file integration', () => {
       })
       await drawer.locator('.el-drawer__close-btn').click()
       await expect(drawer).toHaveCount(0)
+      if (!isTenant) await page.getByRole('button', { name: '详情', exact: true }).first().click()
       await page
-        .getByRole('button', { name: isTenant ? '编辑' : '编辑用户', exact: true })
+        .getByRole('button', { name: isTenant ? '编辑' : '编辑基本信息', exact: true })
         .first()
         .click()
-      await expect(drawer.locator('.el-upload-list__item-thumbnail')).toHaveAttribute(
-        'src',
-        imageUrl,
-      )
+      await expect(
+        page.locator('.el-drawer:visible .el-upload-list__item-thumbnail'),
+      ).toHaveAttribute('src', imageUrl)
       expect(files.accesses).toHaveLength(0)
       expect(files.uploads).toHaveLength(0)
       expect(files.ossHeaders.length).toBeGreaterThan(0)
@@ -542,7 +744,7 @@ test.describe('DMS file integration', () => {
         body: success(uploaded('file_old_tenant')),
       })
     })
-    await page.goto('/login')
+    await page.goto(`${sourceHost}/login`)
     const message = await page.evaluate(async () => {
       const sessionPath = '/src/shared/api/authSession.ts'
       const { setStoredAuthSession } = await import(/* @vite-ignore */ sessionPath)
@@ -570,12 +772,51 @@ test.describe('DMS file integration', () => {
     expect(message).toContain('Tenant 或应用已变化')
   })
 
+  test('preserves Int64 source App IDs and rejects invalid IDs before dispatch', async ({
+    page,
+  }) => {
+    const files = await mockFiles(page)
+    await page.goto(`${sourceHost}/login`)
+    const result = await page.evaluate(async () => {
+      window.sessionStorage.setItem('access_token', 'upload-test')
+      const modulePath = '/src/features/dms/files/public.ts'
+      const { createDmsUploadTask } = await import(/* @vite-ignore */ modulePath)
+      const file = new File(['image'], 'logo.png', { type: 'image/png' })
+      for (const id of ['2', '9223372036854775807', 2]) {
+        await createDmsUploadTask({ file, source_app_id: id, source_app_code: 'IAM' }).run()
+      }
+      const rejected: string[] = []
+      for (const id of [
+        '',
+        'invalid',
+        '0',
+        -1,
+        1.5,
+        Number.MAX_SAFE_INTEGER + 1,
+        '9223372036854775808',
+      ]) {
+        try {
+          await createDmsUploadTask({ file, source_app_id: id, source_app_code: 'IAM' }).run()
+          rejected.push('unexpected success')
+        } catch (error) {
+          rejected.push((error as Error).message)
+        }
+      }
+      return rejected
+    })
+    expect(files.uploads).toHaveLength(3)
+    expect(files.uploads[0]?.body).toContain('name="source_app_id"\r\n\r\n2')
+    expect(files.uploads[1]?.body).toContain('name="source_app_id"\r\n\r\n9223372036854775807')
+    expect(files.uploads[2]?.body).toContain('name="source_app_id"\r\n\r\n2')
+    expect(result).toEqual(Array.from({ length: 7 }, () => '请先选择有效的来源应用'))
+  })
+
   test('Candidate file selection never calls DMS', async ({ page }) => {
     const requests: string[] = []
     page.on('request', (request) => {
       if (request.url().includes('/dms/')) requests.push(request.url())
     })
-    await page.goto('http://127.0.0.1:4174/?preview=training-course-management&capture=1')
+    await page.goto(`${previewHost}/?preview=training-course-management&capture=1`)
     await page.getByRole('button', { name: '新建课程', exact: true }).click()
     await page.locator('.el-drawer:visible input[type=file]').setInputFiles({
       name: 'lesson.mp4',

@@ -6,6 +6,9 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import Ajv2020 from 'ajv/dist/2020.js'
+import { readResourceRegistries } from './lib/resource-registries.mjs'
+import { discoverRoutes } from './lib/iam-maintenance-source.mjs'
+import { requireResourceDescription } from './lib/resource-descriptions.mjs'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const defaultOutput = join(projectRoot, 'artifacts', 'iam-resource-catalog.json')
@@ -23,6 +26,31 @@ const defaultSchemaCandidates = [
 ]
 
 const status = 'active'
+const frontendRegistries = readResourceRegistries(projectRoot)
+
+function registeredMenuFields(pageId) {
+  const page = frontendRegistries.find((item) => item.page_id === pageId)
+  if (!page) throw new Error(`Missing resource registry: ${pageId}`)
+  return {
+    code: page.resource_code,
+    name: page.resource_name,
+    route: page.route_path,
+    component: page.component,
+  }
+}
+
+function registeredButtonResources(pageId) {
+  const page = frontendRegistries.find((item) => item.page_id === pageId)
+  if (!page) throw new Error(`Missing resource registry: ${pageId}`)
+  return Object.values(page.buttons).map((button, index) =>
+    buttonResource({
+      code: button.resource_code,
+      name: button.resource_name,
+      permission: button.permission_code,
+      sortOrder: (index + 1) * 10,
+    }),
+  )
+}
 
 function functionResource(code, name, permission, sortOrder, apiPath, remarks = '') {
   if (!apiPath) throw new Error(`Function ${code} 必须绑定后端 API`)
@@ -53,6 +81,7 @@ function menuResource({
   sortOrder,
   remarks = '',
   pages = [],
+  buttons = [],
   functions = [],
 }) {
   return {
@@ -60,6 +89,7 @@ function menuResource({
     confirmedEntry,
     resource_code: code,
     resource_name: name,
+    source: 'frontend',
     resource_type: 'menu',
     route_path: route,
     component,
@@ -70,6 +100,7 @@ function menuResource({
     status,
     remarks,
     pages,
+    buttons,
     functions,
   }
 }
@@ -85,6 +116,7 @@ function pageResource({
   sortOrder,
   remarks = '',
   pages = [],
+  buttons = [],
   functions = [],
 }) {
   return {
@@ -101,7 +133,56 @@ function pageResource({
     status,
     remarks,
     pages,
+    buttons,
     functions,
+  }
+}
+
+function buttonResource({ approvalRef, code, name, permission, sortOrder, remarks = '' }) {
+  return {
+    approvalRef,
+    resource_code: code,
+    resource_name: name,
+    source: 'frontend',
+    resource_type: 'button',
+    permission_code: permission,
+    icon: '',
+    is_visible: false,
+    sort_order: sortOrder,
+    status,
+    remarks,
+  }
+}
+
+function buttonPageResource({
+  approvalRef,
+  code,
+  name,
+  permission,
+  route,
+  component,
+  sortOrder,
+  remarks = '',
+  pages = [],
+  buttons = [],
+}) {
+  return {
+    approvalRef,
+    resource_code: code,
+    resource_name: name,
+    source: 'frontend',
+    resource_type: 'button_page',
+    permission_code: permission,
+    route_path: route,
+    component,
+    icon: '',
+    is_visible: false,
+    sort_order: sortOrder,
+    status,
+    remarks,
+    pages,
+    buttons,
+    functions: [],
   }
 }
 
@@ -109,6 +190,7 @@ function flattenResources(resources) {
   return resources.flatMap((item) => [
     item,
     ...flattenResources(item.pages ?? []),
+    ...flattenResources(item.buttons ?? []),
     ...(item.functions ?? []),
   ])
 }
@@ -126,6 +208,7 @@ function moduleDefinition({
     moduleApprovalRefs: approvalRefs,
     resource_code: code,
     resource_name: name,
+    source: 'frontend',
     resource_type: 'module',
     icon,
     is_visible: false,
@@ -639,6 +722,80 @@ const appDefinitions = [
             remarks: '无 Dashboard 权限时进入的隐藏兜底页面，不出现在导航菜单。',
           }),
         ],
+        functions: [
+          functionResource(
+            'DMS.DASHBOARD.CURRENT_APPS',
+            '查询当前可用 App',
+            'dms:framework:current-apps',
+            10,
+            '/iam-admin/Permission/CurrentApps',
+            'AppShell 初始化必需 Function。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CURRENT_APP_MENUS',
+            '查询当前 App 导航',
+            'dms:framework:current-app-menus',
+            20,
+            '/iam-admin/Permission/CurrentAppMenus',
+            'AppShell 初始化必需 Function。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CURRENT_MODULES',
+            '查询当前 App Module',
+            'dms:framework:current-modules',
+            30,
+            '/iam-admin/Permission/CurrentModules',
+            '兼容现有 Module 导航查询。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CURRENT_MODULE_MENUS',
+            '查询当前 Module 菜单',
+            'dms:framework:current-module-menus',
+            40,
+            '/iam-admin/Permission/CurrentModuleMenus',
+            '兼容现有 Module 菜单查询。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CURRENT_FUNCTIONS',
+            '查询当前 Menu 功能',
+            'dms:framework:current-functions',
+            50,
+            '/iam-admin/Permission/CurrentFunctions',
+            '运行时功能权限发现接口。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CHECK_FUNCTION',
+            '校验当前功能权限',
+            'dms:framework:check-function',
+            60,
+            '/iam-admin/Permission/CheckFunction',
+            '运行时按稳定资源编码检查功能权限。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.SWITCH_TENANT',
+            '切换当前 Tenant',
+            'dms:session:switch-tenant',
+            70,
+            '/iam-admin/Auth/SwitchTenant',
+            '认证会话自服务接口；仍由服务端校验用户实际 Tenant 归属。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CHANGE_INITIAL_PASSWORD',
+            '修改初始密码',
+            'dms:session:change-initial-password',
+            80,
+            '/iam-admin/Auth/ChangeInitialPassword',
+            '初始密码受限登录状态使用。',
+          ),
+          functionResource(
+            'DMS.DASHBOARD.CHANGE_PASSWORD',
+            '修改本人密码',
+            'dms:session:change-password',
+            90,
+            '/iam-admin/Auth/ChangePassword',
+            '认证用户修改本人密码。',
+          ),
+        ],
       }),
     ],
   },
@@ -665,10 +822,7 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-group-profile',
-        code: 'IAM.GROUP',
-        name: '集团信息',
-        route: '/iam/group',
-        component: 'iam/foundation/pages/GroupProfilePage',
+        ...registeredMenuFields('iam-group-profile'),
         permission: 'iam:group:view',
         icon: 'mdi:domain',
         sortOrder: 10,
@@ -691,10 +845,7 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-tenant-management',
-        code: 'IAM.TENANTS',
-        name: 'Tenant 管理',
-        route: '/iam/tenants',
-        component: 'iam/foundation/pages/TenantManagementPage',
+        ...registeredMenuFields('iam-tenant-management'),
         permission: 'iam:tenants:view',
         icon: 'mdi:office-building-cog-outline',
         sortOrder: 20,
@@ -731,10 +882,7 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-organization-management',
-        code: 'IAM.ORGANIZATIONS',
-        name: '组织管理',
-        route: '/iam/organizations',
-        component: 'iam/foundation/pages/OrganizationManagementPage',
+        ...registeredMenuFields('iam-organization-management'),
         permission: 'iam:organizations:view',
         icon: 'mdi:file-tree-outline',
         sortOrder: 30,
@@ -785,10 +933,7 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-position-management',
-        code: 'IAM.POSITIONS',
-        name: '岗位管理',
-        route: '/iam/positions',
-        component: 'iam/foundation/pages/PositionManagementPage',
+        ...registeredMenuFields('iam-position-management'),
         permission: 'iam:positions:view',
         icon: 'mdi:badge-account-horizontal-outline',
         sortOrder: 40,
@@ -825,70 +970,52 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-membership-management',
-        code: 'IAM.MEMBERS',
-        name: '用户与成员',
-        route: '/iam/members',
-        component: 'iam/foundation/pages/MembershipManagementPage',
+        ...registeredMenuFields('iam-membership-management'),
         permission: 'iam:members:view',
         icon: 'mdi:account-multiple-outline',
         sortOrder: 50,
         pages: [
-          pageResource({
-            approvalRef: 'iam-membership-management',
-            code: 'IAM.MEMBERS.PERMISSIONS',
-            name: '用户角色与权限',
-            route: '/iam/members/permissions',
-            component: 'iam/access-control/pages/MemberPermissionPage',
-            permission: 'iam:members:permissions',
-            icon: 'mdi:account-key-outline',
-            sortOrder: 10,
-            functions: [
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.QUERY_USER_TENANTS',
-                '查询用户 Tenant 关系',
-                'iam:members:permissions:view',
-                10,
-                '/iam-admin/Membership/QueryUserTenants',
-              ),
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.QUERY_ROLES',
-                '查询可分配角色',
-                'iam:members:permissions:view',
-                20,
-                '/iam-admin/RolePermission/QueryRoles',
-              ),
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.QUERY_ASSIGNMENTS',
-                '查询用户当前 Tenant 角色',
-                'iam:members:permissions:view',
-                30,
-                '/iam-admin/MemberRole/Query',
-              ),
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.QUERY_FUNCTIONS',
-                '查询当前 Tenant 成员功能权限',
-                'iam:members:permissions:view',
-                40,
-                '/iam-admin/Permission/QueryMemberFunctionPermissions',
-              ),
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.ASSIGN_ROLE',
-                '为用户分配角色',
-                'iam:members:permissions:assign-role',
-                50,
-                '/iam-admin/MemberRole/Assign',
-              ),
-              functionResource(
-                'IAM.MEMBERS.PERMISSIONS.REVOKE_ROLE',
-                '移除用户角色',
-                'iam:members:permissions:revoke-role',
-                60,
-                '/iam-admin/MemberRole/Revoke',
-              ),
-            ],
+          buttonPageResource({
+            approvalRef: 'iam-user-effective-permissions',
+            ...registeredMenuFields('iam-user-effective-permissions'),
+            permission: 'iam:members:effective-permissions:view',
+            sortOrder: 20,
+            remarks: '只读查看当前 Tenant 下用户经角色获得的有效权限。',
           }),
         ],
         functions: [
+          functionResource(
+            'IAM.MEMBERS.PERMISSIONS.QUERY_ROLES',
+            '查询可分配角色',
+            'iam:members:permissions:view',
+            150,
+            '/iam-admin/RolePermission/QueryRoles',
+            '原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。',
+          ),
+          functionResource(
+            'IAM.MEMBERS.PERMISSIONS.QUERY_ASSIGNMENTS',
+            '查询用户角色关系',
+            'iam:members:permissions:view',
+            160,
+            '/iam-admin/MemberRole/Query',
+            '原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。',
+          ),
+          functionResource(
+            'IAM.MEMBERS.PERMISSIONS.ASSIGN_ROLE',
+            '分配用户角色',
+            'iam:members:permissions:assign-role',
+            170,
+            '/iam-admin/MemberRole/Assign',
+            '原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。',
+          ),
+          functionResource(
+            'IAM.MEMBERS.PERMISSIONS.REVOKE_ROLE',
+            '移除用户角色',
+            'iam:members:permissions:revoke-role',
+            180,
+            '/iam-admin/MemberRole/Revoke',
+            '原用户权限页能力保留为成员列表角色抽屉；复用原资源标识，不创建新 Function。',
+          ),
           functionResource(
             'IAM.MEMBERS.QUERY_USERS',
             '查询用户及 Tenant 成员',
@@ -1011,107 +1138,18 @@ const appDefinitions = [
       }),
       menuResource({
         approvalRef: 'iam-role-management',
-        code: 'IAM.ROLES',
-        name: '角色管理',
-        route: '/iam/roles',
-        component: 'iam/access-control/pages/RoleManagementPage',
+        ...registeredMenuFields('iam-role-management'),
         permission: 'iam:roles:view',
         icon: 'mdi:shield-account-outline',
         sortOrder: 60,
         pages: [
-          pageResource({
-            approvalRef: 'iam-role-function-permissions',
-            code: 'IAM.ROLES.FUNCTION_PERMISSIONS',
-            name: '角色功能权限',
-            route: '/iam/roles/function-permissions',
-            component: 'iam/access-control/pages/RoleFunctionPermissionPage',
-            permission: 'iam:roles:function-permissions',
-            icon: 'mdi:shield-key-outline',
-            sortOrder: 10,
-            functions: [
-              functionResource(
-                'IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_ROLE',
-                '查询当前角色',
-                'iam:roles:function-permissions:view',
-                10,
-                '/iam-admin/RolePermission/QueryRoles',
-              ),
-              functionResource(
-                'IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_SYSTEMS',
-                '查询授权系统',
-                'iam:roles:function-permissions:view',
-                20,
-                '/iam-admin/AuthorizationCatalog/QuerySystems',
-              ),
-              functionResource(
-                'IAM.ROLES.FUNCTION_PERMISSIONS.QUERY',
-                '查询功能权限',
-                'iam:roles:function-permissions:view',
-                30,
-                '/iam-admin/RolePermission/QueryFunctionPermissions',
-              ),
-              functionResource(
-                'IAM.ROLES.FUNCTION_PERMISSIONS.SAVE',
-                '保存功能权限',
-                'iam:roles:function-permissions:update',
-                40,
-                '/iam-admin/RolePermission/SaveFunctionPermissions',
-              ),
-            ],
-          }),
-          pageResource({
-            approvalRef: 'iam-role-data-permissions',
-            code: 'IAM.ROLES.DATA_PERMISSIONS',
-            name: '角色数据权限',
-            route: '/iam/roles/data-permissions',
-            component: 'iam/access-control/pages/RoleDataPermissionPage',
-            permission: 'iam:roles:data-permissions',
-            icon: 'mdi:database-lock-outline',
-            sortOrder: 20,
-            functions: [
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.QUERY_ROLE',
-                '查询当前角色',
-                'iam:role-data-permissions:view',
-                10,
-                '/iam-admin/RolePermission/QueryRoles',
-              ),
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.QUERY_SYSTEMS',
-                '查询授权系统',
-                'iam:role-data-permissions:view',
-                20,
-                '/iam-admin/AuthorizationCatalog/QuerySystems',
-              ),
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.QUERY_DOMAINS',
-                '查询数据域',
-                'iam:role-data-permissions:view',
-                30,
-                '/iam-admin/RolePermission/QueryDataDomains',
-              ),
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.QUERY',
-                '查询数据权限',
-                'iam:role-data-permissions:view',
-                40,
-                '/iam-admin/RolePermission/QueryDataPermissions',
-              ),
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.QUERY_TENANT_OPTIONS',
-                '查询 Tenant 数据范围选项',
-                'iam:role-data-permissions:view',
-                50,
-                '/iam-admin/Tenant/Query',
-              ),
-              functionResource(
-                'IAM.ROLES.DATA_PERMISSIONS.SAVE',
-                '保存数据权限',
-                'iam:role-data-permissions:update',
-                60,
-                '/iam-admin/RolePermission/SaveDataPermission',
-              ),
-            ],
+          buttonPageResource({
+            approvalRef: 'iam-role-authorization',
+            ...registeredMenuFields('iam-role-authorization'),
+            permission: 'iam:roles:authorization:view',
+            sortOrder: 5,
+            remarks: '按权限包维护角色授权。',
+            buttons: registeredButtonResources('iam-role-authorization'),
           }),
           pageResource({
             approvalRef: 'iam-role-assignments',
@@ -1208,79 +1246,29 @@ const appDefinitions = [
         ],
       }),
       menuResource({
-        approvalRef: 'iam-application-resources',
-        code: 'IAM.APPLICATION_RESOURCES',
-        name: '应用与权限资源',
-        route: '/iam/application-resources',
-        component: 'iam/application-resources/pages/ApplicationResourcesPage',
-        permission: 'iam:application-resources:view',
-        icon: 'mdi:layers-triple-outline',
-        sortOrder: 70,
-        remarks: '仅集团超级管理员可见',
-        functions: [
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.VIEW',
-            '查看应用与权限资源',
-            'iam:application-resources:view',
-            10,
-            '/iam-admin/Permission/SystemResources',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.CREATE_APP',
-            '创建 App',
-            'iam:application-resources:create',
-            20,
-            '/iam-admin/AuthorizationCatalog/CreateSystem',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.UPDATE_APP',
-            '编辑 App',
-            'iam:application-resources:update',
-            30,
-            '/iam-admin/AuthorizationCatalog/UpdateSystem',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.CHANGE_APP_STATUS',
-            '变更 App 状态',
-            'iam:application-resources:change-status',
-            40,
-            '/iam-admin/AuthorizationCatalog/ChangeSystemStatus',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.DELETE_APP',
-            '删除 App',
-            'iam:application-resources:delete',
-            50,
-            '/iam-admin/AuthorizationCatalog/DeleteSystem',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.CREATE_RESOURCE',
-            '创建权限资源',
-            'iam:application-resources:create',
-            60,
-            '/iam-admin/AuthorizationCatalog/CreateResource',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.UPDATE_RESOURCE',
-            '编辑权限资源',
-            'iam:application-resources:update',
-            70,
-            '/iam-admin/AuthorizationCatalog/UpdateResource',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.CHANGE_RESOURCE_STATUS',
-            '变更权限资源状态',
-            'iam:application-resources:change-status',
-            80,
-            '/iam-admin/AuthorizationCatalog/ChangeResourceStatus',
-          ),
-          functionResource(
-            'IAM.APPLICATION_RESOURCES.DELETE_RESOURCE',
-            '删除权限资源',
-            'iam:application-resources:delete',
-            90,
-            '/iam-admin/AuthorizationCatalog/DeleteResource',
-          ),
+        approvalRef: 'iam-system-resource-catalog',
+        ...registeredMenuFields('iam-system-resource-catalog'),
+        permission: 'iam:system-resources:view',
+        icon: 'mdi:file-tree-outline',
+        sortOrder: 80,
+        remarks: '只读展示 iam_resource 资源事实目录。',
+      }),
+      menuResource({
+        approvalRef: 'iam-permission-scheme-management',
+        ...registeredMenuFields('iam-permission-scheme-management'),
+        permission: 'iam:permissions:view',
+        icon: 'mdi:shield-key-outline',
+        sortOrder: 90,
+        remarks: '维护前端资源与后端 Function 组成的 Permission。',
+        buttons: registeredButtonResources('iam-permission-scheme-management'),
+        pages: [
+          buttonPageResource({
+            approvalRef: 'iam-permission-scheme-resources',
+            ...registeredMenuFields('iam-permission-scheme-resources'),
+            permission: 'iam:permissions:configuration:view',
+            sortOrder: 10,
+            buttons: registeredButtonResources('iam-permission-scheme-resources'),
+          }),
         ],
       }),
     ],
@@ -1335,23 +1323,6 @@ const excludedApprovedPages = new Map([
   ['iam-login', '公开认证页面，不写入权限资源目录'],
   ['iam-password-recovery', '公开认证页面，不写入权限资源目录'],
   ['iam-tenant-context', '登录态 Tenant 选择流程，不作为业务导航资源'],
-  // 已批准设计尚无生产路由、业务 API 与权限编码；补齐后迁入 appDefinitions。
-  [
-    'training-course-management',
-    '课程管理设计已批准；待培训 API、权限编码及生产路由，暂不导出初始化资源',
-  ],
-  [
-    'training-question-bank',
-    '题库管理设计已批准；待培训 API、权限编码及生产路由，暂不导出初始化资源',
-  ],
-  [
-    'training-paper-management',
-    '试卷管理设计已批准；待培训 API、权限编码及生产路由，暂不导出初始化资源',
-  ],
-  [
-    'training-exam-configuration',
-    '考试配置设计已批准；待培训 API、权限编码及生产路由，暂不导出初始化资源',
-  ],
 ])
 
 function parseArguments(argv) {
@@ -1392,19 +1363,69 @@ function collectApprovedPages() {
 
 function buildCatalog(approvedPages, generatedAt = new Date().toISOString()) {
   const consumed = new Set()
+  const registeredPages = new Map(frontendRegistries.map((page) => [page.resource_code, page]))
+  const descriptions = new Map(
+    frontendRegistries.flatMap((page) =>
+      [page, ...Object.values(page.buttons)].map((resource) => [
+        resource.resource_code,
+        requireResourceDescription(resource.remarks, resource.resource_code),
+      ]),
+    ),
+  )
+  for (const module of readJson(join(projectRoot, 'standards/iam/resource-state-policy.json'))
+    .structural_modules)
+    descriptions.set(
+      module.resource_code,
+      requireResourceDescription(module.remarks, module.resource_code),
+    )
+  const routes = discoverRoutes(projectRoot)
+  function extendRegistered(resource, parentCode) {
+    const registered = registeredPages.get(resource.resource_code)
+    if (!registered)
+      return descriptions.has(resource.resource_code)
+        ? { ...resource, remarks: descriptions.get(resource.resource_code) }
+        : resource
+    if (
+      registered.route_path !== resource.route_path ||
+      registered.component !== resource.component ||
+      registered.parent_resource_code !== parentCode
+    )
+      throw new Error(`Registry/catalog hierarchy mismatch: ${resource.resource_code}`)
+    const buttons = [...(resource.buttons ?? [])]
+    for (const [index, button] of Object.values(registered.buttons).entries())
+      if (!buttons.some((existing) => existing.resource_code === button.resource_code))
+        buttons.push(
+          buttonResource({
+            code: button.resource_code,
+            name: button.resource_name,
+            permission: button.permission_code,
+            sortOrder: (index + 1) * 10,
+            remarks: 'Frontend action identity; no automatic Permission/package/role grant.',
+          }),
+        )
+    return {
+      ...resource,
+      source: 'frontend',
+      remarks: descriptions.get(resource.resource_code),
+      resource_type: registered.resource_type ?? resource.resource_type,
+      buttons,
+    }
+  }
 
-  const buildApprovedPage = (page) => {
+  const buildApprovedPage = (page, parentCode) => {
     if (page.approvalRef && !approvedPages.has(page.approvalRef)) return []
     if (page.approvalRef) consumed.add(page.approvalRef)
-    const resource = { ...page }
+    const resource = extendRegistered({ ...page }, parentCode)
     const pages = resource.pages ?? []
+    const buttons = resource.buttons ?? []
     delete resource.approvalRef
-    return [
-      {
-        ...resource,
-        pages: pages.flatMap(buildApprovedPage),
-      },
-    ]
+    if ('pages' in resource)
+      resource.pages = pages.flatMap((child) => buildApprovedPage(child, resource.resource_code))
+    if ('buttons' in resource)
+      resource.buttons = buttons.flatMap((child) =>
+        buildApprovedPage(child, resource.resource_code),
+      )
+    return [resource]
   }
 
   const apps = appDefinitions.flatMap((app) => {
@@ -1429,21 +1450,85 @@ function buildCatalog(approvedPages, generatedAt = new Date().toISOString()) {
       for (const pageId of module.moduleApprovalRefs ?? []) {
         if (approvedPages.has(pageId)) consumed.add(pageId)
       }
-      const menus = module.menus.flatMap((menu) => {
+      const declaredMenus = [...module.menus]
+      for (const [index, registered] of frontendRegistries.entries()) {
+        if (
+          registered.parent_resource_code !== module.resource_code ||
+          (registered.resource_type ?? 'menu') !== 'menu' ||
+          declaredMenus.some((menu) => menu.resource_code === registered.resource_code)
+        )
+          continue
+        const route = routes.find(
+          (item) =>
+            item.route_path === registered.route_path &&
+            item.component_file === `src/features/${registered.component}.vue`,
+        )
+        if (!route || !approvedPages.has(registered.page_id))
+          throw new Error(
+            `New registry Menu requires an existing approved production page: ${registered.resource_code}`,
+          )
+        declaredMenus.push(
+          menuResource({
+            approvalRef: registered.page_id,
+            code: registered.resource_code,
+            name: registered.resource_name,
+            route: registered.route_path,
+            component: registered.component,
+            permission: registered.permission_code ?? route.meta.permission ?? '',
+            icon: '',
+            sortOrder: registered.sort_order ?? 100 + index * 10,
+            remarks:
+              'Explicit registered production entry; preserves its existing runtime authorization model.',
+          }),
+        )
+      }
+      const menus = declaredMenus.flatMap((menu) => {
         if (menu.approvalRef && !approvedPages.has(menu.approvalRef)) return []
         if (!menu.approvalRef && !menu.confirmedEntry) return []
         if (menu.approvalRef) consumed.add(menu.approvalRef)
-        const resource = { ...menu }
+        const resource = extendRegistered({ ...menu }, module.resource_code)
         const pages = resource.pages ?? []
+        const registered = registeredPages.get(resource.resource_code)
+        if (
+          registered &&
+          (registered.route_path !== resource.route_path ||
+            registered.component !== resource.component)
+        )
+          throw new Error(`Registry/menu mismatch: ${resource.resource_code}`)
+        const buttons = [
+          ...(resource.buttons ?? []),
+          ...Object.values(registered?.buttons ?? {})
+            .filter(
+              (button) =>
+                !(resource.buttons ?? []).some(
+                  (existing) => existing.resource_code === button.resource_code,
+                ),
+            )
+            .map((button, index) =>
+              buttonResource({
+                code: button.resource_code,
+                name: button.resource_name,
+                permission: button.permission_code,
+                sortOrder: (index + 1) * 10,
+                remarks: 'Frontend action identity; no automatic Permission/package/role grant.',
+              }),
+            ),
+        ]
         delete resource.approvalRef
         delete resource.confirmedEntry
-        return [{ ...resource, pages: pages.flatMap(buildApprovedPage) }]
+        return [
+          {
+            ...resource,
+            pages: pages.flatMap((child) => buildApprovedPage(child, resource.resource_code)),
+            buttons: buttons.flatMap((child) => buildApprovedPage(child, resource.resource_code)),
+          },
+        ]
       })
       if (!moduleApproved && menus.length === 0) return []
       const fields = { ...module }
       delete fields.moduleApprovalRefs
       delete fields.menus
-      return [{ ...fields, menus }]
+      return [{ ...fields, remarks: descriptions.get(fields.resource_code), menus }]
     })
 
     if (modules.length === 0) return []
@@ -1467,7 +1552,7 @@ function buildCatalog(approvedPages, generatedAt = new Date().toISOString()) {
     throw new Error(`存在未登记处理方式的 approved 页面: ${unhandled.join(', ')}`)
   }
 
-  return { schema_version: '2.0', generated_at: generatedAt, apps }
+  return { schema_version: '3.0', generated_at: generatedAt, apps }
 }
 
 function validateBusinessRules(catalog) {
@@ -1486,7 +1571,11 @@ function validateBusinessRules(catalog) {
         module,
         ...module.menus.flatMap((menu) => [
           menu,
-          ...flattenResources([...(menu.pages ?? []), ...(menu.functions ?? [])]),
+          ...flattenResources([
+            ...(menu.pages ?? []),
+            ...(menu.buttons ?? []),
+            ...(menu.functions ?? []),
+          ]),
         ]),
       ]
       for (const resource of resources) {
@@ -1496,7 +1585,11 @@ function validateBusinessRules(catalog) {
         resourceCodes.add(code)
       }
       for (const resource of resources) {
-        if (resource.resource_type === 'menu' || resource.resource_type === 'page') {
+        if (
+          resource.resource_type === 'menu' ||
+          resource.resource_type === 'page' ||
+          resource.resource_type === 'button_page'
+        ) {
           if (routePaths.has(resource.route_path))
             errors.push(`route_path 重复: ${resource.route_path}`)
           routePaths.add(resource.route_path)
@@ -1506,8 +1599,16 @@ function validateBusinessRules(catalog) {
           if (resource.resource_type === 'page' && resource.is_visible !== false) {
             errors.push(`Page 必须是隐藏业务路由: ${resource.resource_code}`)
           }
+          if (resource.resource_type === 'button_page' && resource.is_visible !== false) {
+            errors.push(`ButtonPage 必须是隐藏业务路由: ${resource.resource_code}`)
+          }
         }
-        if (resource.resource_type !== 'menu' && resource.resource_type !== 'page') continue
+        if (
+          resource.resource_type !== 'menu' &&
+          resource.resource_type !== 'page' &&
+          resource.resource_type !== 'button_page'
+        )
+          continue
         const componentFile = join(projectRoot, 'src', 'features', `${resource.component}.vue`)
         if (!existsSync(componentFile)) {
           errors.push(`组件不存在: ${relative(projectRoot, componentFile)}`)
@@ -1576,16 +1677,29 @@ function main() {
   const functionCount = catalog.apps.flatMap((app) =>
     app.modules.flatMap((module) =>
       module.menus.flatMap((menu) =>
-        flattenResources([...(menu.pages ?? []), ...(menu.functions ?? [])]).filter(
-          (resource) => resource.resource_type === 'function',
-        ),
+        flattenResources([
+          ...(menu.pages ?? []),
+          ...(menu.buttons ?? []),
+          ...(menu.functions ?? []),
+        ]).filter((resource) => resource.resource_type === 'function'),
       ),
     ),
   ).length
   const pageCount = catalog.apps.flatMap((app) =>
     app.modules.flatMap((module) =>
       module.menus.flatMap((menu) =>
-        flattenResources(menu.pages ?? []).filter((resource) => resource.resource_type === 'page'),
+        flattenResources(menu.pages ?? []).filter((resource) =>
+          ['page', 'button_page'].includes(resource.resource_type),
+        ),
+      ),
+    ),
+  ).length
+  const buttonCount = catalog.apps.flatMap((app) =>
+    app.modules.flatMap((module) =>
+      module.menus.flatMap((menu) =>
+        flattenResources([...(menu.pages ?? []), ...(menu.buttons ?? [])]).filter(
+          (resource) => resource.resource_type === 'button',
+        ),
       ),
     ),
   ).length
@@ -1593,7 +1707,7 @@ function main() {
     .filter(([pageId]) => approvedPages.has(pageId))
     .map(([pageId, reason]) => `${pageId}（${reason}）`)
   console.log(
-    `已生成 ${relative(projectRoot, options.output)}：${catalog.apps.length} Apps / ${menuCount} Menus / ${pageCount} Pages / ${functionCount} Functions`,
+    `已生成 ${relative(projectRoot, options.output)}：${catalog.apps.length} Apps / ${menuCount} Menus / ${pageCount} Pages / ${buttonCount} Buttons / ${functionCount} Functions`,
   )
   if (excluded.length) console.log(`未导出: ${excluded.join('；')}`)
 }

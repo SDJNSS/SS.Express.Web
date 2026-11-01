@@ -1,0 +1,940 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ss-express:iam-maintenance:frontend:3.0",
+  "title": "Offline frontend IAM maintenance evidence (not an authorization result)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "apps",
+    "resources",
+    "elements",
+    "permission_templates",
+    "retirements",
+    "backend_source",
+    "coverage",
+    "authorization_rollout"
+  ],
+  "properties": {
+    "authorization_rollout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "phase",
+        "protocol_file",
+        "runtime_activation_ready",
+        "legacy_routes",
+        "v2_code_routes",
+        "required_gates",
+        "blocked_route_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "phase": {
+          "const": "partial-v2-code"
+        },
+        "protocol_file": {
+          "const": "standards/iam/authorization-rollout.json"
+        },
+        "runtime_activation_ready": {
+          "const": false
+        },
+        "legacy_routes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "v2_code_routes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_gates": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocked_route_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "resource_state_policy",
+        "authorization_model",
+        "source_revision",
+        "build",
+        "source_content_hash",
+        "content_hash",
+        "scope",
+        "complete",
+        "ready_for_sync",
+        "runtime_verified",
+        "database_verified",
+        "exclusions"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "3.0"
+        },
+        "resource_state_policy": {
+          "const": "standards/iam/resource-state-policy.json"
+        },
+        "authorization_model": {
+          "const": "v2"
+        },
+        "source_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "build": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["environment", "discovery", "apps"],
+          "properties": {
+            "environment": {
+              "const": "production"
+            },
+            "discovery": {
+              "const": "all-web-source"
+            },
+            "apps": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "ready_for_sync": {
+          "type": "boolean"
+        },
+        "runtime_verified": {
+          "const": false
+        },
+        "database_verified": {
+          "const": false
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path_rule", "reason"],
+            "properties": {
+              "path_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "apps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["app_code", "app_name", "route_prefix", "default_module_resource_code"],
+        "properties": {
+          "app_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "route_prefix": {
+            "type": "string"
+          },
+          "default_module_resource_code": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "app_code",
+          "resource_code",
+          "resource_name",
+          "remarks",
+          "source",
+          "resource_type",
+          "parent_resource_code",
+          "route_path",
+          "component",
+          "is_visible",
+          "sort_order",
+          "status",
+          "lifecycle",
+          "implementation_status",
+          "runtime_authorization_model",
+          "state_source",
+          "source_file"
+        ],
+        "properties": {
+          "app_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remarks": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "source": {
+            "const": "frontend"
+          },
+          "resource_type": {
+            "enum": ["module", "menu", "button", "button_page"]
+          },
+          "parent_resource_code": {
+            "type": "string"
+          },
+          "route_path": {
+            "type": "string"
+          },
+          "component": {
+            "type": "string"
+          },
+          "is_visible": {
+            "type": "boolean"
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": ["active", "inactive"]
+          },
+          "lifecycle": {
+            "$ref": "#/$defs/lifecycle"
+          },
+          "implementation_status": {
+            "$ref": "#/$defs/implementation_status"
+          },
+          "runtime_authorization_model": {
+            "$ref": "#/$defs/runtime_authorization_model"
+          },
+          "state_source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "file", "reason"],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "registered-page",
+                  "registered-button",
+                  "structural-module",
+                  "unimplemented-declaration"
+                ]
+              },
+              "file": {
+                "$ref": "#/$defs/text"
+              },
+              "reason": {
+                "$ref": "#/$defs/text"
+              }
+            }
+          },
+          "source_file": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resource_element",
+          "owner_page_resource_code",
+          "frontend_resource_code",
+          "permission_key",
+          "kind",
+          "remarks",
+          "events",
+          "source_file",
+          "evidence"
+        ],
+        "properties": {
+          "resource_element": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner_page_resource_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "frontend_resource_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "permission_key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remarks": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["event", "functions"],
+              "properties": {
+                "event": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "functions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "resource_code",
+                      "service_code",
+                      "endpoint",
+                      "authorization_category"
+                    ],
+                    "properties": {
+                      "resource_code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "service_code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "endpoint": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "authorization_category": {
+                        "enum": [
+                          "business",
+                          "public",
+                          "session_self_service",
+                          "restricted_automation",
+                          "internal",
+                          "webhook"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "source_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["resource_element", "file", "line", "tag"],
+              "properties": {
+                "resource_element": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "file": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "tag": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "permission_templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "app_code",
+          "permission_key",
+          "permission_name",
+          "frontend_resource_code",
+          "permission_kind",
+          "function_resource_codes",
+          "local_only_reason",
+          "status",
+          "lifecycle",
+          "implementation_status",
+          "runtime_authorization_model",
+          "source_file",
+          "communication_review_complete",
+          "parent_permission_key",
+          "default_selected_with_parent"
+        ],
+        "properties": {
+          "app_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "permission_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "permission_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "frontend_resource_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "permission_kind": {
+            "enum": ["business", "frontend_only"]
+          },
+          "function_resource_codes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "local_only_reason": {
+            "type": "string"
+          },
+          "status": {
+            "const": "active"
+          },
+          "lifecycle": {
+            "$ref": "#/$defs/lifecycle"
+          },
+          "implementation_status": {
+            "$ref": "#/$defs/implementation_status"
+          },
+          "runtime_authorization_model": {
+            "$ref": "#/$defs/runtime_authorization_model"
+          },
+          "source_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "communication_review_complete": {
+            "type": "boolean"
+          },
+          "parent_permission_key": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "default_selected_with_parent": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "retirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "retired_version",
+          "page_id",
+          "resource_code",
+          "route_path",
+          "replacement_route",
+          "lifecycle",
+          "expected_handling"
+        ],
+        "properties": {
+          "page_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "route_path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replacement_route": {
+            "type": ["string", "null"]
+          },
+          "lifecycle": {
+            "const": "retired"
+          },
+          "expected_handling": {
+            "type": "string",
+            "minLength": 1
+          },
+          "retired_version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "backend_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "file_name",
+        "source_revision",
+        "source_sha256",
+        "runtime_verified",
+        "content_hash",
+        "function_count"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_schema_version": {
+          "const": "3.0"
+        },
+        "runtime_verified": {
+          "const": false
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "function_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "production_routes",
+        "registered_routes",
+        "pending_routes",
+        "verified_placeholder_routes",
+        "reviewed_sources",
+        "pending_sources",
+        "communication_candidates",
+        "reviewed_communications",
+        "unresolved_communications",
+        "routes",
+        "communications",
+        "communication_chains",
+        "source_inputs",
+        "notes"
+      ],
+      "properties": {
+        "production_routes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "registered_routes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_routes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_placeholder_routes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewed_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "communication_chains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "chain_id",
+              "behavior",
+              "callbacks",
+              "candidate_ids",
+              "requests",
+              "dependencies",
+              "evidence"
+            ],
+            "properties": {
+              "chain_id": {
+                "$ref": "#/$defs/text"
+              },
+              "behavior": {
+                "$ref": "#/$defs/text"
+              },
+              "callbacks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["file", "symbol"],
+                  "properties": {
+                    "file": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "symbol": {
+                      "$ref": "#/$defs/text"
+                    }
+                  }
+                }
+              },
+              "candidate_ids": {
+                "$ref": "#/$defs/ids"
+              },
+              "requests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "candidate_id",
+                    "endpoint",
+                    "function_resource_code",
+                    "function_sha256"
+                  ],
+                  "properties": {
+                    "candidate_id": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "endpoint": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "function_resource_code": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "function_sha256": {
+                      "$ref": "#/$defs/hash"
+                    }
+                  }
+                }
+              },
+              "dependencies": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["file", "sha256"],
+                  "properties": {
+                    "file": {
+                      "$ref": "#/$defs/text"
+                    },
+                    "sha256": {
+                      "$ref": "#/$defs/hash"
+                    }
+                  }
+                }
+              },
+              "evidence": {
+                "$ref": "#/$defs/evidence"
+              }
+            }
+          }
+        },
+        "communication_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reviewed_communications": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolved_communications": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "route_path",
+              "route_name",
+              "component_file",
+              "shell",
+              "meta",
+              "status",
+              "reason",
+              "resource_code",
+              "registry_file",
+              "authorization_model"
+            ],
+            "properties": {
+              "route_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "route_name": {
+                "type": "string"
+              },
+              "component_file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "shell": {
+                "type": "boolean"
+              },
+              "meta": {
+                "type": "object"
+              },
+              "status": {
+                "enum": [
+                  "registered",
+                  "auxiliary",
+                  "placeholder-pending-evidence",
+                  "placeholder-verified",
+                  "pending-migration"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resource_code": {
+                "type": "string"
+              },
+              "registry_file": {
+                "type": "string"
+              },
+              "authorization_model": {
+                "enum": ["v2", "legacy", "auxiliary"]
+              }
+            }
+          }
+        },
+        "communications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "candidate_id",
+              "file",
+              "line",
+              "kind",
+              "expression",
+              "review_status",
+              "review_reason"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "kind": {
+                "enum": [
+                  "lifecycle",
+                  "request",
+                  "ui-event",
+                  "dynamic-route",
+                  "dynamic-import",
+                  "injection"
+                ]
+              },
+              "expression": {
+                "type": "string"
+              },
+              "tag": {
+                "type": "string"
+              },
+              "event": {
+                "type": "string"
+              },
+              "marker": {
+                "type": "string"
+              },
+              "injection_role": {
+                "enum": ["provider", "consumer"]
+              },
+              "injection_key": {
+                "type": "string"
+              },
+              "classification": {
+                "enum": [
+                  "local",
+                  "mock",
+                  "business",
+                  "public",
+                  "session_self_service",
+                  "infrastructure",
+                  "delegated"
+                ]
+              },
+              "chain_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "review_status": {
+                "enum": ["pending", "reviewed"]
+              },
+              "review_reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "source_inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "sha256"],
+            "properties": {
+              "file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "lifecycle": {
+      "description": "Maintenance lifecycle only; never derive from guard migration or approval status.",
+      "enum": ["active", "deprecated", "retired"]
+    },
+    "implementation_status": {
+      "description": "Declaration/implementation maturity, not evidence of V2 runtime activation.",
+      "enum": ["implemented", "placeholder", "pending-migration"]
+    },
+    "runtime_authorization_model": {
+      "description": "Owner page guard model; structural Modules have no page guard.",
+      "enum": ["legacy", "v2", "not-applicable"]
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    }
+  }
+}

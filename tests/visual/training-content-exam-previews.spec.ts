@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-const previewHost = 'http://127.0.0.1:4174'
+import { previewHost } from './helpers/testServers'
 
 const candidatePages = [
   { id: 'training-course-management', heading: '课程管理' },
@@ -53,7 +53,9 @@ test.describe('Training resources and exam rules candidates', () => {
     expect(runtimeMessages).toEqual([])
   })
 
-  test('covers course detail, locked editing, copy and duration validation', async ({ page }, testInfo) => {
+  test('covers course detail, locked editing, copy and duration validation', async ({
+    page,
+  }, testInfo) => {
     await page.goto(`${previewHost}/?preview=training-course-management&capture=1`)
     await page.getByRole('button', { name: '危化品道路运输安全基础' }).click()
     await expect(page.getByRole('heading', { name: /课程详情/ })).toBeVisible()
@@ -71,10 +73,15 @@ test.describe('Training resources and exam rules candidates', () => {
     await expect(page.getByRole('heading', { name: '新建课程' })).toBeVisible()
     await expect(page.getByText('视频时长与计划学习时长必须相同且大于 0')).toBeVisible()
     await expect(page.getByRole('button', { name: '创建草稿' })).toBeDisabled()
-    await page.screenshot({ path: testInfo.outputPath(`training-course-form-${testInfo.project.name}.png`), animations: 'disabled' })
+    await page.screenshot({
+      path: testInfo.outputPath(`training-course-form-${testInfo.project.name}.png`),
+      animations: 'disabled',
+    })
   })
 
-  test('guards question type switching and exposes answer structure', async ({ page }, testInfo) => {
+  test('guards question type switching and exposes answer structure', async ({
+    page,
+  }, testInfo) => {
     await page.goto(`${previewHost}/?preview=training-question-bank&capture=1`)
     await page.getByRole('button', { name: '新建题目' }).click()
     await expect(page.getByRole('heading', { name: '新建题目' })).toBeVisible()
@@ -82,11 +89,16 @@ test.describe('Training resources and exam rules candidates', () => {
     await expect(page.getByRole('heading', { name: '切换题型并重置选项？' })).toBeVisible()
     await expect(page.getByText('当前选项与正确答案将清空')).toBeVisible()
     await page.getByRole('button', { name: '确认切换' }).click()
-    await expect(page.getByText('至少 3 个选项、至少 2 个正确答案')).toBeVisible()
-    await page.screenshot({ path: testInfo.outputPath(`training-question-form-${testInfo.project.name}.png`), animations: 'disabled' })
+    await expect(page.getByText('至少 3 个选项、一个或多个正确答案')).toBeVisible()
+    await page.screenshot({
+      path: testInfo.outputPath(`training-question-form-${testInfo.project.name}.png`),
+      animations: 'disabled',
+    })
   })
 
-  test('covers fixed and random paper editing with real-time score validation', async ({ page }, testInfo) => {
+  test('covers fixed and random paper editing with real-time score validation', async ({
+    page,
+  }, testInfo) => {
     await page.goto(`${previewHost}/?preview=training-paper-management&capture=1`)
     await page.getByRole('button', { name: '新建试卷' }).click()
     await expect(page.getByRole('heading', { name: '新建试卷' })).toBeVisible()
@@ -96,7 +108,10 @@ test.describe('Training resources and exam rules candidates', () => {
     await page.getByRole('button', { name: '确认切换' }).click()
     await expect(page.getByText('随机抽题规则')).toBeVisible()
     await expect(page.getByRole('columnheader', { name: '可用题数' })).toBeVisible()
-    await page.screenshot({ path: testInfo.outputPath(`training-paper-form-${testInfo.project.name}.png`), animations: 'disabled' })
+    await page.screenshot({
+      path: testInfo.outputPath(`training-paper-form-${testInfo.project.name}.png`),
+      animations: 'disabled',
+    })
   })
 
   test('covers exam configuration constraints and independent feedback switches', async ({
@@ -110,7 +125,10 @@ test.describe('Training resources and exam rules candidates', () => {
     await expect(page.getByText('两个开关相互独立，默认均关闭。')).toBeVisible()
     await expect(page.getByLabel('展示正确答案')).not.toBeChecked()
     await expect(page.getByLabel('展示答案解析')).not.toBeChecked()
-    await page.screenshot({ path: testInfo.outputPath(`training-exam-form-${testInfo.project.name}.png`), animations: 'disabled' })
+    await page.screenshot({
+      path: testInfo.outputPath(`training-exam-form-${testInfo.project.name}.png`),
+      animations: 'disabled',
+    })
   })
 
   test('keeps loading, empty and retryable-error states explicit', async ({ page }) => {

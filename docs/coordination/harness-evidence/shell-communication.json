@@ -1,0 +1,1880 @@
+{
+  "schema_version": "2.0",
+  "notes": [
+    "主Agent逐文件读取回调及正式绑定；来源审查与线上验证分离。此片段不单独授权同步。"
+  ],
+  "sources": [
+    {
+      "file": "src/app/composables/useAppShellContext.ts",
+      "sha256": "f935205764327174cfaf0f94b205186a67f1280c9ca81f6cd0aae889f5cc4d5a",
+      "candidates_hash": "1fcf7bfcfe8dfd83788ec820fad178612ba9d04fc71b4eaf690c7e13516665fe",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "3739928610d565e6b0310a7144a6df624db7ebb6388134a1d5b690c95f2ce70c",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/app/composables/useAppShellContext.ts#lifecycle:342f086f5d3f698e:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "WelcomeOnly不请求；普通挂载Apps和CurrentProfile并行；导航链仅Legacy读取Functions。目录变更只重载导航。",
+          "chain_ids": [
+            "shell.bootstrap"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/app/composables/useAppShellContext.ts#lifecycle:ae24690d6a1e4095:0",
+            "src/app/composables/useAppShellContext.ts#lifecycle:9e77d2d15028e9e6:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "上下文一致才加载菜单/Functions，缓存命中无网络，V2跳过Legacy。",
+          "chain_ids": [
+            "shell.navigation"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/app/composables/useAppShellContext.ts#dynamic-route:1e84615ddf8ba2ec:0"
+          ],
+          "classification": "infrastructure",
+          "reason": "服务端目录仅匹配编译白名单页，跳过已注册/退休/Reference；注册本身无请求，访问经过守卫。",
+          "chain_ids": [
+            "shell.navigation"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/app/layouts/AppLayout.vue",
+      "sha256": "c060cdeb18c70342aeb9347a3d6d991917b08dd127a4b2ee35bb6bbf1d69057a",
+      "candidates_hash": "e2c45e825748b7de459dd516a5fba8253bca445d5bbb9bb5b788b5e2ef7a66d4",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "f775f47215cb6452c8b814952d7b92ec1af43f4711a85b955dc81b1b8a935613",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/app/layouts/AppLayout.vue#ui-event:4f4d9cad9d835277:0",
+            "src/app/layouts/AppLayout.vue#ui-event:f9718e6aa48a1212:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "切换读取服务端首位菜单；重试按失败阶段重载；不补静态权限。",
+          "chain_ids": [
+            "shell.navigation"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/app/layouts/AppLayout.vue#injection:6f3e2df0b36f5499:0"
+          ],
+          "classification": "infrastructure",
+          "reason": "provide注入DMS传输能力，不在挂载时上传；生产用户行为另有消费者证据。",
+          "chain_ids": [
+            "shell.file-provider"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/app/layouts/AppLayout.vue#ui-event:d1f5f4aa450f8e76:0",
+            "src/app/layouts/AppLayout.vue#ui-event:e8b01fa680626415:0",
+            "src/app/layouts/AppLayout.vue#ui-event:2f7f27783d87f2d8:0",
+            "src/app/layouts/AppLayout.vue#ui-event:200fbda120ade9bd:0",
+            "src/app/layouts/AppLayout.vue#ui-event:ac944c8fda08d227:0"
+          ],
+          "classification": "local",
+          "reason": "collapse/search值赋值；搜索/通知/设置/组织切换仅toast；logout只清本地会话和router.replace/login，无Auth/Logout。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/app/router/index.ts",
+      "sha256": "2245cd64473d278e0a19b61f337e38e52c3b3e26c0bdba2e833c001f8a9fdc3c",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "3e679bb9deb8004b3999ba20015e1b989b897affe4dfea953aae4142b97ac8a0",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/app/config/subsystems.ts",
+      "sha256": "3f886803693e675ea066eb3d10086cae6a33af47b345a748d4ee46dd6c8d1035",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "dd4d5af900e736bd43cb8d46808f8d280d968721c953afbea160d36e29a15112",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/app/router/permissionFallback.ts",
+      "sha256": "3aa4da7f66f0f400162a986c73cb088d8d60f6f8f51e92090e4975b10cdb6f54",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "a0f1f7c954a176538942a08e896f9587eea4bad62c62c52b4af962e82fa8d32a",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/app/store/session.ts",
+      "sha256": "087eac242bd66acf56007aca5148100aae0c7161bddf2a03596e46335e083a84",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "66417f82b394c195e7492bee246e656fbc65752776840c4ba74ba7c0394f4a47",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/shell-context/adapters/shellContextAdapter.ts",
+      "sha256": "e9e379eb4afd982ac48e4f8d3963d835d53abdcc27298570f283e3e46fef9b6d",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "c4c1593751f5212bf82ff961b053933e88e853d9de0a977dd52bda2804a94a54",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+      "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52",
+      "candidates_hash": "8b378dd625cf32d248aa2240ea6e18975c6a4e4968ddcd316b5c0fd29dc8ade7",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "339a6aca9f763ce3b00f265091b7b6c96f5436be5da499ab4022fcaf202a92b8",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "匹配后端权威会话自服务Function，不进入业务Permission",
+          "chain_ids": [
+            "shell.api.currentApps"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "匹配后端权威会话自服务Function，不进入业务Permission",
+          "chain_ids": [
+            "shell.api.currentAppMenus"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "匹配后端权威会话自服务Function，不进入业务Permission",
+          "chain_ids": [
+            "shell.api.currentFunctions"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/shell-context/api/shellContextApi.ts#request:7c0eb3bad5f09d8f:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "匹配后端权威会话自服务Function，不进入业务Permission",
+          "chain_ids": [
+            "shell.api.currentPageResources"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/shell-context/api/shellContextApi.ts#request:ecd9b34fc6ff4fce:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "匹配后端权威会话自服务Function，不进入业务Permission",
+          "chain_ids": [
+            "shell.api.currentProfile"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/shell-context/public.ts",
+      "sha256": "211291438342823cba393487e97bd86d1c59589f5ab2af4b92b61eb17ae91b3e",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "a5da773c740dcf17a75c4c7fbab1a77d6ecf53207dd160b54a093167fb25a808",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+      "sha256": "456551c8238d87da1186f3c5cb3e22db4714a8c4ce57214f1246825b4e052f4a",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "b6904181019b9e0a6338cf2af010173aa260b932db480f651888df181e0172c8",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/shell-context/types/shellContext.ts",
+      "sha256": "244182d79f2a1430cc32720fada6441f411c080a0488965b874d09efc77d17df",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "54ae0a83cc20f5ed8f62cf3112f03d6a8abb87e04cef92c6f00fe31534132641",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/login/types/loginApi.ts",
+      "sha256": "60e9f339cfd3b19210093da9bffd08d4071681fa31de7782a650be7432dab6ca",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "e9c7ca4938ce88ba1ad8d85ff0b57041b55f7fbbd27447c7f93ed5798bd54c4e",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue",
+      "sha256": "291105c4fc365b0096256ecf38ab44063083c16c75c3a11901f5a1f147cee564",
+      "candidates_hash": "b5605e449f33fa3053d2148bc6b20c9cd4dc0312dfbd2c11a7b8ea576ab6c646",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "349472fa4df92c7b90e67f72fa96f30da1abb540e00d9154c8c29398b0c95546",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue#ui-event:85a46d4e8e55c71f:0",
+            "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue#ui-event:6478cf42d75d8845:0"
+          ],
+          "classification": "delegated",
+          "reason": "仅router导航；目标路由自服务/业务通信归目标绑定，不作为错误页业务Permission。",
+          "chain_ids": [
+            "shell.error-navigation"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/features/forbidden/pages/ForbiddenPage.vue",
+      "sha256": "ae7854787f8565fce1ec272db6aa73689b4314b2e65f823eb1d20e110d72f07d",
+      "candidates_hash": "4530a64662167f3b7dc8c0f5581b4b02bff15a7fa34801dea81a2c1c55f35721",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "e186d97005281df508a4b453fc1a82e4a31e455536086e178702766d9b1a926e",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/forbidden/pages/ForbiddenPage.vue#ui-event:b11450c9fbe671f6:0",
+            "src/features/forbidden/pages/ForbiddenPage.vue#ui-event:85a46d4e8e55c71f:0"
+          ],
+          "classification": "delegated",
+          "reason": "仅router导航；目标路由自服务/业务通信归目标绑定，不作为错误页业务Permission。",
+          "chain_ids": [
+            "shell.error-navigation"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/features/not-found/pages/NotFoundPage.vue",
+      "sha256": "a158f7c2db67a6e5630a955ef0086c13c326ba7da6a9032ed4a8334f95778e36",
+      "candidates_hash": "cc75fb5147a5fc806e601f6b3546c5994c5cd56f4e95e2643b818256cad944a5",
+      "status": "reviewed",
+      "reason": "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-communication-review.md",
+        "逐文件读取：框架导航及会话编排、精确页面校验与缓存；个人展示不用于补授业务权限，类型与纯适配无请求。"
+      ],
+      "dependency_hash": "026cec5e1ad9c507c836faf5b9c47e495c1294945b9ae71ec4281b8b28cc81f9",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/not-found/pages/NotFoundPage.vue#ui-event:b97402552a151e82:0"
+          ],
+          "classification": "delegated",
+          "reason": "仅router导航；目标路由自服务/业务通信归目标绑定，不作为错误页业务Permission。",
+          "chain_ids": [
+            "shell.error-navigation"
+          ]
+        }
+      ]
+    }
+  ],
+  "chains": [
+    {
+      "chain_id": "shell.api.currentApps",
+      "behavior": "currentApps通过统一客户端/Bearer。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "currentApps"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentApps",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APPS",
+          "function_sha256": "7b975c926a46e095c615a9c9142e3f64a1c8c55da1b5226dfc0b7a80dd3a0df4"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "currentApps通过统一客户端/Bearer。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.api.currentAppMenus",
+      "behavior": "currentAppMenus通过统一客户端/Bearer。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "currentAppMenus"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentAppMenus",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APP_MENUS",
+          "function_sha256": "e8df60cb66ad3c33105f133979b28c67bea03520f2b823a17769b1068cc553a8"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "currentAppMenus通过统一客户端/Bearer。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.api.currentFunctions",
+      "behavior": "currentFunctions通过统一客户端/Bearer。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "currentFunctions"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentFunctions",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_FUNCTIONS",
+          "function_sha256": "b3b914f56918adc385c276b01aef390c972dce9ee1aba41845c2bc340f7cf898"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "currentFunctions通过统一客户端/Bearer。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.api.currentPageResources",
+      "behavior": "currentPageResources通过统一客户端/Bearer。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "currentPageResources"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:7c0eb3bad5f09d8f:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:7c0eb3bad5f09d8f:0",
+          "endpoint": "POST /iam-admin/CurrentPermissionResource/CurrentPageResources",
+          "function_resource_code": "IAM.CURRENT_PERMISSION.PAGE_RESOURCES",
+          "function_sha256": "5568d6d4c581562a00cc5849da36a1b4e83e7ecffe01b20643505ac5919c5f2d"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "currentPageResources通过统一客户端/Bearer。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.api.currentProfile",
+      "behavior": "currentProfile通过统一客户端/Bearer。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "currentProfile"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:ecd9b34fc6ff4fce:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:ecd9b34fc6ff4fce:0",
+          "endpoint": "POST /iam-admin/Auth/CurrentProfile",
+          "function_resource_code": "IAM.AUTH.CURRENT_PROFILE",
+          "function_sha256": "183e0ede0208b51afe5826cb54cac77e89df499791842fe0597cef686d77619b"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "currentProfile通过统一客户端/Bearer。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.bootstrap",
+      "behavior": "挂载Apps→Menus→仅Legacy且正menu_id的Functions；CurrentProfile并行，慢响应按会话丢弃。",
+      "callbacks": [
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "symbol": "onMounted/loadApps/loadAppContext/loadFunctionPermissions/loadUserProfile"
+        },
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "symbol": "getCurrentApps/getCurrentAppMenus/getCurrentFunctions/getCurrentProfile"
+        }
+      ],
+      "candidate_ids": [
+        "src/app/composables/useAppShellContext.ts#lifecycle:342f086f5d3f698e:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:ecd9b34fc6ff4fce:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentApps",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APPS",
+          "function_sha256": "7b975c926a46e095c615a9c9142e3f64a1c8c55da1b5226dfc0b7a80dd3a0df4"
+        },
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentAppMenus",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APP_MENUS",
+          "function_sha256": "e8df60cb66ad3c33105f133979b28c67bea03520f2b823a17769b1068cc553a8"
+        },
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentFunctions",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_FUNCTIONS",
+          "function_sha256": "b3b914f56918adc385c276b01aef390c972dce9ee1aba41845c2bc340f7cf898"
+        },
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:ecd9b34fc6ff4fce:0",
+          "endpoint": "POST /iam-admin/Auth/CurrentProfile",
+          "function_resource_code": "IAM.AUTH.CURRENT_PROFILE",
+          "function_sha256": "183e0ede0208b51afe5826cb54cac77e89df499791842fe0597cef686d77619b"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "sha256": "f935205764327174cfaf0f94b205186a67f1280c9ca81f6cd0aae889f5cc4d5a"
+        },
+        {
+          "file": "src/app/config/subsystems.ts",
+          "sha256": "3f886803693e675ea066eb3d10086cae6a33af47b345a748d4ee46dd6c8d1035"
+        },
+        {
+          "file": "src/app/router/permissionFallback.ts",
+          "sha256": "3aa4da7f66f0f400162a986c73cb088d8d60f6f8f51e92090e4975b10cdb6f54"
+        },
+        {
+          "file": "src/app/store/session.ts",
+          "sha256": "087eac242bd66acf56007aca5148100aae0c7161bddf2a03596e46335e083a84"
+        },
+        {
+          "file": "src/features/iam/shell-context/adapters/shellContextAdapter.ts",
+          "sha256": "e9e379eb4afd982ac48e4f8d3963d835d53abdcc27298570f283e3e46fef9b6d"
+        },
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/features/iam/shell-context/public.ts",
+          "sha256": "211291438342823cba393487e97bd86d1c59589f5ab2af4b92b61eb17ae91b3e"
+        },
+        {
+          "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+          "sha256": "456551c8238d87da1186f3c5cb3e22db4714a8c4ce57214f1246825b4e052f4a"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/constants/authSession.ts",
+          "sha256": "3c6d79541bd7a59676985620850f7f8a9df66f96a6540c703d9ced54c6f3594d"
+        },
+        {
+          "file": "src/shared/constants/iamRetirements.ts",
+          "sha256": "127a1bef59428271323c5bb52ec076badc9cb714dbbbc23434c4bb3daae82f6f"
+        },
+        {
+          "file": "src/shared/icons/registerIcons.ts",
+          "sha256": "57d2808c94c464b24683082ee7c6dabc19e66e303b12f4323c87fd16955862c5"
+        },
+        {
+          "file": "src/shared/services/functionPermissionState.ts",
+          "sha256": "0d63d2ebad5454eadd234561fa8f3bed9fd0646cd0a34aee8d0e4c711a6d97fc"
+        },
+        {
+          "file": "src/shared/services/navigationPermissionState.ts",
+          "sha256": "17b7c880b07412dcdf8b73f1fdd713f19113e2410025c09e45b2c692f0bac777"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        },
+        {
+          "file": "src/shared/services/pageResourcePermissionState.ts",
+          "sha256": "cbcd9640262094772c4d90326029190134e5e1f894f8b5b850bcdffde5db73ba"
+        },
+        {
+          "file": "src/shared/services/permissionCatalogEvents.ts",
+          "sha256": "82ba5a03b8791bbe1f85688c9f3d2b5c927f5a6387de2d2f92a6b3cb34e06f38"
+        }
+      ],
+      "evidence": [
+        "挂载Apps→Menus→仅Legacy且正menu_id的Functions；CurrentProfile并行，慢响应按会话丢弃。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.navigation",
+      "behavior": "App/路径切换或重试，只按服务端目录和当前菜单查会话自服务。",
+      "callbacks": [
+        {
+          "file": "src/app/layouts/AppLayout.vue",
+          "symbol": "switchSubsystem/retryNavigation"
+        },
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "symbol": "resolveAppEntry/watch/retryNavigation/loadApps/loadAppContext"
+        }
+      ],
+      "candidate_ids": [
+        "src/app/composables/useAppShellContext.ts#lifecycle:ae24690d6a1e4095:0",
+        "src/app/composables/useAppShellContext.ts#lifecycle:9e77d2d15028e9e6:0",
+        "src/app/layouts/AppLayout.vue#ui-event:4f4d9cad9d835277:0",
+        "src/app/layouts/AppLayout.vue#ui-event:f9718e6aa48a1212:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0",
+        "src/app/composables/useAppShellContext.ts#dynamic-route:1e84615ddf8ba2ec:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:466235dba5b9bd6a:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentApps",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APPS",
+          "function_sha256": "7b975c926a46e095c615a9c9142e3f64a1c8c55da1b5226dfc0b7a80dd3a0df4"
+        },
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:7aeedfb940383fc7:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentAppMenus",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_APP_MENUS",
+          "function_sha256": "e8df60cb66ad3c33105f133979b28c67bea03520f2b823a17769b1068cc553a8"
+        },
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:e90cca4b096a4cc2:0",
+          "endpoint": "POST /iam-admin/Permission/CurrentFunctions",
+          "function_resource_code": "IAM.PERMISSION.CURRENT_FUNCTIONS",
+          "function_sha256": "b3b914f56918adc385c276b01aef390c972dce9ee1aba41845c2bc340f7cf898"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "sha256": "f935205764327174cfaf0f94b205186a67f1280c9ca81f6cd0aae889f5cc4d5a"
+        },
+        {
+          "file": "src/app/config/subsystems.ts",
+          "sha256": "3f886803693e675ea066eb3d10086cae6a33af47b345a748d4ee46dd6c8d1035"
+        },
+        {
+          "file": "src/app/layouts/AppLayout.vue",
+          "sha256": "c060cdeb18c70342aeb9347a3d6d991917b08dd127a4b2ee35bb6bbf1d69057a"
+        },
+        {
+          "file": "src/app/router/permissionFallback.ts",
+          "sha256": "3aa4da7f66f0f400162a986c73cb088d8d60f6f8f51e92090e4975b10cdb6f54"
+        },
+        {
+          "file": "src/app/store/session.ts",
+          "sha256": "087eac242bd66acf56007aca5148100aae0c7161bddf2a03596e46335e083a84"
+        },
+        {
+          "file": "src/features/dms/files/api/fileApi.ts",
+          "sha256": "19b437bd93655e1749119ea7c9419f3a0ce520e8f738d44e50d327852ff07175"
+        },
+        {
+          "file": "src/features/dms/files/api/fileTransferGateway.ts",
+          "sha256": "fe3b02c40820da7de6c4decfc3090150cd43adca291528b4f699b4daf049c03e"
+        },
+        {
+          "file": "src/features/dms/files/public.ts",
+          "sha256": "b541ff6ae1f58672a94445d39e98fefadb466a6259c74c1be2cf300f195ae893"
+        },
+        {
+          "file": "src/features/iam/shell-context/adapters/shellContextAdapter.ts",
+          "sha256": "e9e379eb4afd982ac48e4f8d3963d835d53abdcc27298570f283e3e46fef9b6d"
+        },
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/features/iam/shell-context/public.ts",
+          "sha256": "211291438342823cba393487e97bd86d1c59589f5ab2af4b92b61eb17ae91b3e"
+        },
+        {
+          "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+          "sha256": "456551c8238d87da1186f3c5cb3e22db4714a8c4ce57214f1246825b4e052f4a"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/components/AppShell.vue",
+          "sha256": "845e8816f34449b20efb68a48a86166ae3b375894b2e88d6768776f13d4b361d"
+        },
+        {
+          "file": "src/shared/components/appShellContentContext.ts",
+          "sha256": "a8ab4121d7a3d683879b332de7021f357d37ff59b022403e230de490f4d1f872"
+        },
+        {
+          "file": "src/shared/constants/authSession.ts",
+          "sha256": "3c6d79541bd7a59676985620850f7f8a9df66f96a6540c703d9ced54c6f3594d"
+        },
+        {
+          "file": "src/shared/constants/iamRetirements.ts",
+          "sha256": "127a1bef59428271323c5bb52ec076badc9cb714dbbbc23434c4bb3daae82f6f"
+        },
+        {
+          "file": "src/shared/icons/registerIcons.ts",
+          "sha256": "57d2808c94c464b24683082ee7c6dabc19e66e303b12f4323c87fd16955862c5"
+        },
+        {
+          "file": "src/shared/services/fileTransfer.ts",
+          "sha256": "eb4805dea25f9084e3d4d0dff651736e322672034671131f0afc185cf424b1d7"
+        },
+        {
+          "file": "src/shared/services/functionPermissionState.ts",
+          "sha256": "0d63d2ebad5454eadd234561fa8f3bed9fd0646cd0a34aee8d0e4c711a6d97fc"
+        },
+        {
+          "file": "src/shared/services/navigationPermissionState.ts",
+          "sha256": "17b7c880b07412dcdf8b73f1fdd713f19113e2410025c09e45b2c692f0bac777"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        },
+        {
+          "file": "src/shared/services/pageResourcePermissionState.ts",
+          "sha256": "cbcd9640262094772c4d90326029190134e5e1f894f8b5b850bcdffde5db73ba"
+        },
+        {
+          "file": "src/shared/services/permissionCatalogEvents.ts",
+          "sha256": "82ba5a03b8791bbe1f85688c9f3d2b5c927f5a6387de2d2f92a6b3cb34e06f38"
+        }
+      ],
+      "evidence": [
+        "App/路径切换或重试，只按服务端目录和当前菜单查会话自服务。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.file-provider",
+      "behavior": "fileTransferKey→gateway；createTask用户选择/重试Upload，VIDEO再ValidateVideo；access独立GetAccessUrl。",
+      "callbacks": [
+        {
+          "file": "src/app/layouts/AppLayout.vue",
+          "symbol": "provide(fileTransferKey)"
+        },
+        {
+          "file": "src/features/dms/files/api/fileTransferGateway.ts",
+          "symbol": "createDmsFileTransferGateway"
+        },
+        {
+          "file": "src/features/dms/files/api/fileApi.ts",
+          "symbol": "createDmsUploadTask/getAccessUrl"
+        }
+      ],
+      "candidate_ids": [
+        "src/app/layouts/AppLayout.vue#injection:6f3e2df0b36f5499:0",
+        "src/features/dms/files/api/fileApi.ts#request:ee0ba554e10535b2:0",
+        "src/features/dms/files/api/fileApi.ts#request:388a742534d8216a:0",
+        "src/features/dms/files/api/fileApi.ts#request:508399f969a0bbd4:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/dms/files/api/fileApi.ts#request:ee0ba554e10535b2:0",
+          "endpoint": "POST /dms/File/Upload",
+          "function_resource_code": "DMS.FILE.UPLOAD",
+          "function_sha256": "688b81cd942d3d819b2bfb2bfd49b8b2fc8b7f9b69722b2259a9e80f4a99cb12"
+        },
+        {
+          "candidate_id": "src/features/dms/files/api/fileApi.ts#request:388a742534d8216a:0",
+          "endpoint": "POST /dms/File/GetAccessUrl",
+          "function_resource_code": "DMS.FILE.GET_ACCESS_URL",
+          "function_sha256": "010a46872f10df87c525d3b5eab98f88dc9df35aa8703146a0d6e701d55dd359"
+        },
+        {
+          "candidate_id": "src/features/dms/files/api/fileApi.ts#request:508399f969a0bbd4:0",
+          "endpoint": "POST /dms/File/ValidateVideo",
+          "function_resource_code": "DMS.FILE.VALIDATE_VIDEO",
+          "function_sha256": "52932a65127b4c47e89e2e5cabc034bf2019839ae208e27ffdbeb4220ecea756"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "sha256": "f935205764327174cfaf0f94b205186a67f1280c9ca81f6cd0aae889f5cc4d5a"
+        },
+        {
+          "file": "src/app/config/subsystems.ts",
+          "sha256": "3f886803693e675ea066eb3d10086cae6a33af47b345a748d4ee46dd6c8d1035"
+        },
+        {
+          "file": "src/app/layouts/AppLayout.vue",
+          "sha256": "c060cdeb18c70342aeb9347a3d6d991917b08dd127a4b2ee35bb6bbf1d69057a"
+        },
+        {
+          "file": "src/app/router/permissionFallback.ts",
+          "sha256": "3aa4da7f66f0f400162a986c73cb088d8d60f6f8f51e92090e4975b10cdb6f54"
+        },
+        {
+          "file": "src/app/store/session.ts",
+          "sha256": "087eac242bd66acf56007aca5148100aae0c7161bddf2a03596e46335e083a84"
+        },
+        {
+          "file": "src/features/dms/files/api/fileApi.ts",
+          "sha256": "19b437bd93655e1749119ea7c9419f3a0ce520e8f738d44e50d327852ff07175"
+        },
+        {
+          "file": "src/features/dms/files/api/fileTransferGateway.ts",
+          "sha256": "fe3b02c40820da7de6c4decfc3090150cd43adca291528b4f699b4daf049c03e"
+        },
+        {
+          "file": "src/features/dms/files/public.ts",
+          "sha256": "b541ff6ae1f58672a94445d39e98fefadb466a6259c74c1be2cf300f195ae893"
+        },
+        {
+          "file": "src/features/iam/shell-context/adapters/shellContextAdapter.ts",
+          "sha256": "e9e379eb4afd982ac48e4f8d3963d835d53abdcc27298570f283e3e46fef9b6d"
+        },
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/features/iam/shell-context/public.ts",
+          "sha256": "211291438342823cba393487e97bd86d1c59589f5ab2af4b92b61eb17ae91b3e"
+        },
+        {
+          "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+          "sha256": "456551c8238d87da1186f3c5cb3e22db4714a8c4ce57214f1246825b4e052f4a"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/components/AppShell.vue",
+          "sha256": "845e8816f34449b20efb68a48a86166ae3b375894b2e88d6768776f13d4b361d"
+        },
+        {
+          "file": "src/shared/components/appShellContentContext.ts",
+          "sha256": "a8ab4121d7a3d683879b332de7021f357d37ff59b022403e230de490f4d1f872"
+        },
+        {
+          "file": "src/shared/constants/authSession.ts",
+          "sha256": "3c6d79541bd7a59676985620850f7f8a9df66f96a6540c703d9ced54c6f3594d"
+        },
+        {
+          "file": "src/shared/constants/iamRetirements.ts",
+          "sha256": "127a1bef59428271323c5bb52ec076badc9cb714dbbbc23434c4bb3daae82f6f"
+        },
+        {
+          "file": "src/shared/icons/registerIcons.ts",
+          "sha256": "57d2808c94c464b24683082ee7c6dabc19e66e303b12f4323c87fd16955862c5"
+        },
+        {
+          "file": "src/shared/services/fileTransfer.ts",
+          "sha256": "eb4805dea25f9084e3d4d0dff651736e322672034671131f0afc185cf424b1d7"
+        },
+        {
+          "file": "src/shared/services/functionPermissionState.ts",
+          "sha256": "0d63d2ebad5454eadd234561fa8f3bed9fd0646cd0a34aee8d0e4c711a6d97fc"
+        },
+        {
+          "file": "src/shared/services/navigationPermissionState.ts",
+          "sha256": "17b7c880b07412dcdf8b73f1fdd713f19113e2410025c09e45b2c692f0bac777"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        },
+        {
+          "file": "src/shared/services/pageResourcePermissionState.ts",
+          "sha256": "cbcd9640262094772c4d90326029190134e5e1f894f8b5b850bcdffde5db73ba"
+        },
+        {
+          "file": "src/shared/services/permissionCatalogEvents.ts",
+          "sha256": "82ba5a03b8791bbe1f85688c9f3d2b5c927f5a6387de2d2f92a6b3cb34e06f38"
+        }
+      ],
+      "evidence": [
+        "fileTransferKey→gateway；createTask用户选择/重试Upload，VIDEO再ValidateVideo；access独立GetAccessUrl。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    },
+    {
+      "chain_id": "shell.error-navigation",
+      "behavior": "错误页返回/重试→路由守卫；目标V2 CurrentPageResources，按会话/Tenant5秒缓存，失败不缓存，拒绝和故障分开。",
+      "callbacks": [
+        {
+          "file": "src/app/router/index.ts",
+          "symbol": "router.beforeEach"
+        },
+        {
+          "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+          "symbol": "getCurrentPageResourcesCached"
+        },
+        {
+          "file": "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue",
+          "symbol": "router navigation"
+        },
+        {
+          "file": "src/features/forbidden/pages/ForbiddenPage.vue",
+          "symbol": "router navigation"
+        },
+        {
+          "file": "src/features/not-found/pages/NotFoundPage.vue",
+          "symbol": "router navigation"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue#ui-event:85a46d4e8e55c71f:0",
+        "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue#ui-event:6478cf42d75d8845:0",
+        "src/features/forbidden/pages/ForbiddenPage.vue#ui-event:b11450c9fbe671f6:0",
+        "src/features/forbidden/pages/ForbiddenPage.vue#ui-event:85a46d4e8e55c71f:0",
+        "src/features/not-found/pages/NotFoundPage.vue#ui-event:b97402552a151e82:0",
+        "src/features/iam/shell-context/api/shellContextApi.ts#request:7c0eb3bad5f09d8f:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/shell-context/api/shellContextApi.ts#request:7c0eb3bad5f09d8f:0",
+          "endpoint": "POST /iam-admin/CurrentPermissionResource/CurrentPageResources",
+          "function_resource_code": "IAM.CURRENT_PERMISSION.PAGE_RESOURCES",
+          "function_sha256": "5568d6d4c581562a00cc5849da36a1b4e83e7ecffe01b20643505ac5919c5f2d"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/app/composables/useAppShellContext.ts",
+          "sha256": "f935205764327174cfaf0f94b205186a67f1280c9ca81f6cd0aae889f5cc4d5a"
+        },
+        {
+          "file": "src/app/config/subsystems.ts",
+          "sha256": "3f886803693e675ea066eb3d10086cae6a33af47b345a748d4ee46dd6c8d1035"
+        },
+        {
+          "file": "src/app/layouts/AppLayout.vue",
+          "sha256": "c060cdeb18c70342aeb9347a3d6d991917b08dd127a4b2ee35bb6bbf1d69057a"
+        },
+        {
+          "file": "src/app/router/index.ts",
+          "sha256": "2245cd64473d278e0a19b61f337e38e52c3b3e26c0bdba2e833c001f8a9fdc3c"
+        },
+        {
+          "file": "src/app/router/permissionFallback.ts",
+          "sha256": "3aa4da7f66f0f400162a986c73cb088d8d60f6f8f51e92090e4975b10cdb6f54"
+        },
+        {
+          "file": "src/app/store/session.ts",
+          "sha256": "087eac242bd66acf56007aca5148100aae0c7161bddf2a03596e46335e083a84"
+        },
+        {
+          "file": "src/features/dms/files/api/fileApi.ts",
+          "sha256": "19b437bd93655e1749119ea7c9419f3a0ce520e8f738d44e50d327852ff07175"
+        },
+        {
+          "file": "src/features/dms/files/api/fileTransferGateway.ts",
+          "sha256": "fe3b02c40820da7de6c4decfc3090150cd43adca291528b4f699b4daf049c03e"
+        },
+        {
+          "file": "src/features/dms/files/public.ts",
+          "sha256": "b541ff6ae1f58672a94445d39e98fefadb466a6259c74c1be2cf300f195ae893"
+        },
+        {
+          "file": "src/features/forbidden/pages/AuthorizationServiceErrorPage.vue",
+          "sha256": "291105c4fc365b0096256ecf38ab44063083c16c75c3a11901f5a1f147cee564"
+        },
+        {
+          "file": "src/features/forbidden/pages/ForbiddenPage.vue",
+          "sha256": "ae7854787f8565fce1ec272db6aa73689b4314b2e65f823eb1d20e110d72f07d"
+        },
+        {
+          "file": "src/features/iam/access-control/adapters/accessControlAdapter.ts",
+          "sha256": "b08bd0edaf331a484c7482bc300feee11a14ae325cc8ed2b94fd18913f0da069"
+        },
+        {
+          "file": "src/features/iam/access-control/api/accessControlApi.ts",
+          "sha256": "36644bda75496dd60b080d8b9a30c16143727bddc676d856f5c1e76be933fb4c"
+        },
+        {
+          "file": "src/features/iam/access-control/api/accessControlSession.ts",
+          "sha256": "108976fec69c1720587802cce7f3fd28f7958c7c15ce22194fe36051a7035a1c"
+        },
+        {
+          "file": "src/features/iam/access-control/components/RoleAssignmentPageView.vue",
+          "sha256": "f478874a526bc92d4733a0f3b0ff95bb0eade4d65714c02de5e95805ec5257de"
+        },
+        {
+          "file": "src/features/iam/access-control/components/RoleManagementPageView.vue",
+          "sha256": "ea9d1f1016460615d0e0d6a7b6bb345aba97e6635e149df185d7bf32e3ffa8db"
+        },
+        {
+          "file": "src/features/iam/access-control/iam-resource.registry.ts",
+          "sha256": "73391dae0e10cccc52c001ab19614c53134041e931134f92264f30f92935fdcf"
+        },
+        {
+          "file": "src/features/iam/access-control/pages/RoleAssignmentPage.vue",
+          "sha256": "75dafd9aec2adba0479d70af304b3e6a151cea9f0fb4b2070e2cef8e9a85a86d"
+        },
+        {
+          "file": "src/features/iam/access-control/pages/RoleManagementPage.vue",
+          "sha256": "4228a474e2e4de99ff83f2a394debf6e1253f5cc9b6cbf8d0c190b6b1bf7bcbe"
+        },
+        {
+          "file": "src/features/iam/access-control/public.ts",
+          "sha256": "a1b659b3e802e20019d12450d7fac5f121d217ef787233eb01f39ffc5f88e581"
+        },
+        {
+          "file": "src/features/iam/foundation/adapters/foundationAdapter.ts",
+          "sha256": "598b924dc8075eb1489723d53df4d9f59d100d4c5aca00c886c3f82d9f781efb"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationApi.ts",
+          "sha256": "4cefd593328fd1f9e8af6be8ef366cca5390150b0eaa94cc97026ebd1598bd9e"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "sha256": "2f3f9160b0d515a49df041cf982340edebdb526325e128290b2e1abc099f43f5"
+        },
+        {
+          "file": "src/features/iam/foundation/api/organizationLeaderApi.ts",
+          "sha256": "48c6eaf824d07731043e29404a97a45a485488c6c5a66d6fdfc0a0ead67d5ef5"
+        },
+        {
+          "file": "src/features/iam/foundation/components/GroupProfilePageView.vue",
+          "sha256": "578f995518ae81d21fc21eb4c5dbe1cf8f5eabeaf2a4c4f2b28083d89fd63cfa"
+        },
+        {
+          "file": "src/features/iam/foundation/components/MemberRolesDrawer.vue",
+          "sha256": "f07f6622b92cf49f36c994f91f1d2854e85c55e3e7cffb55b3ef864421e546fa"
+        },
+        {
+          "file": "src/features/iam/foundation/components/MembershipManagementPageView.vue",
+          "sha256": "0513c1d0a539b0675c661a0096d61bdff9a01777b31d697e87bec2b3c58c1555"
+        },
+        {
+          "file": "src/features/iam/foundation/components/OrganizationLeaderSelector.vue",
+          "sha256": "5b2679469870e30dde14712b2e0d53168daf025ad4c8b0bdeb0e8e7a30a4d107"
+        },
+        {
+          "file": "src/features/iam/foundation/components/OrganizationManagementPageView.vue",
+          "sha256": "3e3db4756b1c9ab45cbe0b0cc74b359fe7eff7280930913d451220fec15bf5ec"
+        },
+        {
+          "file": "src/features/iam/foundation/components/PositionManagementPageView.vue",
+          "sha256": "5f6df0354836a181ad30839f76c5674de1925272f1cffa83e31600715476e080"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+          "sha256": "5df174a9e2e2f1638f2810df4d8a99d9f91da2e39dd4785588c525c51ec3c6b3"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+          "sha256": "10d184082763f179e0241e8031d4e39135c71362a49fd086bd598461cbd14a3c"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantManagementPageView.vue",
+          "sha256": "48e0469f2361d33cab5b54b078b108ecfeb9c0e85d83fdbe42e2b002b6284f79"
+        },
+        {
+          "file": "src/features/iam/foundation/iam-resource.registry.ts",
+          "sha256": "10e4640798642d0e4b3256a0d178071ac4a5812ca664ea90d3dfc55aa48b86e0"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/GroupProfilePage.vue",
+          "sha256": "47775a4225424a579d0d395c5fd96d41f2696c7fc2b7f760262904a58fac8093"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/MembershipManagementPage.vue",
+          "sha256": "72e1a44853b0de2e74ea37d70ab0d428cf9b89bb07727e926ee6ba5025f2ab0a"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/OrganizationManagementPage.vue",
+          "sha256": "8498f037ab24ce5037ee63b5e41aa9bb74aeadbe5e71dc02366da8a61c2c6910"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/PositionManagementPage.vue",
+          "sha256": "10f318a928232a8b4779e098239d7c1ddc3bd4d7c269567cccc447a9bba5cf14"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+          "sha256": "540b621513a90c18fd7004592057c7706e543ee5f957c06ec8132474fdcb7d81"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantManagementPage.vue",
+          "sha256": "c5294b38fb64d63b4f1fcfa996ceec6fe0f413686a9bb830724a15b86c9cfc5a"
+        },
+        {
+          "file": "src/features/iam/foundation/public.ts",
+          "sha256": "77262a6132708e32784e4f7e4cea923c603e6095d6a8f6c85464418fed179c8f"
+        },
+        {
+          "file": "src/features/iam/login/api/loginApi.ts",
+          "sha256": "1dd8c11734dd84228d071cd67bafe8b20f1f40e1fa3ae2c1368a23c99676e204"
+        },
+        {
+          "file": "src/features/iam/login/components/LoginPageView.vue",
+          "sha256": "c705650a6a231d3d1dda6a1cd3c08b54800bfced9a9de748f10a39b3f88911a6"
+        },
+        {
+          "file": "src/features/iam/login/loginPage.config.ts",
+          "sha256": "7b2affca56c3c113b36505f11cd74159b8b4e6ad29b758804c2c27c7c096ceb6"
+        },
+        {
+          "file": "src/features/iam/login/pages/LoginPage.vue",
+          "sha256": "18a2755732216dd83291912beb7b7eb8cb59559eb3f41ea403cc0162dd5264ca"
+        },
+        {
+          "file": "src/features/iam/login/types/loginApi.ts",
+          "sha256": "60e9f339cfd3b19210093da9bffd08d4071681fa31de7782a650be7432dab6ca"
+        },
+        {
+          "file": "src/features/iam/overview/iam-resource.registry.ts",
+          "sha256": "5f00695203fc748fe55c071da1396c40a1b0bae1758e8a0e4742e774eccdf199"
+        },
+        {
+          "file": "src/features/iam/overview/pages/IamOverviewPage.vue",
+          "sha256": "186774a5dd3aa5ccdec6779480b6059ef4fe6d10cc4d6057d0351a22f1cd148f"
+        },
+        {
+          "file": "src/features/iam/permission-governance/adapters/permissionGovernanceAdapter.ts",
+          "sha256": "e536fad5161bfc3d7baf063500d163c2f0c02078bca0550d02c7aa522a18aa39"
+        },
+        {
+          "file": "src/features/iam/permission-governance/api/permissionGovernanceApi.ts",
+          "sha256": "152842ab6610c36f18ec9881d43fa00ff78305a3c7a0178e9706f063ecdaae6f"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionAppNavigator.vue",
+          "sha256": "c922f546146667e22bce9380c4a96725037c812a4e3716299ba82cce75ab8352"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionHierarchyInspector.vue",
+          "sha256": "7e36c64b6f0059437ff1561cd59f9a5111758cea7ee177adae0154dd90c82c2c"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionPackageManagementPageView.vue",
+          "sha256": "65515049b7dda2de8e76280dc6e89ab46286bf0aa9371d6fefafeab0bf84c801"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionPackagePermissionsPageView.vue",
+          "sha256": "9c340fb375b3d37fae1beac45726e50e5635e5ce6cc2a74c13975991f97b7d7a"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionPackageTree.vue",
+          "sha256": "58d57c1c4d23edde9d356a47af79f5fc5eb288b28ba36638545c7b30f133cbc0"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionSchemeManagementPageView.vue",
+          "sha256": "e5fc0096dc7ea592e463aefa7d9d3ad963318c85c0d38667ab47fde9d016c4ec"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/PermissionSchemeResourcesPageView.vue",
+          "sha256": "75c86f082e7ec84f18faefe6872636fd4de6ec53766f782fe96d8d0b4c5d1969"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/RoleAuthorizationPageView.vue",
+          "sha256": "ea72831b4729450ae38bf33d7d1a0ad5c8db13bab2c99f5433906441247862da"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/SystemResourceCatalogPageView.vue",
+          "sha256": "a649017b1329c45c9777c2dafb124e1a0aa300716e2d2944df6584d1e1a549a1"
+        },
+        {
+          "file": "src/features/iam/permission-governance/components/UserEffectivePermissionsPageView.vue",
+          "sha256": "6c0585fde7b5d8f32fa0900e1cf15b097ab26000c6bf6c01890c34c67001e927"
+        },
+        {
+          "file": "src/features/iam/permission-governance/composables/permissionGovernanceFeedback.ts",
+          "sha256": "130fa2307fa9ed0e340d4abacb6ff2e2b34d0a75087fdc55802cac08c4795811"
+        },
+        {
+          "file": "src/features/iam/permission-governance/composables/usePermissionManagement.ts",
+          "sha256": "3715de79bfb6984653aecd4040a62c45a6b374082c675fb79a8b40c5c41e82c8"
+        },
+        {
+          "file": "src/features/iam/permission-governance/composables/usePermissionPackageManagement.ts",
+          "sha256": "cf1f56524fb63ec3ea757c22ee44160ad2533961de90235f97323c36049a81e6"
+        },
+        {
+          "file": "src/features/iam/permission-governance/composables/useSystemResourceCatalog.ts",
+          "sha256": "574b35629f1c8adce700dfe4e3030c8051b0982380150ecc7459c1241adb0dda"
+        },
+        {
+          "file": "src/features/iam/permission-governance/iam-resource.registry.ts",
+          "sha256": "7c450bf2e209e56fca356332d2e690af0e3d360bfd77381b0c343ffb85bf3571"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/PermissionConfigurationPage.vue",
+          "sha256": "346d983fa5bf360cb5dc26fd9b9475b24870f1966e8629568fc9c491068755f1"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/PermissionManagementPage.vue",
+          "sha256": "213c80ebdf78963d615f4300bc5ab18d082329cab97814524a5b0fc5c9792824"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/PermissionPackageManagementPage.vue",
+          "sha256": "e8efe3a5b7ed7c197e0406ba4606a98d7445d756b33bda4a7d096bb4e77b01a3"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/PermissionPackagePermissionsPage.vue",
+          "sha256": "6c22b2cb92e1a84ccf0210144a96d7993a7773c2125e9fd7e5bed41f1ce659de"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/RoleAuthorizationPage.vue",
+          "sha256": "66311d0ecc72585bb5f718903c3edf3c3967ae8a2c4f87bbc342b970b50ddd3e"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/SystemResourceCatalogPage.vue",
+          "sha256": "69522c9c74cacae55d4249b90d15f2b888a6cb6ea9acde7441ec2ecd98c53087"
+        },
+        {
+          "file": "src/features/iam/permission-governance/pages/UserEffectivePermissionsPage.vue",
+          "sha256": "c43709a615c9ac06334ab3a6e5d2ba459485e72600753534a534d120caa39124"
+        },
+        {
+          "file": "src/features/iam/routes.ts",
+          "sha256": "3407f7b08ae324ceb90370b391829d8c54f4350ce8ed65683a356ab8d43fafd9"
+        },
+        {
+          "file": "src/features/iam/shell-context/adapters/shellContextAdapter.ts",
+          "sha256": "e9e379eb4afd982ac48e4f8d3963d835d53abdcc27298570f283e3e46fef9b6d"
+        },
+        {
+          "file": "src/features/iam/shell-context/api/shellContextApi.ts",
+          "sha256": "4b96a50393a731f2ea828c16739af7398d489ac085520acd79273489f9062c52"
+        },
+        {
+          "file": "src/features/iam/shell-context/public.ts",
+          "sha256": "211291438342823cba393487e97bd86d1c59589f5ab2af4b92b61eb17ae91b3e"
+        },
+        {
+          "file": "src/features/iam/shell-context/services/currentPageResourceAccess.ts",
+          "sha256": "456551c8238d87da1186f3c5cb3e22db4714a8c4ce57214f1246825b4e052f4a"
+        },
+        {
+          "file": "src/features/not-found/pages/NotFoundPage.vue",
+          "sha256": "a158f7c2db67a6e5630a955ef0086c13c326ba7da6a9032ed4a8334f95778e36"
+        },
+        {
+          "file": "src/features/platform/dashboard/api/dashboardApi.ts",
+          "sha256": "7fd3733ef9d6f3a330053354f6c42b6ad081c3bd6ae58d6ef984bc008231304b"
+        },
+        {
+          "file": "src/features/platform/dashboard/components/RouteOverview.vue",
+          "sha256": "7eba47b9f95528827175070d923032532bcccdc611e3118f4b7004be9165e4b6"
+        },
+        {
+          "file": "src/features/platform/dashboard/composables/useDashboard.ts",
+          "sha256": "6d75dfd7770499e9d9497e3518f10b962ff9f8186f22cd34854c783ecd0e7f27"
+        },
+        {
+          "file": "src/features/platform/dashboard/iam-resource.registry.ts",
+          "sha256": "dd2acde1c24f20fd7b2932a82dd940ef39eba46065dcee7f2d5fe88469271f3f"
+        },
+        {
+          "file": "src/features/platform/dashboard/pages/PlatformDashboardPage.vue",
+          "sha256": "221df46bc8f1b20be99c0fd2c1e6eefcf732093f274ff2da445ecf6d0066dc39"
+        },
+        {
+          "file": "src/features/platform/dashboard/pages/PlatformWelcomePage.vue",
+          "sha256": "ed1c4898ca4b10659f00e443a7db2314522f96d5a14fd74e4c45903eaccc97a3"
+        },
+        {
+          "file": "src/features/platform/routes.ts",
+          "sha256": "e0bf5ac718939f3ab31c47a5663a816cc8f17959ce10a5a238583a382884679b"
+        },
+        {
+          "file": "src/features/tms/overview/iam-resource.registry.ts",
+          "sha256": "b3f82a32f4871ef9deaac30aa1fbeaa323189fd15fd3f02d754e3aba348966bc"
+        },
+        {
+          "file": "src/features/tms/overview/pages/TmsOverviewPage.vue",
+          "sha256": "71f52466a5d33df8e93a44ef44439029949ff09c5b4886166c16d396e7c40e6e"
+        },
+        {
+          "file": "src/features/tms/routes.ts",
+          "sha256": "beaf04cbc0d99e8c07f94d7ddd6e2543eb903bd41f4aa9dd909405cc5872addd"
+        },
+        {
+          "file": "src/features/training/content-exam/adapters/trainingContentAdapter.ts",
+          "sha256": "33b2482756c06e3d3fd70313a95a4e3a579dc55fcee70a921f769ad008a34d57"
+        },
+        {
+          "file": "src/features/training/content-exam/api/trainingContentApi.ts",
+          "sha256": "fa5cbfc93a6e39d2db7106d538c17d8177443e87026849bafef999afcf00f533"
+        },
+        {
+          "file": "src/features/training/content-exam/components/CourseManagementPageView.vue",
+          "sha256": "e6e0334d8a3b2d72d35713617c9d60faf44a044c7dc2491c052c7adc815dee77"
+        },
+        {
+          "file": "src/features/training/content-exam/components/ExamConfigurationPageView.vue",
+          "sha256": "814c5bed5835a3fd0349e7d064c3935a2bb65b72e35bf9d0ceeb89245571e2cf"
+        },
+        {
+          "file": "src/features/training/content-exam/components/PaperManagementPageView.vue",
+          "sha256": "dc7e8da2d62482c43ce457679f4f942ad0e4b634655e3a6b39a6a92fbd075055"
+        },
+        {
+          "file": "src/features/training/content-exam/components/QuestionBankPageView.vue",
+          "sha256": "bee62ebc9d69b0678c6aa2ec516f1be5d6896adfdb9c9719660c1448dc2172c3"
+        },
+        {
+          "file": "src/features/training/content-exam/composables/useContentPages.ts",
+          "sha256": "bcd29c7ed4f278b27790a03af78925570329b9dbb0fa23328ecf721c4a440e65"
+        },
+        {
+          "file": "src/features/training/content-exam/composables/useTrainingContent.ts",
+          "sha256": "f40a74366c8b2c31de91b78cb8cd88683ddd0c5dad25bf9a1cf5def7f1a3aa13"
+        },
+        {
+          "file": "src/features/training/content-exam/composables/useTrainingContentView.ts",
+          "sha256": "366cfcfbfed71a63c4bae1896ac62277c7d179b04eefa70133514e1bf9ce14a2"
+        },
+        {
+          "file": "src/features/training/content-exam/iam-resource.registry.ts",
+          "sha256": "0c2665029c4f26d0bd4a6a1fce7c047d91df92a0b6ebf24219ae392aaf778983"
+        },
+        {
+          "file": "src/features/training/content-exam/pages/CourseManagementPage.vue",
+          "sha256": "2a6215c26dbccfb302243b6b921d4c2a8c45c16ec615f78586305c8808a1c5db"
+        },
+        {
+          "file": "src/features/training/content-exam/pages/ExamConfigurationPage.vue",
+          "sha256": "1052cbc3f0a98b96a0ac01712258921d8c37dd36814eaee0ba23e8c1f5f0dd12"
+        },
+        {
+          "file": "src/features/training/content-exam/pages/PaperManagementPage.vue",
+          "sha256": "74f5561b7b34e681d225be1dd8c07934394061ebba84ab6dd652ff2e94da0b4a"
+        },
+        {
+          "file": "src/features/training/content-exam/pages/QuestionBankPage.vue",
+          "sha256": "23344e68812a36f9aec186e5c6f5fbc0c10e6b31ce9aad9aef24fa3e6a3a7588"
+        },
+        {
+          "file": "src/features/training/content-exam/trainingContentPermissions.ts",
+          "sha256": "e10e2a3a8751b33e9fa59a8ae463843b1ec6294c44ed92ce4149bfb0c590717c"
+        },
+        {
+          "file": "src/features/training/operations-archive/adapters/trainingOperationsAdapter.ts",
+          "sha256": "ae39c6929d06d76798d03e6897efed059cd6732914ebe49b58065b8a5d9b5ef4"
+        },
+        {
+          "file": "src/features/training/operations-archive/api/trainingOperationsApi.ts",
+          "sha256": "65f77da58664937c4896890d61edc5fd3493a73d3cb6f80ad32750fdf37ea518"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/EmployeeTrainingArchivePageView.vue",
+          "sha256": "58326355a7ac0db177a93830933a5450ba8221689884e084b9e2d55c8ee1f16e"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingOverviewPageView.vue",
+          "sha256": "515f52a6ab26697df068c9932e1e55cc2f4b53ac292ebb0f553f3dd89b4c8c38"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingPersonnelDrawer.vue",
+          "sha256": "6077c55d2c3bc4e7b328dcbbc3edd64e8dbaa8e8f1ad5e64696d8b146639a8c9"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingPlanDetailPageView.vue",
+          "sha256": "cedb353cf89809cfae171fa07a0259b347dd2ced24cc04bb9c32e64d5eb246ed"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingPlanPageView.vue",
+          "sha256": "9ad43f0ef6365f3f0a1029c3fba09b69b33d97dc1ac68ecb22f7a18b7920fdae"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingStatisticsPageView.vue",
+          "sha256": "b796f11bd0eaaecedc1aa5c973c7d37401a0e3ec1e45b17a04c4b62ab934b0ef"
+        },
+        {
+          "file": "src/features/training/operations-archive/components/TrainingTaskDetailPageView.vue",
+          "sha256": "1f7724079ba4c48e68d52cf6e3042fe9e3cd2753856d6aa931021549474b23e5"
+        },
+        {
+          "file": "src/features/training/operations-archive/iam-resource.registry.ts",
+          "sha256": "4813f254518de51fa312613b03836036861065a04b7d16563bd9be8df6772628"
+        },
+        {
+          "file": "src/features/training/operations-archive/operationsUi.ts",
+          "sha256": "0a8b2af706c9327583e541371f2d038eef8ad200dc6bf7a51d3802dd4a65f696"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/EmployeeTrainingArchivePage.vue",
+          "sha256": "d5496716cd044044a6bf5e24a6f94a53bfb0b9f71f60026b981c2989c8ba490a"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/TrainingOperationsOverviewPage.vue",
+          "sha256": "0df639487fe17ea96ac3c07f0cf54ebc8b25f09da940781eaa72e91c1e883ffe"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/TrainingPlanDetailPage.vue",
+          "sha256": "55c3c70e18e2d1064d9ee5d9c609384ee6985704413f6d3580fd90825117613a"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/TrainingPlanManagementPage.vue",
+          "sha256": "1dff5d8214d2ac4c4934bc4b9702720653e3afb954e252ad2136edc65d24ab81"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/TrainingStatisticsPage.vue",
+          "sha256": "9dc0b1e460d5fbeefd666ab5d44ee04c8d1d1cd131c21905dc650b4579503391"
+        },
+        {
+          "file": "src/features/training/operations-archive/pages/TrainingTaskDetailPage.vue",
+          "sha256": "24ab15b566c3fce22607e3b3ea2a9cee8f4e2720dcebd7bc869a20ee88b225d0"
+        },
+        {
+          "file": "src/features/training/operations-archive/trainingPermissions.ts",
+          "sha256": "d7d1439df38eaa0913b07200451113b9fc0a8df679dcb759df4b70cf70d1f3db"
+        },
+        {
+          "file": "src/features/training/routes.ts",
+          "sha256": "541a72b41106a76f46034f7ef9746c7e7bfd5ea3ab47eeadfdab14feeabbbcf1"
+        },
+        {
+          "file": "src/features/vms/overview/iam-resource.registry.ts",
+          "sha256": "bb8766a2612f99b67d65f7cd97bde427310df550ad2f89baff3efaa9cf48bd16"
+        },
+        {
+          "file": "src/features/vms/overview/pages/VmsOverviewPage.vue",
+          "sha256": "ba06de7a337246395fcbd0405f55b673be040ccd01afc6fa63b6217c6e24fce8"
+        },
+        {
+          "file": "src/features/vms/routes.ts",
+          "sha256": "ce09904b9445df431435dcfde20348702667c6601120675e3f9faa2a9bf78400"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/business-components/FeatureScaffoldPage.vue",
+          "sha256": "b9102d7a128787ae065a424afa2290c6d73bd71e54e74fe5523717e887054749"
+        },
+        {
+          "file": "src/shared/business-components/ImageAssetField.vue",
+          "sha256": "2a386398f5acc588afda2572959395f0c28d8f3fb516ba110cde8c5630a392fc"
+        },
+        {
+          "file": "src/shared/business-components/SubsystemWorkspace.vue",
+          "sha256": "8e563c2ef0cc7127b3f97bb4aafd00cd98e348139ce556b0c84a87f16042da6b"
+        },
+        {
+          "file": "src/shared/charts/chartTheme.ts",
+          "sha256": "9327a657a82b361a17022f6b49b470c2b8df2b23dacbbed80f6a5021f5e58b3e"
+        },
+        {
+          "file": "src/shared/components/AppPage.vue",
+          "sha256": "f34ef079a01c1e007deb13a2591e643689649cc535d90b8a4bbc911c6c846b47"
+        },
+        {
+          "file": "src/shared/components/AppPagination.vue",
+          "sha256": "6ace9a5bb9c5a3bf6ae32bfbb24bd671417bd22dff2bbb515fc33b3638433a5c"
+        },
+        {
+          "file": "src/shared/components/AppShell.vue",
+          "sha256": "845e8816f34449b20efb68a48a86166ae3b375894b2e88d6768776f13d4b361d"
+        },
+        {
+          "file": "src/shared/components/AuthBrand.vue",
+          "sha256": "2a51160defce945e2b2de1f295bd7de68b8db0ccafbe5177699a585dd9b757fc"
+        },
+        {
+          "file": "src/shared/components/ConfirmAction.vue",
+          "sha256": "a4d5811c3aeaf4159fac88f89ecbc59d0de63c1f4df9b51dff31c0a83ee07bc7"
+        },
+        {
+          "file": "src/shared/components/DataTable.vue",
+          "sha256": "d6a24498db72c046c92398a865e84f0bc8faf3f8a6709eecd399cece10e7011e"
+        },
+        {
+          "file": "src/shared/components/DateTimeText.vue",
+          "sha256": "7a5dbd7b810ac5c56f5b4645dc169b7276a7913c09872d2cc8f997804c8b43d9"
+        },
+        {
+          "file": "src/shared/components/DetailDrawer.vue",
+          "sha256": "d96768ed4c6268cedcb90c3f4ef62781d09c3b2a7b88c1755822f8cf43e56f02"
+        },
+        {
+          "file": "src/shared/components/EmptyState.vue",
+          "sha256": "b8ccdb1fd2c92ff93ccb77c59671c0b1181033d26721e9ff231548a886006a43"
+        },
+        {
+          "file": "src/shared/components/FileUploader.vue",
+          "sha256": "02664ba0510fcfd739858419b756249154c4c7637a0e87bd4430a7a85b305a67"
+        },
+        {
+          "file": "src/shared/components/FormDialog.vue",
+          "sha256": "a6d8458dfa2708daadbd4872d11d1c1fe7019d95d3be285860944c3ef62f2d5a"
+        },
+        {
+          "file": "src/shared/components/FormDrawer.vue",
+          "sha256": "2757a7bd511ab2651b8541452e699729de9ad71a5729219846cfbc51b7ca5d7a"
+        },
+        {
+          "file": "src/shared/components/ImageUploader.vue",
+          "sha256": "ce9ec95948847511210a769d7ea6d39bfec61727ab3d28535ebc38c566eceb82"
+        },
+        {
+          "file": "src/shared/components/LoadingState.vue",
+          "sha256": "e2dd4a52b8eb7521bf48c7ab7dba43c48e04b18466b3f2fc4bd89a54c85b9a55"
+        },
+        {
+          "file": "src/shared/components/PageHeader.vue",
+          "sha256": "3d2a8d7b06b2fcedfd80c316adcde790900c33e890c7409a2450b6c5068be945"
+        },
+        {
+          "file": "src/shared/components/PagedEntitySelect.vue",
+          "sha256": "bf8efcae0ac7f8b1c83974b0e86f83a39699919d08cff04cbf22775d088d8629"
+        },
+        {
+          "file": "src/shared/components/RowActionGrid.vue",
+          "sha256": "161a2bef34d1ceda2ef6128b2a565bc41332aebe563152156b6f27feb2c7b64b"
+        },
+        {
+          "file": "src/shared/components/SearchPanel.vue",
+          "sha256": "ea08b22c6d692c8f69273dcafb7482343a548f8908555211b1b7fdeebb5d8b55"
+        },
+        {
+          "file": "src/shared/components/StatusTag.vue",
+          "sha256": "a9f2d33472e0eaa655ab7d04a56e01f297a89e89c656372a67238786aa9b890a"
+        },
+        {
+          "file": "src/shared/components/TableCellText.vue",
+          "sha256": "bbfc1dfda4401fd2ed13f50379827545438f396c9eec1505b62d751bf3e5207e"
+        },
+        {
+          "file": "src/shared/components/TableToolbar.vue",
+          "sha256": "0628b5f74d999a3e04029dc7dbc679fb48db28fd9efc225805bf9b6f946709c2"
+        },
+        {
+          "file": "src/shared/components/appShellContentContext.ts",
+          "sha256": "a8ab4121d7a3d683879b332de7021f357d37ff59b022403e230de490f4d1f872"
+        },
+        {
+          "file": "src/shared/components/charts/BaseChart.vue",
+          "sha256": "5169b1d803557f4c8500ab0876ba59bd5ea122ac7183d3fa3a5e3fabf870a2bd"
+        },
+        {
+          "file": "src/shared/components/page-templates/AuthPageTemplate.vue",
+          "sha256": "38076c1e5b94cf5512a5c31cdf1e6d938fdee79199149c6506e77615478c2fe9"
+        },
+        {
+          "file": "src/shared/components/page-templates/DashboardPageTemplate.vue",
+          "sha256": "022c2b44479243e34419fa3aac68c0257ec51aa0731cfcb41776b26b80fdb7e3"
+        },
+        {
+          "file": "src/shared/components/page-templates/DetailPageTemplate.vue",
+          "sha256": "f91d01e98b6de8ac97ba2fc60da569aa37b6d2c57e57c622f2e1dc252f5aadd5"
+        },
+        {
+          "file": "src/shared/components/page-templates/ListPageTemplate.vue",
+          "sha256": "22f2b00c4181a22ba713b596267a0ef8b3f03e4199bdfc61b7ab9bbc28e3f6a5"
+        },
+        {
+          "file": "src/shared/components/page-templates/WorkspacePageTemplate.vue",
+          "sha256": "cf285355d9b931a6f912eff3accc6d9b6178fb29f274cf2bc0e6ccafe230dc4f"
+        },
+        {
+          "file": "src/shared/composables/useEffectivePermissions.ts",
+          "sha256": "7a708b6920bcb82aaf781f669c832571019132424146760d426280d769925d4a"
+        },
+        {
+          "file": "src/shared/constants/authSession.ts",
+          "sha256": "3c6d79541bd7a59676985620850f7f8a9df66f96a6540c703d9ced54c6f3594d"
+        },
+        {
+          "file": "src/shared/constants/iamPermissionGovernanceResources.generated.ts",
+          "sha256": "9f82ed65455044db0c90b171e28d22e3826f38b44781066f74ffb5c38cc5de31"
+        },
+        {
+          "file": "src/shared/constants/iamPermissions.ts",
+          "sha256": "226b1ee05d31a0330bf87ce01bbe4ddff84407f41681c1e31175eef4754ded2a"
+        },
+        {
+          "file": "src/shared/constants/iamRetirements.ts",
+          "sha256": "127a1bef59428271323c5bb52ec076badc9cb714dbbbc23434c4bb3daae82f6f"
+        },
+        {
+          "file": "src/shared/icons/registerIcons.ts",
+          "sha256": "57d2808c94c464b24683082ee7c6dabc19e66e303b12f4323c87fd16955862c5"
+        },
+        {
+          "file": "src/shared/services/fileTransfer.ts",
+          "sha256": "eb4805dea25f9084e3d4d0dff651736e322672034671131f0afc185cf424b1d7"
+        },
+        {
+          "file": "src/shared/services/functionPermissionState.ts",
+          "sha256": "0d63d2ebad5454eadd234561fa8f3bed9fd0646cd0a34aee8d0e4c711a6d97fc"
+        },
+        {
+          "file": "src/shared/services/navigationPermissionState.ts",
+          "sha256": "17b7c880b07412dcdf8b73f1fdd713f19113e2410025c09e45b2c692f0bac777"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        },
+        {
+          "file": "src/shared/services/pageResourcePermissionState.ts",
+          "sha256": "cbcd9640262094772c4d90326029190134e5e1f894f8b5b850bcdffde5db73ba"
+        },
+        {
+          "file": "src/shared/services/permissionCatalogEvents.ts",
+          "sha256": "82ba5a03b8791bbe1f85688c9f3d2b5c927f5a6387de2d2f92a6b3cb34e06f38"
+        },
+        {
+          "file": "src/shared/services/resourceElement.ts",
+          "sha256": "d81203e7189037009f73e205e54bf6db685064382d612e8abc72cf6baa71da07"
+        },
+        {
+          "file": "src/shared/styles/runtimeTokens.ts",
+          "sha256": "c263945ce796b7ff1eee221872ad44524ef8d65a91f922ba1082eb8dc473722b"
+        },
+        {
+          "file": "src/shared/utils/tableText.mjs",
+          "sha256": "ba315bc25073d65c77556c92c9ec6d72d1591f41cfdbc7a422f11e1cb29a5797"
+        }
+      ],
+      "evidence": [
+        "错误页返回/重试→路由守卫；目标V2 CurrentPageResources，按会话/Tenant5秒缓存，失败不缓存，拒绝和故障分开。",
+        "已追踪正式回调、分支与响应消费；未使用的API定义不自动进入页面Permission。"
+      ]
+    }
+  ]
+}

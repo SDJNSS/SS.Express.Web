@@ -1,0 +1,247 @@
+{
+  "schema_version": "1.0",
+  "retired_at": "2026-09-27",
+  "archive_root": "archive/iam-permission-v1/2026-09-27",
+  "authority": "用户明确批准旧版权限页全部作废并移出活动目录。",
+  "database_actions": "none; backend Impact and explicit migration required",
+  "pages": [
+    {
+      "page_id": "iam-application-resources",
+      "resource_code": "IAM.APPLICATION_RESOURCES",
+      "route_path": "/iam/application-resources",
+      "replacement_route": "/iam/system-resources",
+      "lifecycle": "retired",
+      "expected_handling": "exclude-from-frontend-discovery; review-backend-impact-before-deactivation"
+    },
+    {
+      "page_id": "iam-role-function-permissions",
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS",
+      "route_path": "/iam/roles/function-permissions",
+      "replacement_route": "/iam/roles/authorization",
+      "lifecycle": "retired",
+      "expected_handling": "exclude-from-frontend-discovery; review-backend-impact-before-deactivation"
+    },
+    {
+      "page_id": "iam-role-data-permissions",
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS",
+      "route_path": "/iam/roles/data-permissions",
+      "replacement_route": null,
+      "lifecycle": "retired",
+      "expected_handling": "exclude-from-frontend-discovery; review-backend-impact-before-deactivation"
+    },
+    {
+      "page_id": "iam-user-function-permissions",
+      "resource_code": "IAM.MEMBERS.PERMISSIONS",
+      "route_path": "/iam/members/permissions",
+      "replacement_route": "/iam/members/effective-permissions",
+      "lifecycle": "retired",
+      "expected_handling": "exclude-from-frontend-discovery; review-backend-impact-before-deactivation"
+    },
+    {
+      "page_id": "iam-permission-package-management",
+      "resource_code": "IAM.PERMISSION_PACKAGES",
+      "route_path": "/iam/permission-packages",
+      "replacement_route": "/iam/permissions",
+      "lifecycle": "retired",
+      "retired_at": "2026-10-18",
+      "archive_root": "archive/iam-permission-packages/2026-10-18",
+      "expected_handling": "exclude-from-frontend-discovery; no-database-write-by-frontend"
+    },
+    {
+      "page_id": "iam-permission-package-permissions",
+      "resource_code": "IAM.PERMISSION_PACKAGES.PERMISSIONS",
+      "route_path": "/iam/permission-packages/permissions",
+      "replacement_route": "/iam/permissions",
+      "lifecycle": "retired",
+      "retired_at": "2026-10-18",
+      "archive_root": "archive/iam-permission-packages/2026-10-18",
+      "expected_handling": "exclude-from-frontend-discovery; no-database-write-by-frontend"
+    }
+  ],
+  "legacy_resource_snapshot": [
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS",
+      "resource_type": "page",
+      "api_path": null
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_USER_TENANTS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/Membership/QueryUserTenants",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ROLES",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryRoles",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_ASSIGNMENTS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/MemberRole/Query",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.QUERY_FUNCTIONS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/Permission/QueryMemberFunctionPermissions",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.ASSIGN_ROLE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/MemberRole/Assign",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.MEMBERS.PERMISSIONS.REVOKE_ROLE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/MemberRole/Revoke",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS",
+      "resource_type": "page",
+      "api_path": null
+    },
+    {
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_ROLE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryRoles",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY_SYSTEMS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/QuerySystems",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.QUERY",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryFunctionPermissions",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.FUNCTION_PERMISSIONS.SAVE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/SaveFunctionPermissions",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS",
+      "resource_type": "page",
+      "api_path": null
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_ROLE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryRoles",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_SYSTEMS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/QuerySystems",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_DOMAINS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryDataDomains",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/QueryDataPermissions",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.QUERY_TENANT_OPTIONS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/Tenant/Query",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.ROLES.DATA_PERMISSIONS.SAVE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/RolePermission/SaveDataPermission",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES",
+      "resource_type": "menu",
+      "api_path": null
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.VIEW",
+      "resource_type": "function",
+      "api_path": "/iam-admin/Permission/SystemResources",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.CREATE_APP",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/CreateSystem",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.UPDATE_APP",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/UpdateSystem",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.CHANGE_APP_STATUS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/ChangeSystemStatus",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.DELETE_APP",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/DeleteSystem",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.CREATE_RESOURCE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/CreateResource",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.UPDATE_RESOURCE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/UpdateResource",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.CHANGE_RESOURCE_STATUS",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/ChangeResourceStatus",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    },
+    {
+      "resource_code": "IAM.APPLICATION_RESOURCES.DELETE_RESOURCE",
+      "resource_type": "function",
+      "api_path": "/iam-admin/AuthorizationCatalog/DeleteResource",
+      "expected_handling": "reference-snapshot-only; check all consumers and backend Impact; not a Function retirement"
+    }
+  ],
+  "retired_components": [
+    "iam/application-resources/pages/ApplicationResourcesPage",
+    "iam/access-control/pages/RoleFunctionPermissionPage",
+    "iam/access-control/pages/RoleDataPermissionPage",
+    "iam/access-control/pages/MemberPermissionPage"
+  ],
+  "retained_capabilities": {
+    "member_role_assignment": {
+      "component": "src/features/iam/foundation/components/MemberRolesDrawer.vue",
+      "owner_route": "/iam/members",
+      "user_decision": "保留分配/撤销角色，使用按钮打开抽屉，不创建独立页面。",
+      "authorization_migration": "existing V1 gates retained; migrate with foundation registry, do not infer V2 grant"
+    }
+  }
+}

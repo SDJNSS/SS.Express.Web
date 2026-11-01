@@ -1,0 +1,705 @@
+{
+  "schema_version": "2.0",
+  "notes": [
+    "主Agent人工核对登录/租户选择源码和事件接收者。非全局通过；哈希绑定本轮源码；待最终静态输入冻结再合并。"
+  ],
+  "sources": [
+    {
+      "file": "src/features/iam/login/api/loginApi.ts",
+      "sha256": "1dd8c11734dd84228d071cd67bafe8b20f1f40e1fa3ae2c1368a23c99676e204",
+      "candidates_hash": "853b75edc2171b97d82420940b84c65b5d6e9708eceff69420e9ad8ad05b8710",
+      "status": "reviewed",
+      "reason": "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。"
+      ],
+      "dependency_hash": "f2d522d41a4eabc33f1bf94c2c65bc611f97e329ad81ecb50d28e1aa1a846a46",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/login/api/loginApi.ts#request:2f75fe0079f93efb:0"
+          ],
+          "classification": "public",
+          "reason": "唯一POST Auth/Login；authMode=none、retryAuth=false。",
+          "chain_ids": [
+            "auth.login"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/login/components/LoginPageView.vue",
+      "sha256": "c705650a6a231d3d1dda6a1cd3c08b54800bfced9a9de748f10a39b3f88911a6",
+      "candidates_hash": "ce87b3148f20ecc7368cd98b94f0d9e5ca3cb90a8adc77134472dc36ae927ba5",
+      "status": "reviewed",
+      "reason": "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。"
+      ],
+      "dependency_hash": "3e695408a5651a6f8b7a11535c7a87229c33c6cd4ee2a0233972edf6a5cf196e",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:55a82b6eddb54430:0"
+          ],
+          "classification": "public",
+          "reason": "校验非空后emit submit，由LoginPage.submitLogin接收。",
+          "chain_ids": [
+            "auth.login"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:c9ac80ecc2f2427a:0",
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:95f8242492befb47:0",
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:6546700fb82a0de5:0",
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:f03de46ec952c2f2:0",
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:5d0eef76e130f96d:0",
+            "src/features/iam/login/components/LoginPageView.vue#ui-event:4d843133a0457ecd:0"
+          ],
+          "classification": "local",
+          "reason": "其余已逐项核对：表单赋值、显隐焦点、loading表达式和未接入找回密码提示；无额外请求。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/login/pages/LoginPage.vue",
+      "sha256": "18a2755732216dd83291912beb7b7eb8cb59559eb3f41ea403cc0162dd5264ca",
+      "candidates_hash": "8718e61db85fd1c099eaaa2e867765355e71569eb1b4efcc0e460044d177d161",
+      "status": "reviewed",
+      "reason": "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。"
+      ],
+      "dependency_hash": "7e8b8fd2d768013b3859963fc5d096db6e21c674169cd7a27c63072fc7341679",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/login/pages/LoginPage.vue#ui-event:691576eb7a65dc0f:0"
+          ],
+          "classification": "public",
+          "reason": "调用login并按login_state进入Welcome或Tenant选择；无额外业务API。",
+          "chain_ids": [
+            "auth.login"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/login/pages/LoginPage.vue#ui-event:67b2957df9f29c89:0",
+            "src/features/iam/login/pages/LoginPage.vue#ui-event:e59596c04a83fea0:0"
+          ],
+          "classification": "local",
+          "reason": "其余已逐项核对：表单赋值、显隐焦点、loading表达式和未接入找回密码提示；无额外请求。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/login/loginPage.config.ts",
+      "sha256": "7b2affca56c3c113b36505f11cd74159b8b4e6ad29b758804c2c27c7c096ceb6",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "登录表单只在submit时调用Auth/Login；输入/记住我/显隐密码仅本地，忘记密码仅未接入提示；响应写本地会话再走正式路由守卫。"
+      ],
+      "dependency_hash": "3deefb0290de2137290e83f1d158b018ba2b564c9819692b123d72a25202ea6e",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/foundation/api/foundationSession.ts",
+      "sha256": "2f3f9160b0d515a49df041cf982340edebdb526325e128290b2e1abc099f43f5",
+      "candidates_hash": "258099d5d51aa58a6d688780cec2fa354fa2029d8f4bb0104260d32260c9cb87",
+      "status": "reviewed",
+      "reason": "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。"
+      ],
+      "dependency_hash": "df44d10c5ef41ab911bc85f5d113a811732d5cd2f8ebbb6324a040914488d3bd",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/api/foundationSession.ts#request:bacbcafc44549dde:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+          "chain_ids": [
+            "auth.switch-tenant"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/api/foundationSession.ts#request:b2552f3296aeb10c:0"
+          ],
+          "classification": "public",
+          "reason": "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+          "chain_ids": [
+            "auth.tenant-selection-logout"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/api/foundationSession.ts#request:921ecde92ca7ad15:0"
+          ],
+          "classification": "business",
+          "reason": "用户管理初始化查询本人有效租户；仍是business查询，不能用于全局框架自服务。",
+          "chain_ids": [
+            "foundation.own-tenant-options"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+      "sha256": "540b621513a90c18fd7004592057c7706e543ee5f957c06ec8132474fdcb7d81",
+      "candidates_hash": "e68bf36761d90a1da200b6513941382b3c158b5887637d49aea89785af5a87a2",
+      "status": "reviewed",
+      "reason": "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。"
+      ],
+      "dependency_hash": "01900a07e70e5002a8a0d7d97aeb60fa05fa106e98f2685bd22b3190b665684d",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:59307af970a2423f:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+          "chain_ids": [
+            "auth.switch-tenant"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:56b31ab0ac57adb2:0"
+          ],
+          "classification": "public",
+          "reason": "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+          "chain_ids": [
+            "auth.tenant-selection-logout"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:d222aa42d7d5b8e3:0",
+            "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:4e540eb285f10632:0",
+            "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:98d02ecea7898a9a:0"
+          ],
+          "classification": "local",
+          "reason": "已核对select/update:setAsDefault只赋值，retry恢复ready且不取后端；生产options来自session.availableTenants。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+      "sha256": "10d184082763f179e0241e8031d4e39135c71362a49fd086bd598461cbd14a3c",
+      "candidates_hash": "3a32575368dbd7d5f74a1b9cb96a2993db82dce7b2c386af912c8dfd6e2c2c88",
+      "status": "reviewed",
+      "reason": "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。"
+      ],
+      "dependency_hash": "1d6e6b033bc2a0fe56651a54baa3e39b380ba01be6764bcbb58ab0e4bc644a7a",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:2b664a5f6b411564:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+          "chain_ids": [
+            "auth.switch-tenant"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:2cf0c394990793f8:0"
+          ],
+          "classification": "public",
+          "reason": "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+          "chain_ids": [
+            "auth.tenant-selection-logout"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:f6249a976054e356:0",
+            "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:ef951f5df04243c5:0",
+            "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:5965e81ed202cf9e:0"
+          ],
+          "classification": "local",
+          "reason": "已核对select/update:setAsDefault只赋值，retry恢复ready且不取后端；生产options来自session.availableTenants。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+      "sha256": "5df174a9e2e2f1638f2810df4d8a99d9f91da2e39dd4785588c525c51ec3c6b3",
+      "candidates_hash": "b68fabb61df54cbcc9b60a60d043feb540012d630af5154cc745844bac997f96",
+      "status": "reviewed",
+      "reason": "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "租户选项从登录会话读取。选择/设默认本地；submit为SwitchTenant，cancel为Logout；本页retry只恢复ready。foundationSession另有业务用户列表本人租户回读。"
+      ],
+      "dependency_hash": "6315c000afa6603ec79b00136901da34e115f9863f2275d142701357f1bfcb73",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:d617517fc40cbc30:0"
+          ],
+          "classification": "session_self_service",
+          "reason": "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+          "chain_ids": [
+            "auth.switch-tenant"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:6416c303d66ba63a:0",
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:6416c303d66ba63a:1"
+          ],
+          "classification": "public",
+          "reason": "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+          "chain_ids": [
+            "auth.tenant-selection-logout"
+          ]
+        },
+        {
+          "candidate_ids": [
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:61ccb82726daded9:0",
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:2f279a1ae397bed8:0",
+            "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:b45011e8eb6b77a8:0"
+          ],
+          "classification": "local",
+          "reason": "已核对select/update:setAsDefault只赋值，retry恢复ready且不取后端；生产options来自session.availableTenants。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/password-recovery/components/PasswordRecoveryPageView.vue",
+      "sha256": "250964c7c5db19e48c63f294689c68eb897973952a93a32053d307ed6b2319b8",
+      "candidates_hash": "8106c9a433b9c236e20fd370701ed91ebb5665293f368bcf3d8b04795078f8af",
+      "status": "reviewed",
+      "reason": "找回密码组件无生产路由/生产API绑定；仅Preview调用，表单校验/emit和展示状态不构成真实找回服务。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "找回密码组件无生产路由/生产API绑定；仅Preview调用，表单校验/emit和展示状态不构成真实找回服务。"
+      ],
+      "dependency_hash": "bce12d081d23f41dd9bdef46f15f0d5865b633c0d0ca3b1fd018f207cc1c9585",
+      "candidate_reviews": [
+        {
+          "candidate_ids": [
+            "src/features/iam/password-recovery/components/PasswordRecoveryPageView.vue#ui-event:55a82b6eddb54430:0",
+            "src/features/iam/password-recovery/components/PasswordRecoveryPageView.vue#ui-event:c9ac80ecc2f2427a:0",
+            "src/features/iam/password-recovery/components/PasswordRecoveryPageView.vue#ui-event:4d843133a0457ecd:0",
+            "src/features/iam/password-recovery/components/PasswordRecoveryPageView.vue#ui-event:b39d16d2f7b0e680:0"
+          ],
+          "classification": "local",
+          "reason": "校验、回显、emit submit/back；当前正式Login只显示未接入提示，不生成找回密码Function。",
+          "chain_ids": []
+        }
+      ]
+    },
+    {
+      "file": "src/features/iam/login/types/login.ts",
+      "sha256": "88c6dc6f3950034a073610493941804fb112451ea4848fd08c35e8f1bad6968a",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "仅TS类型定义，无运行时代码。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "仅TS类型定义，无运行时代码。"
+      ],
+      "dependency_hash": "9c98e2ce78a53fb09ef902be4c4b9a4f6197d28da16e158bc9bc8b68fcf3c95d",
+      "candidate_reviews": []
+    },
+    {
+      "file": "src/features/iam/password-recovery/types/passwordRecovery.ts",
+      "sha256": "c7ccd8c9cef8d4cf9359ca7dadc7530aad0e1a50491266b7518da58b791a3595",
+      "candidates_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "reviewed",
+      "reason": "仅TS类型定义，无运行时代码。",
+      "reviewed_by": "harness-root/source-review-2026-09-27",
+      "evidence": [
+        "docs/coordination/iam-maintenance-harness-progress.md",
+        "仅TS类型定义，无运行时代码。"
+      ],
+      "dependency_hash": "c1f90c7adbcb1e2141cdc5fcc985dfbae36b27a13e39e912c7df5430bd66abe9",
+      "candidate_reviews": []
+    }
+  ],
+  "chains": [
+    {
+      "chain_id": "auth.login",
+      "behavior": "账号密码提交→LoginPage.submitLogin→loginApi.login→公开登录；登录后导航由框架自服务/路由守卫独立验收。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/login/components/LoginPageView.vue",
+          "symbol": "submitForm"
+        },
+        {
+          "file": "src/features/iam/login/pages/LoginPage.vue",
+          "symbol": "submitLogin"
+        },
+        {
+          "file": "src/features/iam/login/api/loginApi.ts",
+          "symbol": "login"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/login/api/loginApi.ts#request:2f75fe0079f93efb:0",
+        "src/features/iam/login/components/LoginPageView.vue#ui-event:55a82b6eddb54430:0",
+        "src/features/iam/login/pages/LoginPage.vue#ui-event:691576eb7a65dc0f:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/login/api/loginApi.ts#request:2f75fe0079f93efb:0",
+          "endpoint": "POST /iam-admin/Auth/Login",
+          "function_resource_code": "IAM.AUTH.LOGIN",
+          "function_sha256": "7bf1a3f3830c82957446f247b5c108992f25e404bc97882d9e572a0f264c8cbd"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/login/api/loginApi.ts",
+          "sha256": "1dd8c11734dd84228d071cd67bafe8b20f1f40e1fa3ae2c1368a23c99676e204"
+        },
+        {
+          "file": "src/features/iam/login/components/LoginPageView.vue",
+          "sha256": "c705650a6a231d3d1dda6a1cd3c08b54800bfced9a9de748f10a39b3f88911a6"
+        },
+        {
+          "file": "src/features/iam/login/loginPage.config.ts",
+          "sha256": "7b2affca56c3c113b36505f11cd74159b8b4e6ad29b758804c2c27c7c096ceb6"
+        },
+        {
+          "file": "src/features/iam/login/pages/LoginPage.vue",
+          "sha256": "18a2755732216dd83291912beb7b7eb8cb59559eb3f41ea403cc0162dd5264ca"
+        },
+        {
+          "file": "src/features/iam/login/types/loginApi.ts",
+          "sha256": "60e9f339cfd3b19210093da9bffd08d4071681fa31de7782a650be7432dab6ca"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/components/AuthBrand.vue",
+          "sha256": "2a51160defce945e2b2de1f295bd7de68b8db0ccafbe5177699a585dd9b757fc"
+        },
+        {
+          "file": "src/shared/components/page-templates/AuthPageTemplate.vue",
+          "sha256": "38076c1e5b94cf5512a5c31cdf1e6d938fdee79199149c6506e77615478c2fe9"
+        },
+        {
+          "file": "src/shared/constants/authSession.ts",
+          "sha256": "3c6d79541bd7a59676985620850f7f8a9df66f96a6540c703d9ced54c6f3594d"
+        }
+      ],
+      "evidence": [
+        "账号密码提交→LoginPage.submitLogin→loginApi.login→公开登录；登录后导航由框架自服务/路由守卫独立验收。",
+        "核查源码中的正式回调，不把Preview模拟或未调用的API定义授予业务页面。"
+      ]
+    },
+    {
+      "chain_id": "auth.switch-tenant",
+      "behavior": "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+          "symbol": "submit"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+          "symbol": "submit"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+          "symbol": "switchTenant"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "symbol": "switchFoundationTenant"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/foundation/api/foundationSession.ts#request:bacbcafc44549dde:0",
+        "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:59307af970a2423f:0",
+        "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:2b664a5f6b411564:0",
+        "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:d617517fc40cbc30:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/foundation/api/foundationSession.ts#request:bacbcafc44549dde:0",
+          "endpoint": "POST /iam-admin/Auth/SwitchTenant",
+          "function_resource_code": "IAM.AUTH.SWITCH_TENANT",
+          "function_sha256": "c1b8a994e34bad7c75d018f2d612d7933d3f9721f726ca3bacc6e3f689d35762"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/foundation/api/foundationApi.ts",
+          "sha256": "4cefd593328fd1f9e8af6be8ef366cca5390150b0eaa94cc97026ebd1598bd9e"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "sha256": "2f3f9160b0d515a49df041cf982340edebdb526325e128290b2e1abc099f43f5"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+          "sha256": "5df174a9e2e2f1638f2810df4d8a99d9f91da2e39dd4785588c525c51ec3c6b3"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+          "sha256": "10d184082763f179e0241e8031d4e39135c71362a49fd086bd598461cbd14a3c"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+          "sha256": "540b621513a90c18fd7004592057c7706e543ee5f957c06ec8132474fdcb7d81"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/components/AuthBrand.vue",
+          "sha256": "2a51160defce945e2b2de1f295bd7de68b8db0ccafbe5177699a585dd9b757fc"
+        },
+        {
+          "file": "src/shared/components/page-templates/AuthPageTemplate.vue",
+          "sha256": "38076c1e5b94cf5512a5c31cdf1e6d938fdee79199149c6506e77615478c2fe9"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        }
+      ],
+      "evidence": [
+        "选择租户并确认：传tenant_id/session_version/request_id后替换会话并导航。",
+        "核查源码中的正式回调，不把Preview模拟或未调用的API定义授予业务页面。"
+      ]
+    },
+    {
+      "chain_id": "auth.tenant-selection-logout",
+      "behavior": "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+          "symbol": "cancel"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+          "symbol": "cancel"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+          "symbol": "logout"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "symbol": "logoutFoundationSession"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/foundation/api/foundationSession.ts#request:b2552f3296aeb10c:0",
+        "src/features/iam/foundation/pages/TenantContextPage.vue#ui-event:56b31ab0ac57adb2:0",
+        "src/features/iam/foundation/components/TenantContextPageView.vue#ui-event:2cf0c394990793f8:0",
+        "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:6416c303d66ba63a:0",
+        "src/features/iam/foundation/components/TenantChoicePanel.vue#ui-event:6416c303d66ba63a:1"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/foundation/api/foundationSession.ts#request:b2552f3296aeb10c:0",
+          "endpoint": "POST /iam-admin/Auth/Logout",
+          "function_resource_code": "IAM.AUTH.LOGOUT",
+          "function_sha256": "7024229943098ac76c2b35bf130a8168ab759c0189ac0c60120a4e43ba0e168d"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/foundation/api/foundationApi.ts",
+          "sha256": "4cefd593328fd1f9e8af6be8ef366cca5390150b0eaa94cc97026ebd1598bd9e"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "sha256": "2f3f9160b0d515a49df041cf982340edebdb526325e128290b2e1abc099f43f5"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantChoicePanel.vue",
+          "sha256": "5df174a9e2e2f1638f2810df4d8a99d9f91da2e39dd4785588c525c51ec3c6b3"
+        },
+        {
+          "file": "src/features/iam/foundation/components/TenantContextPageView.vue",
+          "sha256": "10d184082763f179e0241e8031d4e39135c71362a49fd086bd598461cbd14a3c"
+        },
+        {
+          "file": "src/features/iam/foundation/pages/TenantContextPage.vue",
+          "sha256": "540b621513a90c18fd7004592057c7706e543ee5f957c06ec8132474fdcb7d81"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        },
+        {
+          "file": "src/shared/components/AuthBrand.vue",
+          "sha256": "2a51160defce945e2b2de1f295bd7de68b8db0ccafbe5177699a585dd9b757fc"
+        },
+        {
+          "file": "src/shared/components/page-templates/AuthPageTemplate.vue",
+          "sha256": "38076c1e5b94cf5512a5c31cdf1e6d938fdee79199149c6506e77615478c2fe9"
+        },
+        {
+          "file": "src/shared/services/notification.ts",
+          "sha256": "f5e8aa922751509ab79094a36e5efe28a6c3cdea9f7ed52139897c444399be66"
+        }
+      ],
+      "evidence": [
+        "租户选择页取消：尝试后端Logout，finally清本地会话；不等同AppLayout纯本地登出。",
+        "核查源码中的正式回调，不把Preview模拟或未调用的API定义授予业务页面。"
+      ]
+    },
+    {
+      "chain_id": "foundation.own-tenant-options",
+      "behavior": "queryFoundationTenantOptions→QueryUsers(当前Tenant/account)，核对会话未变后取本人有效membership；仅作为用户管理行为依赖，不给普通Shell自动授权。",
+      "callbacks": [
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "symbol": "queryFoundationTenantOptions"
+        }
+      ],
+      "candidate_ids": [
+        "src/features/iam/foundation/api/foundationSession.ts#request:921ecde92ca7ad15:0"
+      ],
+      "requests": [
+        {
+          "candidate_id": "src/features/iam/foundation/api/foundationSession.ts#request:921ecde92ca7ad15:0",
+          "endpoint": "POST /iam-admin/Membership/QueryUsers",
+          "function_resource_code": "IAM.MEMBERSHIP.QUERY_USERS",
+          "function_sha256": "74825bd665f27752f5be7792861cf7a52b86de9f50a9557b34f54a38e99cde4c"
+        }
+      ],
+      "dependencies": [
+        {
+          "file": "src/features/iam/foundation/api/foundationApi.ts",
+          "sha256": "4cefd593328fd1f9e8af6be8ef366cca5390150b0eaa94cc97026ebd1598bd9e"
+        },
+        {
+          "file": "src/features/iam/foundation/api/foundationSession.ts",
+          "sha256": "2f3f9160b0d515a49df041cf982340edebdb526325e128290b2e1abc099f43f5"
+        },
+        {
+          "file": "src/shared/api/apiConfig.ts",
+          "sha256": "21d2697e2a116d7dbec3237968743e6c640c854036b946768ee2c6c0ead656c3"
+        },
+        {
+          "file": "src/shared/api/apiPath.ts",
+          "sha256": "95b365cfb802146119a817bc9d920c2aea458e371ece748fb102bd67bee2d3a2"
+        },
+        {
+          "file": "src/shared/api/authSession.ts",
+          "sha256": "c99a92984ae63ae603ddd529c98c841c29706fe103e57fcc9f8a82f918f8a156"
+        },
+        {
+          "file": "src/shared/api/backendServices.ts",
+          "sha256": "0c8a6e6015ce8de7cbdb8314c6a920266b0f75a98cea010cad4dd2afe1e1693b"
+        },
+        {
+          "file": "src/shared/api/httpClient.ts",
+          "sha256": "f42b7e294f54816df9d58ca030e910695d2e485fe50b23885e3346a2f04578af"
+        },
+        {
+          "file": "src/shared/api/requestIdentity.ts",
+          "sha256": "d784a1599447d77b13df041978ad3a10b31c8d443bc28285a9bd511e25dcb295"
+        }
+      ],
+      "evidence": [
+        "queryFoundationTenantOptions→QueryUsers(当前Tenant/account)，核对会话未变后取本人有效membership；仅作为用户管理行为依赖，不给普通Shell自动授权。",
+        "核查源码中的正式回调，不把Preview模拟或未调用的API定义授予业务页面。"
+      ]
+    }
+  ]
+}

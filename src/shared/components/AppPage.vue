@@ -1,14 +1,18 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     scrollable?: boolean
   }>(),
-  { scrollable: true },
+  { resource_element: undefined, scrollable: true },
 )
 </script>
 
 <template>
   <main
+    v-bind="resourceElementAttributes(resource_element)"
     class="app-page"
     :class="scrollable ? 'app-page--scrollable' : 'app-page--contained'"
     data-app-page

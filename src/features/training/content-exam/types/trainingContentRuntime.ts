@@ -3,7 +3,24 @@ import type {
   ExamConfigurationRecord,
   PaperRecord,
   QuestionRecord,
+  QuestionType,
+  FixedPaperQuestion,
+  RandomPaperRule,
 } from './trainingContent'
+
+export type QuestionChoice = Pick<QuestionRecord, 'id' | 'stem' | 'type' | 'status' | 'updatedAt'>
+export interface QuestionChoiceQuery {
+  keyword: string
+  type: QuestionType
+  page: number
+  action: 'create' | 'update'
+}
+export interface QuestionChoicePage {
+  items: QuestionChoice[]
+  total: number
+}
+/** Page model adapter; offline Preview injects its fixture separately from the production runtime. */
+export type PaperPreviewGenerator = (rules: RandomPaperRule[]) => Promise<FixedPaperQuestion[]>
 
 export type ContentAction = 'view' | 'create' | 'update' | 'status' | 'copy'
 export type ContentSearch = Record<string, string | number>
@@ -53,5 +70,12 @@ export interface ContentRuntime<RecordType, FormType> {
   optionsPage?: number
   optionsLoading?: boolean
   questionCounts?: Record<string, number>
+  queryQuestions?: (query: QuestionChoiceQuery, signal: AbortSignal) => Promise<QuestionChoicePage>
+  generatePaperPreview?: (
+    rules: RandomPaperRule[],
+    total: number,
+    action: 'create' | 'update',
+    signal: AbortSignal,
+  ) => Promise<FixedPaperQuestion[]>
   setLeaveGuard?: (guard: () => boolean | Promise<boolean>) => void
 }

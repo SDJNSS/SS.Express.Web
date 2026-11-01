@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assignmentsElements } from '../iam-resource.registry'
+import { resourceElementAttributes } from '@shared/services/resourceElement'
 import { computed, reactive, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
@@ -61,7 +63,7 @@ const columns: DataTableColumn[] = [
   { label: '控制范围', width: 112, slot: 'control' },
   { label: '分配状态', width: 100, slot: 'assigned' },
   { label: '当前有效性', minWidth: 190, slot: 'effective' },
-  { label: '操作', width: 100, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const currentRole = computed(() => props.roles.find((role) => role.id === committed.roleId))
@@ -239,7 +241,7 @@ watch(
 </script>
 
 <template>
-  <AppPage class="assignment-page">
+  <AppPage :resource_element="assignmentsElements.page" class="assignment-page">
     <ListPageTemplate>
       <template #header>
         <PageHeader
@@ -247,10 +249,15 @@ watch(
           description="按角色维护直接分配的成员；移除角色不会停用 Tenant 成员或删除用户"
         >
           <template #actions>
-            <el-button v-if="navigateRoles" @click="navigateRoles">
+            <el-button
+              v-if="navigateRoles"
+              v-resource-element="assignmentsElements.roles"
+              @click="navigateRoles"
+            >
               <Icon icon="mdi:chevron-left" width="18" aria-hidden="true" />返回角色列表
             </el-button>
             <el-button
+              v-resource-element="assignmentsElements.assign"
               v-permission="IAM_PERMISSIONS.roles.assign"
               type="primary"
               :disabled="!canMaintainCurrentRole"
@@ -263,17 +270,12 @@ watch(
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
-          <el-form-item label="目标 Tenant">
-            <el-select v-model="query.tenantId">
-              <el-option
-                v-for="tenant in tenants"
-                :key="tenant.id"
-                :label="`${tenant.name} · ${tenant.code}`"
-                :value="tenant.id"
-              />
-            </el-select>
-          </el-form-item>
+        <SearchPanel
+          :resource_element="assignmentsElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="角色">
             <el-select v-model="query.roleId" filterable placeholder="请选择角色">
               <el-option
@@ -303,6 +305,7 @@ watch(
 
       <template #toolbar>
         <TableToolbar
+          :resource_element="assignmentsElements.query"
           title="角色成员列表"
           :total="total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -332,7 +335,13 @@ watch(
         show-icon
       >
         <template #default>
-          <el-button link type="primary" @click="emit('retry')">重新加载</el-button>
+          <el-button
+            v-resource-element="assignmentsElements.query"
+            link
+            type="primary"
+            @click="emit('retry')"
+            >重新加载</el-button
+          >
         </template>
       </el-alert>
 
@@ -365,6 +374,7 @@ watch(
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asAssignment(row).displayName} 的角色成员操作`">
             <el-button
+              v-resource-element="assignmentsElements.revoke"
               v-permission="IAM_PERMISSIONS.roles.revoke"
               link
               type="danger"
@@ -379,6 +389,7 @@ watch(
         <AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="assignmentsElements.query"
           :total="total ?? visibleRecords.length"
           @change="changePage"
         />
@@ -387,6 +398,7 @@ watch(
 
     <FormDrawer
       v-model="assignVisible"
+      :resource_element="assignmentsElements.assign"
       :title="`向 ${currentRole?.roleName ?? ''} 添加成员`"
       confirm-button-text="确认添加"
       :submitting="submitting"
@@ -427,8 +439,14 @@ watch(
         <el-empty v-if="assignableMembers.length === 0" description="当前 Tenant 暂无可添加成员" />
       </el-form>
       <template #footer="{ requestClose }">
-        <el-button :disabled="submitting" @click="requestClose">取消</el-button>
         <el-button
+          v-resource-element="assignmentsElements.local"
+          :disabled="submitting"
+          @click="requestClose"
+          >取消</el-button
+        >
+        <el-button
+          v-resource-element="assignmentsElements.assign"
           v-permission="IAM_PERMISSIONS.roles.assign"
           type="primary"
           :disabled="!selectedMember || submitting"
@@ -440,6 +458,7 @@ watch(
     </FormDrawer>
 
     <el-dialog
+      v-bind="resourceElementAttributes(assignmentsElements.revoke)"
       v-model="revokeVisible"
       title="移除角色成员"
       width="580"
@@ -456,8 +475,14 @@ watch(
         <span>将从 {{ revokeTarget.roleName }} 中移除</span>
       </div>
       <template #footer>
-        <el-button :disabled="submitting" @click="revokeVisible = false">保留成员</el-button>
         <el-button
+          v-resource-element="assignmentsElements.local"
+          :disabled="submitting"
+          @click="revokeVisible = false"
+          >保留成员</el-button
+        >
+        <el-button
+          v-resource-element="assignmentsElements.revoke"
           v-permission="IAM_PERMISSIONS.roles.revoke"
           type="danger"
           :loading="submitting"

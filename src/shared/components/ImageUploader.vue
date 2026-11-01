@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { type ResourceElement } from '@shared/services/resourceElement'
 import type { UploadUserFile } from 'element-plus'
 import FileUploader from './FileUploader.vue'
 import type { UploadedAsset } from '@shared/services/fileTransfer'
 
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     modelValue: UploadUserFile[]
     limit?: number
     disabled?: boolean
   }>(),
-  { limit: 4, disabled: false },
+  { resource_element: undefined, limit: 4, disabled: false },
 )
 
 const emit = defineEmits<{
@@ -22,6 +25,7 @@ const emit = defineEmits<{
 
 <template>
   <FileUploader
+    :resource_element="resource_element"
     list-type="picture-card"
     accept="image/png,image/jpeg,image/webp"
     :model-value="modelValue"

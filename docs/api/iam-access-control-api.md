@@ -1,6 +1,8 @@
 # IAM 权限治理 API（受控接口摘要）
 
-> 权威来源：用户提供的 `iam-api-documentation.md` 最新版本，2026-09-14 核对。本文收录角色管理、功能权限、数据权限、角色分配及其只读资源依赖；新的应用与权限资源管理页使用独立的 `iam-application-resources-api.md`。字段冲突时后端契约优先。
+> 2026-09-27 范围修订：本文继续作为角色 CRUD、角色成员分配的既有契约来源。旧功能权限、数据权限、应用资源、用户组合权限页面部分已退役，只供历史追溯；新七页以 `permission-scheme-v2.md`、`permission-governance/` 当前实现及对应 Page Contract 为准。旧页不再注册；详情见 `docs/coordination/iam-maintenance-adoption.md`。
+
+> 权威来源：用户提供的 `iam-api-documentation.md` 最新版本，2026-09-14 核对。本文收录角色管理、功能权限、数据权限、角色分配及其只读资源依赖；旧应用与权限资源契约已归档至 `archive/iam-permission-v1/2026-09-27/docs/api/iam-application-resources-api.md`。字段冲突时后端契约优先。
 
 ## 通用约定
 
@@ -43,6 +45,8 @@
 `IamRoleDetailResponse` 完整字段：`id`, `tenant_id`, `tenant_code`, `role_code`, `role_name`, `role_type`, `sort_order`, `status`, `description`, `remarks`, `is_currently_effective`, `is_group_controlled`, `can_maintain`, `version`, `created_at`, `updated_at`。
 
 `role_code` 由服务端在创建成功后生成，编辑时不可变；前端只读展示响应值，CreateRole 与 UpdateRole 均不提交该字段。
+
+`QueryRoles.can_maintain` 仅用于角色基本资料维护；系统角色返回 `false`，不代表其权限包绑定不可调整。V2 角色授权页独立按 `CurrentPageResources` 返回的 `IAM.ROLES.AUTHORIZATION.SAVE` 与目标角色启用状态控制勾选和保存，不按 SA 身份补权，也不按 `role_type=system` 隐藏授权操作；最终仍由 `RolePermissionScheme/Save` 鉴权。权限包状态策略由后端维护，本次不改变。
 
 ## 功能权限
 

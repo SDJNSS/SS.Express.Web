@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { statisticsElements } from '../iam-resource.registry'
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 import dayjs from 'dayjs'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -423,19 +425,35 @@ function durationLabel(bucket: string) {
 </script>
 
 <template>
-  <AppPage class="training-operations-page">
+  <AppPage :resource_element="statisticsElements.page" class="training-operations-page">
     <DashboardPageTemplate>
       <template #header>
         <PageHeader
           title="专项统计"
           description="分别核对任务完成、课程学习、考试结果与培训逾期口径"
           ><template #actions
-            ><el-button v-if="canExportCurrent" @click="exportVisible = true"
+            ><el-button
+              v-if="canExportCurrent"
+              v-resource-element="
+                activeTab === 'exam' ? statisticsElements.auditExport : statisticsElements.export
+              "
+              @click="exportVisible = true"
               >导出当前统计</el-button
             ></template
           ></PageHeader
         >
-        <el-tabs v-model="activeTab" class="training-stat-tabs"
+        <el-tabs
+          v-model="activeTab"
+          v-resource-element="
+            activeTab === 'task'
+              ? statisticsElements.taskQuery
+              : activeTab === 'course'
+                ? statisticsElements.courseQuery
+                : activeTab === 'exam'
+                  ? statisticsElements.examQuery
+                  : statisticsElements.overdueQuery
+          "
+          class="training-stat-tabs"
           ><el-tab-pane label="任务完成" name="task" /><el-tab-pane
             label="课程学习"
             name="course" /><el-tab-pane label="考试结果" name="exam" /><el-tab-pane
@@ -443,6 +461,15 @@ function durationLabel(bucket: string) {
             name="overdue"
         /></el-tabs>
         <SearchPanel
+          :resource_element="
+            activeTab === 'task'
+              ? statisticsElements.taskQuery
+              : activeTab === 'course'
+                ? statisticsElements.courseQuery
+                : activeTab === 'exam'
+                  ? statisticsElements.examQuery
+                  : statisticsElements.overdueQuery
+          "
           collapsible
           :loading="currentState === 'loading'"
           @search="runQuery()"
@@ -477,7 +504,7 @@ function durationLabel(bucket: string) {
             ><el-select v-model="currentQuery.taskType" clearable placeholder="全部类型"
               ><el-option label="月度" value="MONTHLY" /><el-option
                 label="季度"
-                value="QUARTERLY" /><el-option label="临时" value="TEMPORARY" /></el-select
+                value="QUARTERLY" /><el-option label="其他" :value="TRAINING_TASK_TYPES.OTHER" /></el-select
           ></el-form-item>
           <el-form-item label="当前组织">
             <el-select
@@ -600,7 +627,19 @@ function durationLabel(bucket: string) {
         :closable="false"
         show-icon
         ><template #default
-          ><el-button link type="primary" @click="emit('retry', activeTab)"
+          ><el-button
+            v-resource-element="
+              activeTab === 'task'
+                ? statisticsElements.taskQuery
+                : activeTab === 'course'
+                  ? statisticsElements.courseQuery
+                  : activeTab === 'exam'
+                    ? statisticsElements.examQuery
+                    : statisticsElements.overdueQuery
+            "
+            link
+            type="primary"
+            @click="emit('retry', activeTab)"
             >重新加载</el-button
           ></template
         ></el-alert
@@ -643,6 +682,7 @@ function durationLabel(bucket: string) {
           <template #taskName="{ row }">
             <button
               v-if="canViewTaskDetail"
+              v-resource-element="statisticsElements.resolveTask"
               class="training-operations-link"
               type="button"
               @click="
@@ -683,6 +723,7 @@ function durationLabel(bucket: string) {
           ></DataTable
         >
         <AppPagination
+          :resource_element="statisticsElements.taskQuery"
           :page="currentPage"
           :page-size="currentPageSize"
           :total="taskReport?.total ?? taskRows.length"
@@ -712,6 +753,7 @@ function durationLabel(bucket: string) {
           ><template #courseTask="{ row }">
             <button
               v-if="canViewTaskDetail"
+              v-resource-element="statisticsElements.resolveTask"
               class="training-operations-link"
               type="button"
               @click="
@@ -726,6 +768,7 @@ function durationLabel(bucket: string) {
           </template>
           <template #courseNotStarted="{ row }"
             ><el-button
+              v-resource-element="statisticsElements.personnel"
               link
               type="primary"
               @click="
@@ -742,6 +785,7 @@ function durationLabel(bucket: string) {
           >
           <template #courseLearning="{ row }"
             ><el-button
+              v-resource-element="statisticsElements.personnel"
               link
               type="primary"
               @click="
@@ -758,6 +802,7 @@ function durationLabel(bucket: string) {
           >
           <template #courseCompleted="{ row }"
             ><el-button
+              v-resource-element="statisticsElements.personnel"
               link
               type="primary"
               @click="
@@ -781,6 +826,7 @@ function durationLabel(bucket: string) {
           }}</template></DataTable
         >
         <AppPagination
+          :resource_element="statisticsElements.courseQuery"
           :page="currentPage"
           :page-size="currentPageSize"
           :total="courseReport?.total ?? 0"
@@ -900,6 +946,7 @@ function durationLabel(bucket: string) {
             <template #examTask="{ row }"
               ><button
                 v-if="canViewTaskDetail"
+                v-resource-element="statisticsElements.resolveTask"
                 class="training-operations-link"
                 type="button"
                 @click="
@@ -916,6 +963,7 @@ function durationLabel(bucket: string) {
             >
             <template #examNotSubmitted="{ row }"
               ><el-button
+                v-resource-element="statisticsElements.personnel"
                 link
                 type="primary"
                 @click="
@@ -939,6 +987,7 @@ function durationLabel(bucket: string) {
             >
             <template #examSubmitted="{ row }"
               ><el-button
+                v-resource-element="statisticsElements.personnel"
                 link
                 type="primary"
                 @click="
@@ -956,6 +1005,7 @@ function durationLabel(bucket: string) {
             >
             <template #examPassed="{ row }"
               ><el-button
+                v-resource-element="statisticsElements.personnel"
                 link
                 type="primary"
                 @click="
@@ -975,6 +1025,7 @@ function durationLabel(bucket: string) {
             >
             <template #examFailed="{ row }"
               ><el-button
+                v-resource-element="statisticsElements.personnel"
                 link
                 type="primary"
                 @click="
@@ -1003,6 +1054,7 @@ function durationLabel(bucket: string) {
             }}</template>
           </DataTable>
           <AppPagination
+            :resource_element="statisticsElements.examQuery"
             :page="currentPage"
             :page-size="currentPageSize"
             :total="examReport?.total ?? 0"
@@ -1129,6 +1181,7 @@ function durationLabel(bucket: string) {
           }}</template></DataTable
         >
         <AppPagination
+          :resource_element="statisticsElements.overdueQuery"
           :page="currentPage"
           :page-size="currentPageSize"
           :total="overdueReport?.total ?? 0"
@@ -1139,6 +1192,7 @@ function durationLabel(bucket: string) {
 
       <DetailDrawer
         v-model="drilldownVisible"
+        :resource_element="statisticsElements.personnel"
         :title="drilldownContext?.title ?? '人员明细'"
         size="860px"
       >
@@ -1152,6 +1206,7 @@ function durationLabel(bucket: string) {
         >
           <template #default
             ><el-button
+              v-resource-element="statisticsElements.personnel"
               link
               type="primary"
               @click="changeDrilldownPage(drilldownPage, drilldownPageSize)"
@@ -1177,6 +1232,7 @@ function durationLabel(bucket: string) {
           >
         </el-table>
         <AppPagination
+          :resource_element="statisticsElements.personnel"
           :page="drilldownPage"
           :page-size="drilldownPageSize"
           :total="drilldownTotal"
@@ -1187,6 +1243,9 @@ function durationLabel(bucket: string) {
 
       <FormDialog
         v-model="exportVisible"
+        :resource_element="
+          activeTab === 'exam' ? statisticsElements.auditExport : statisticsElements.export
+        "
         title="导出专项统计"
         confirm-button-text="开始生成"
         :submitting="exporting"

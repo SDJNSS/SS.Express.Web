@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { taskDetailElements } from '../iam-resource.registry'
 import { computed, ref, watch } from 'vue'
 
 import AppPagination from '@shared/components/AppPagination.vue'
@@ -70,6 +71,7 @@ watch(
 
 <template>
   <DetailDrawer
+    :resource_element="taskDetailElements.personnel"
     :model-value="modelValue"
     :title="context?.title ?? '人员明细'"
     :size="1080"
@@ -107,6 +109,7 @@ watch(
       <AppPagination
         v-model:page="currentPage"
         v-model:page-size="currentPageSize"
+        :resource_element="taskDetailElements.personnel"
         :total="effectiveTotal"
         @change="emit('pageChange', currentPage, currentPageSize)"
       />

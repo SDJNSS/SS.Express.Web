@@ -65,6 +65,8 @@ export interface FixedQuestionRequest {
   question_id: number
   question_score: number
   sort_order: number
+  question_type: QuestionType
+  question_updated_at: string
 }
 export interface PaperContentRequest {
   paper_name: string
@@ -72,22 +74,24 @@ export interface PaperContentRequest {
   total_score: number
   random_question_order: boolean
   random_option_order: boolean
-  fixed_questions: FixedQuestionRequest[]
-  single_choice_count: number | null
-  single_choice_score: number | null
-  multiple_choice_count: number | null
-  multiple_choice_score: number | null
-  true_false_count: number | null
-  true_false_score: number | null
+  questions: FixedQuestionRequest[]
 }
 export interface PaperSummaryDto extends TrainingResourceDto {
   paper_name: string
   paper_mode: PaperMode
   total_score: number
+  question_count: number
 }
-export interface PaperDetailDto
-  extends PaperSummaryDto, Omit<PaperContentRequest, 'fixed_questions'> {
-  fixed_questions: Array<
+export interface PaperGroupDto {
+  question_type: QuestionType
+  count: number
+  total_score: number | null
+  question_score: number | null
+}
+export interface PaperDetailDto extends PaperSummaryDto, PaperContentRequest {
+  is_configuration_valid: boolean
+  configuration_invalid_reason: string
+  questions: Array<
     FixedQuestionRequest & {
       id: number
       question_type: QuestionType
@@ -95,6 +99,17 @@ export interface PaperDetailDto
       question_status: TrainingStatus
     }
   >
+  groups: PaperGroupDto[]
+}
+export interface PaperGeneratePreviewRequest {
+  total_score: number
+  groups: Array<{ question_type: QuestionType; count: number; total_score: number | null }>
+}
+export interface PaperGeneratePreviewResponse {
+  paper_mode: 'RANDOM'
+  total_score: number
+  questions: PaperDetailDto['questions']
+  groups: PaperGroupDto[]
 }
 export interface ExamContentRequest {
   exam_name: string

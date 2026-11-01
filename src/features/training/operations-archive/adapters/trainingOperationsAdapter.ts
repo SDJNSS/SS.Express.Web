@@ -1,3 +1,4 @@
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 import type {
   TrainingPlanDetailDto,
   TrainingPlanDto,
@@ -55,8 +56,8 @@ function taskStatus(input: string): TaskStatus {
 }
 function taskType(input: string, periodKey: string): TrainingTaskType {
   const type = value(input).toUpperCase()
-  if (type === 'MONTHLY' || type === 'QUARTERLY' || type === 'TEMPORARY') return type
-  if (periodKey.startsWith('TEMP-')) return 'TEMPORARY'
+  if (type === 'MONTHLY' || type === 'QUARTERLY' || type === TRAINING_TASK_TYPES.OTHER) return type
+  if (periodKey.startsWith('TEMP-')) return TRAINING_TASK_TYPES.OTHER
   return periodKey.includes('Q') ? 'QUARTERLY' : 'MONTHLY'
 }
 function employeeStatus(input: string): EmployeeTrainingStatus {

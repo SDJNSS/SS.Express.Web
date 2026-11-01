@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { notification } from '@shared/services/notification'
-import type { PagedEntityQuery } from '@shared/types/pagedOptions'
-import { foundationApi, type IamUserQueryResponse } from '../api/foundationApi'
 import {
-  mapOrganization,
-  mapPosition,
-  mapUserQuery,
-  mapUserTenantSnapshot,
-} from '../adapters/foundationAdapter'
+  IAM_PERMISSIONS,
+  IAM_PERMISSION_GOVERNANCE_RESOURCES,
+} from '@shared/constants/iamPermissions'
+import type { PagedEntityQuery } from '@shared/types/pagedOptions'
+import { sameEntityId } from '@shared/utils/entityId'
+import { publishPageResourcePermissionSnapshot } from '@shared/services/pageResourcePermissionState'
+import { currentTenantOption, requireCurrentTenantId } from '../api/foundationSession'
+import {
+  clearCurrentPageResourceAccessCache,
+  getCurrentPageResourcesCached,
+} from '@features/iam/shell-context/public'
+import { createRequestId, foundationApi, type IamUserQueryResponse } from '../api/foundationApi'
+import { mapOrganization, mapPosition, mapUserQuery } from '../adapters/foundationAdapter'
+import { accessControlApi } from '@features/iam/access-control/public'
+import { useEffectivePermissions } from '@shared/composables/useEffectivePermissions'
+import type { MemberRoleSnapshot } from '../types/memberRoles'
 import MembershipManagementPageView from '../components/MembershipManagementPageView.vue'
+import { resourceRegistry } from '../iam-resource.registry'
+import type {
+  MemberAdminChangeValue,
+  MemberRelationEndValue,
+  MemberRelationKind,
+} from '../types/memberMaintenance'
 import {
   currentTenantId,
   foundationErrorMessage,
   getFoundationSession,
-  queryFoundationTenantOptions,
 } from '../api/foundationSession'
 import type {
   FoundationPreviewState,
@@ -27,46 +41,31 @@ import type {
   MemberRelationValue,
   MemberUpdateValue,
   MembershipRecord,
-  TenantAssignmentOption,
-  UserTenantAssignmentSnapshot,
-  UserTenantAssignmentUpdateValue,
   UserUpdateValue,
 } from '../types/foundation'
 
 const activeTenantId = currentTenantId()
-const route = useRoute()
 const router = useRouter()
-const permissionWorkspace = computed(() => {
-  const view = Array.isArray(route.query.view) ? route.query.view[0] : route.query.view
-  return (
-    view === 'permissions' &&
-    (Number(route.query.userId) > 0 || Number(route.query.tenantUserId) > 0)
-  )
-})
 const session = getFoundationSession()
 const records = ref<MembershipRecord[]>([])
-const tenants = ref<Array<{ id: number; code: string; name: string }>>(
-  session?.availableTenants?.map((tenant) => ({
-    id: tenant.tenantId,
-    code: tenant.tenantCode,
-    name: tenant.tenantName,
-  })) ?? [],
-)
+const tenants = ref([currentTenantOption()])
 const organizationOptions = ref<FoundationSelectOption[]>([])
 const positionOptions = ref<FoundationSelectOption[]>([])
 const organizationOptionsTenantId = ref<number>()
 const positionOptionsTenantId = ref<number>()
 const relationOptionsLoading = ref(false)
 const state = ref<FoundationPreviewState>('loading')
+const canAccessEffectivePermissions = ref(false)
 let loadSequence = 0
-let defaultTenantSelectionPending = true
 let organizationOptionsSequence = 0
 let positionOptionsSequence = 0
 let relationOptionsRequestCount = 0
+let disposed = false
 
 const initialQuery: MembershipQueryValue = {
   tenantIds: tenants.value.map((tenant) => tenant.id),
-  userId: '',
+  memberCode: '',
+  memberCodeFuzzy: false,
   userName: '',
   realName: '',
   phone: '',
@@ -74,7 +73,6 @@ const initialQuery: MembershipQueryValue = {
   organizationId: undefined,
   positionId: undefined,
   roleId: undefined,
-  userStatus: '',
   memberStatus: '',
 }
 const activeQuery = ref<MembershipQueryValue>({
@@ -82,51 +80,26 @@ const activeQuery = ref<MembershipQueryValue>({
   tenantIds: [...initialQuery.tenantIds],
 })
 
-function positiveInteger(value: string): number | undefined {
-  const result = Number(value)
-  return Number.isInteger(result) && result > 0 ? result : undefined
-}
-
 async function load(query?: MembershipQueryValue) {
-  const shouldRefreshTenantOptions = query === undefined
-  if (!shouldRefreshTenantOptions) defaultTenantSelectionPending = false
   const currentQuery = query ?? activeQuery.value
   const sequence = ++loadSequence
-  activeQuery.value = { ...currentQuery, tenantIds: [...currentQuery.tenantIds] }
-  const requestedQuery = { ...currentQuery, tenantIds: [...currentQuery.tenantIds] }
+  activeQuery.value = { ...currentQuery, tenantIds: [activeTenantId] }
+  const requestedQuery = { ...currentQuery, tenantIds: [activeTenantId] }
   state.value = 'loading'
   try {
-    if (shouldRefreshTenantOptions) {
-      const previousTenantIds = tenants.value.map((tenant) => tenant.id)
-      const selectAll =
-        defaultTenantSelectionPending ||
-        (previousTenantIds.length > 0 &&
-          previousTenantIds.length === requestedQuery.tenantIds.length &&
-          previousTenantIds.every((id) => requestedQuery.tenantIds.includes(id)))
-      const options = await queryFoundationTenantOptions()
-      if (sequence !== loadSequence) return
-      defaultTenantSelectionPending = false
-      tenants.value = options
-      const requestedTenantIds = [...requestedQuery.tenantIds]
-      requestedQuery.tenantIds = selectAll
-        ? options.map((tenant) => tenant.id)
-        : requestedQuery.tenantIds.filter((id) => options.some((tenant) => tenant.id === id))
-      if (
-        requestedTenantIds.length !== requestedQuery.tenantIds.length ||
-        requestedTenantIds.some((id) => !requestedQuery.tenantIds.includes(id))
-      ) {
-        requestedQuery.organizationId = undefined
-        requestedQuery.positionId = undefined
-        requestedQuery.roleId = undefined
-      }
-    }
+    requireCurrentTenantId(activeTenantId)
     activeQuery.value = requestedQuery
-    const userId = positiveInteger(requestedQuery.userId)
+    const memberCode = requestedQuery.memberCode.trim()
+    if (memberCode && requestedQuery.memberCodeFuzzy && memberCode.length < 3) {
+      throw new Error('成员编号模糊查询至少需要3个字符')
+    }
     const response = await foundationApi.queryUsers({
-      tenant_ids: [...requestedQuery.tenantIds],
+      tenant_ids: [activeTenantId],
       page_index: 1,
       page_size: 1000,
-      ...(userId ? { user_id: userId } : {}),
+      ...(memberCode
+        ? { tenant_user_code: memberCode, tenant_user_code_fuzzy: requestedQuery.memberCodeFuzzy }
+        : {}),
       ...(requestedQuery.userName.trim() ? { user_name: requestedQuery.userName.trim() } : {}),
       ...(requestedQuery.realName.trim() ? { real_name: requestedQuery.realName.trim() } : {}),
       ...(requestedQuery.phone.trim() ? { phone: requestedQuery.phone.trim() } : {}),
@@ -134,11 +107,12 @@ async function load(query?: MembershipQueryValue) {
       ...(requestedQuery.organizationId ? { org_id: requestedQuery.organizationId } : {}),
       ...(requestedQuery.positionId ? { position_id: requestedQuery.positionId } : {}),
       ...(requestedQuery.roleId ? { role_id: requestedQuery.roleId } : {}),
-      ...(requestedQuery.userStatus ? { user_status: requestedQuery.userStatus } : {}),
       ...(requestedQuery.memberStatus ? { member_status: requestedQuery.memberStatus } : {}),
     })
     if (sequence !== loadSequence) return
-    records.value = response.items.map(mapQueryRecord)
+    records.value = response.items
+      .filter((item) => item.tenant_id === activeTenantId)
+      .map(mapQueryRecord)
     state.value = records.value.length ? 'ready' : 'empty'
   } catch (error) {
     if (sequence !== loadSequence) return
@@ -148,16 +122,35 @@ async function load(query?: MembershipQueryValue) {
   }
 }
 
+async function loadEffectivePermissionsEntryAccess() {
+  const resourceCode = IAM_PERMISSION_GOVERNANCE_RESOURCES.members.effectivePermissions
+  try {
+    const response = await getCurrentPageResourcesCached(resourceCode)
+    canAccessEffectivePermissions.value =
+      response.can_access && response.page_resource_code.trim() === resourceCode
+  } catch {
+    canAccessEffectivePermissions.value = false
+    notification.warning('有效权限入口暂时无法校验，请刷新页面后重试')
+  }
+}
+
 function mapQueryRecord(item: IamUserQueryResponse): MembershipRecord {
+  requireCurrentTenantId(item.tenant_id)
   const tenant = tenants.value.find((option) => option.id === item.tenant_id)
   const storedTenant = session?.availableTenants?.find(
     (option) => option.tenantId === item.tenant_id,
   )
-  return mapUserQuery(item, {
+  const record = mapUserQuery(item, {
     id: item.tenant_id,
     ...(tenant ? { name: tenant.name } : {}),
     ...(storedTenant?.timezone ? { timezone: storedTenant.timezone } : {}),
   })
+  return {
+    ...record,
+    tenantMemberships: record.tenantMemberships.filter(
+      (member) => member.tenantId === activeTenantId,
+    ),
+  }
 }
 
 async function queryFilterOptions(
@@ -165,10 +158,11 @@ async function queryFilterOptions(
   kind: 'organization' | 'position' | 'role',
   query: PagedEntityQuery,
 ): Promise<{ items: FoundationSelectOption[]; total: number }> {
-  if (!tenantIds.length) return { items: [], total: 0 }
+  if (tenantIds.length !== 1 || tenantIds[0] !== activeTenantId) return { items: [], total: 0 }
+  requireCurrentTenantId(activeTenantId)
   const response = await foundationApi.queryMembershipFilterOptions(
     {
-      tenant_ids: [...tenantIds],
+      tenant_ids: [activeTenantId],
       kind,
       ...(query.keyword.trim() ? { keyword: query.keyword.trim() } : {}),
       page_index: query.pageIndex,
@@ -190,6 +184,7 @@ async function queryFilterOptions(
 }
 
 async function queryMemberDetail(record: MembershipRecord): Promise<MembershipRecord> {
+  requireCurrentTenantId(record.tenantId)
   const response = await foundationApi.queryUsers({
     tenant_ids: [record.tenantId],
     user_id: record.userId,
@@ -204,6 +199,7 @@ async function queryMemberDetail(record: MembershipRecord): Promise<MembershipRe
 }
 
 async function loadOrganizationOptions(tenantId: number) {
+  requireCurrentTenantId(tenantId)
   if (organizationOptionsTenantId.value === tenantId) return
   const sequence = ++organizationOptionsSequence
   organizationOptions.value = []
@@ -224,6 +220,7 @@ async function loadOrganizationOptions(tenantId: number) {
 }
 
 async function loadPositionOptions(tenantId: number) {
+  requireCurrentTenantId(tenantId)
   if (positionOptionsTenantId.value === tenantId) return
   const sequence = ++positionOptionsSequence
   positionOptions.value = []
@@ -262,66 +259,6 @@ async function loadRelationOptions(tenantId: number, kind: MembershipOptionKind)
   }
 }
 
-async function queryUserTenants(userId: number): Promise<UserTenantAssignmentSnapshot> {
-  return mapUserTenantSnapshot(await foundationApi.queryUserTenants(userId))
-}
-
-async function loadTenantAssignmentOptions(): Promise<TenantAssignmentOption[]> {
-  const pageSize = 200
-  let pageIndex = 1
-  let total = Number.POSITIVE_INFINITY
-  const result: TenantAssignmentOption[] = []
-
-  while (result.length < total) {
-    const response = await foundationApi.queryTenants({
-      page_index: pageIndex,
-      page_size: pageSize,
-    })
-    total = response.total
-    result.push(
-      ...response.items.map((tenant) => ({
-        id: tenant.id,
-        code: tenant.tenant_code,
-        name: tenant.tenant_name,
-        status: (tenant.status.toUpperCase() === 'ACTIVE'
-          ? 'ACTIVE'
-          : 'DISABLED') as TenantAssignmentOption['status'],
-      })),
-    )
-    if (!response.items.length || result.length >= total) break
-    pageIndex += 1
-  }
-
-  return result
-}
-
-async function saveUserTenants(
-  value: UserTenantAssignmentUpdateValue,
-): Promise<UserTenantAssignmentSnapshot> {
-  try {
-    const response = await foundationApi.updateUserTenants({
-      user_id: value.userId,
-      user_version: value.userVersion,
-      original_memberships: value.originalMemberships.map((membership) => ({
-        tenant_user_id: membership.tenantUserId,
-        member_version: membership.memberVersion,
-      })),
-      tenants: value.tenants.map((tenant) => ({
-        tenant_id: tenant.tenantId,
-        is_tenant_admin: tenant.isTenantAdmin,
-        restore: tenant.restore,
-      })),
-      remove_tenant_user_ids: [...value.removeTenantUserIds],
-    })
-    notification.success('用户租户归属已更新')
-    await load()
-    return mapUserTenantSnapshot(response)
-  } catch (error) {
-    notification.error(foundationErrorMessage(error, '用户租户归属更新失败'))
-    throw error
-  }
-}
-
 async function saveUser(value: UserUpdateValue) {
   try {
     await foundationApi.updateUser({
@@ -329,7 +266,8 @@ async function saveUser(value: UserUpdateValue) {
       version: value.version,
       user_name: value.userName.trim(),
       real_name: value.realName.trim(),
-      nick_name: value.nickName.trim(),
+      // Nickname is retired from the UI, not deleted from existing user data.
+      nick_name: value.nickName,
       phone: value.phone.trim(),
       email: value.email.trim(),
       avatar_url: value.avatarFileId ? '' : value.avatarUrl.trim(),
@@ -411,15 +349,27 @@ async function saveRelation(
   value: MemberRelationValue,
 ) {
   try {
+    requireCurrentTenantId(member.tenantId)
+    const permission = resourceRegistry.members.buttons[relationMode].resource_code
+    if (!hasFunctionPermission(permission)) throw new Error('没有维护该归属的权限')
+    if (
+      value.id &&
+      !member[relationMode === 'organization' ? 'organizations' : 'positions'].some(
+        (row) => row.id === value.id,
+      )
+    ) {
+      throw new Error('归属不属于当前成员，请重新加载')
+    }
     if (!value.targetId || !Number.isSafeInteger(value.targetId) || value.targetId <= 0) {
       throw new Error(relationMode === 'organization' ? '请选择目标组织' : '请选择目标岗位')
     }
     const request = {
+      ...(value.id ? { id: value.id, version: value.version } : {}),
       tenant_user_id: member.id,
       target_id: value.targetId,
       is_primary: value.primary,
       effective_start: value.effectiveStart,
-      ...(value.effectiveEnd ? { effective_end: value.effectiveEnd } : {}),
+      effective_end: value.effectiveEnd || null,
       remarks: value.remarks.trim(),
     }
     if (relationMode === 'organization') await foundationApi.saveOrganization(request)
@@ -432,19 +382,79 @@ async function saveRelation(
   }
 }
 
-async function changeStatus(
-  target: 'member' | 'user',
-  record: MembershipRecord,
-  targetStatus: 'ACTIVE' | 'DISABLED',
+async function endRelation(
+  kind: MemberRelationKind,
+  member: MembershipRecord,
+  value: MemberRelationEndValue,
 ) {
+  requireCurrentTenantId(member.tenantId)
+  const permission =
+    kind === 'organization'
+      ? resourceRegistry.members.buttons.endOrganization.resource_code
+      : resourceRegistry.members.buttons.endPosition.resource_code
+  if (!hasFunctionPermission(permission)) throw new Error('没有结束该归属的权限')
+  const relations = kind === 'organization' ? member.organizations : member.positions
+  if (!relations.some((row) => row.id === value.id && row.version === value.version))
+    throw new Error('归属快照已变化，请重新加载')
+  const request = { id: value.id, version: value.version, effective_end: value.effectiveEnd }
+  if (kind === 'organization') await foundationApi.endOrganization(request)
+  else await foundationApi.endPosition(request)
+  if (disposed) return
+  notification.success(
+    kind === 'organization' ? '组织归属结束时间已保存' : '岗位归属结束时间已保存',
+  )
+  await load()
+}
+
+async function changeAdmin(value: MemberAdminChangeValue) {
+  requireCurrentTenantId(value.tenantId)
+  const permission = value.appoint
+    ? resourceRegistry.members.buttons.appointAdmin.resource_code
+    : resourceRegistry.members.buttons.cancelAdmin.resource_code
+  if (!hasFunctionPermission(permission)) throw new Error('没有变更管理员身份的权限')
+  const request = {
+    tenant_id: value.tenantId,
+    user_id: value.userId,
+    member_version: value.memberVersion,
+    request_id: value.requestId,
+  }
+  const result = value.appoint
+    ? await foundationApi.appointTenantAdmin(request)
+    : await foundationApi.cancelTenantAdmin(request)
+  if (disposed) return
+  requireCurrentTenantId(value.tenantId)
+  if (
+    !sameEntityId(result.tenant_id, value.tenantId) ||
+    !sameEntityId(result.user_id, value.userId)
+  ) {
+    throw new Error('响应身份不一致，请重新加载成员状态')
+  }
+  notification.success(
+    result.idempotent
+      ? '请求已处理，请以最新身份为准'
+      : result.changed
+        ? '管理员身份已更新'
+        : '该成员已是目标身份',
+  )
+  // Rebuild all local context for self/unknown identity; never keep stale Menu/Button grants.
+  const actor = getFoundationSession()?.userId
+  if (!actor || sameEntityId(actor, value.userId)) {
+    clearCurrentPageResourceAccessCache()
+    publishPageResourcePermissionSnapshot('IAM.MEMBERS', [], false)
+    window.location.reload()
+    return
+  }
+  await load()
+}
+
+async function changeStatus(record: MembershipRecord, targetStatus: 'ACTIVE' | 'DISABLED') {
   try {
     const request = {
-      id: target === 'member' ? record.id : record.userId,
-      version: target === 'member' ? record.version : record.userVersion,
+      id: record.id,
+      version: record.version,
       target_status: targetStatus,
     }
-    if (target === 'member') await foundationApi.changeMemberStatus(request)
-    else await foundationApi.changeUserStatus(request)
+    await foundationApi.changeMemberStatus(request)
     notification.success(targetStatus === 'ACTIVE' ? '状态已启用' : '状态已停用')
     await load()
   } catch (error) {
@@ -453,46 +463,126 @@ async function changeStatus(
   }
 }
 
-function inspectPermissions(record: MembershipRecord) {
+const { hasFunctionPermission } = useEffectivePermissions()
+const rowActionPermissions = computed(() => ({
+  editUser: hasFunctionPermission(IAM_PERMISSIONS.members.updateUser),
+  editMember: hasFunctionPermission(IAM_PERMISSIONS.members.update),
+  memberStatus: hasFunctionPermission(IAM_PERMISSIONS.members.changeStatus),
+}))
+
+async function allRolePages<T>(query: (page: number) => Promise<{ total: number; items: T[] }>) {
+  const items: T[] = []
+  for (let page = 1; ; page += 1) {
+    const result = await query(page)
+    items.push(...result.items)
+    if (items.length >= result.total) return items
+    if (!result.items.length) throw new Error('角色分页结果不完整，请刷新后重试')
+  }
+}
+
+async function loadMemberRoles(record: MembershipRecord): Promise<MemberRoleSnapshot> {
+  const current = await queryMemberDetail(record)
+  const [assignments, roles] = await Promise.all([
+    allRolePages((page) =>
+      accessControlApi.queryAssignments({
+        tenant_id: current.tenantId,
+        tenant_user_id: current.id,
+        page_index: page,
+        page_size: 100,
+        keyword: '',
+        status: '',
+      }),
+    ),
+    hasFunctionPermission(IAM_PERMISSIONS.members.assignRole)
+      ? allRolePages((page) =>
+          accessControlApi.queryRoles({
+            tenant_id: current.tenantId,
+            id: 0,
+            role_type: '',
+            page_index: page,
+            page_size: 100,
+            keyword: '',
+            status: 'ACTIVE',
+          }),
+        )
+      : Promise.resolve([]),
+  ])
+  return {
+    tenantUserId: current.id,
+    memberVersion: current.version,
+    effective:
+      current.effectiveness === 'EFFECTIVE' &&
+      current.memberStatus === 'ACTIVE' &&
+      current.userStatus === 'ACTIVE',
+    roles: assignments.map((assignment) => ({
+      roleId: assignment.role_id,
+      roleName: assignment.role_name,
+      roleCode: assignment.role_code,
+      effective: assignment.is_currently_effective,
+      removable:
+        assignment.can_maintain &&
+        !assignment.is_group_controlled &&
+        !assignment.is_tenant_admin_identity,
+      reason:
+        assignment.invalid_reason ||
+        (assignment.is_tenant_admin_identity
+          ? '管理员身份不通过角色分配调整；请返回员工详情使用管理员专用操作（需独立授权）'
+          : ''),
+    })),
+    candidates: roles
+      .filter(
+        (role) =>
+          role.role_type.toUpperCase() === 'CUSTOM' &&
+          role.status.toUpperCase() === 'ACTIVE' &&
+          role.is_currently_effective &&
+          role.can_maintain &&
+          !role.is_group_controlled,
+      )
+      .map((role) => ({ id: role.id, name: role.role_name })),
+  }
+}
+
+async function updateMemberRoles(
+  snapshot: MemberRoleSnapshot,
+  roleIds: number[],
+  operation: 'assign' | 'revoke',
+) {
+  const permission =
+    operation === 'assign' ? IAM_PERMISSIONS.members.assignRole : IAM_PERMISSIONS.members.revokeRole
+  if (!hasFunctionPermission(permission)) throw new Error('没有执行此角色操作的权限')
+  const request = {
+    tenant_user_id: snapshot.tenantUserId,
+    member_version: snapshot.memberVersion,
+    role_ids: roleIds,
+  }
+  if (operation === 'assign') await accessControlApi.assignRoles(request)
+  else await accessControlApi.revokeRoles(request)
+  await load()
+}
+
+function inspectEffectivePermissions(record: MembershipRecord) {
   void router.push({
-    name: 'iam-member-permissions',
-    query: { tenantId: record.tenantId, userId: record.userId, tab: 'roles' },
+    name: 'iam-user-effective-permissions',
+    query: { tenantId: record.tenantId, userId: record.userId },
   })
 }
 
-let listLoaded = false
 onBeforeUnmount(() => {
+  disposed = true
   loadSequence += 1
   organizationOptionsSequence += 1
   positionOptionsSequence += 1
 })
-watch(
-  permissionWorkspace,
-  (value) => {
-    if (value) {
-      void router.replace({
-        name: 'iam-member-permissions',
-        query: {
-          tenantId: route.query.tenantId,
-          userId: route.query.userId,
-          tenantUserId: route.query.tenantUserId,
-          tab: route.query.tab,
-        },
-      })
-    } else if (!listLoaded) {
-      listLoaded = true
-      void load()
-    }
-  },
-  { immediate: true },
-)
+void loadEffectivePermissionsEntryAccess()
+void load()
 </script>
 
 <template>
   <MembershipManagementPageView
-    v-if="!permissionWorkspace"
     :records="records"
     :state="state"
+    :can-access-effective-permissions="canAccessEffectivePermissions"
+    :row-action-permissions="rowActionPermissions"
     :initial-tenant-id="activeTenantId"
     :tenant-options="tenants"
     :organization-options="organizationOptions"
@@ -506,11 +596,13 @@ watch(
     :save-member="saveMember"
     :create-member="createMember"
     :save-relation="saveRelation"
+    :end-relation="endRelation"
+    :change-admin="changeAdmin"
+    :create-admin-request-id="createRequestId"
     :change-status="changeStatus"
-    :inspect-permissions="inspectPermissions"
-    :query-user-tenants="queryUserTenants"
-    :load-tenant-assignment-options="loadTenantAssignmentOptions"
-    :save-user-tenants="saveUserTenants"
+    :load-member-roles="loadMemberRoles"
+    :update-member-roles="updateMemberRoles"
+    :inspect-effective-permissions="inspectEffectivePermissions"
     @retry="load"
   />
 </template>

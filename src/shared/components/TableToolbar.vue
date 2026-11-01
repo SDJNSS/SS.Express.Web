@@ -1,17 +1,16 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import { Icon } from '@iconify/vue'
 
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     total?: number
     title?: string
     refreshing?: boolean
   }>(),
-  {
-    total: 0,
-    title: '',
-    refreshing: false,
-  },
+  { resource_element: undefined, total: 0, title: '', refreshing: false },
 )
 
 const emit = defineEmits<{
@@ -20,7 +19,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="table-toolbar">
+  <div v-bind="resourceElementAttributes(resource_element)" class="table-toolbar">
     <div class="table-toolbar__summary">
       <strong v-if="title">{{ title }}</strong>
       <span>共 {{ total }} 条</span>
@@ -30,6 +29,7 @@ const emit = defineEmits<{
       <slot />
       <el-tooltip content="刷新数据" placement="top">
         <el-button
+          v-resource-element="resource_element"
           class="icon-button"
           :loading="refreshing"
           aria-label="刷新数据"

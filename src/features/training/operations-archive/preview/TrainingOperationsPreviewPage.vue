@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { TRAINING_TASK_TYPES } from '../constants/trainingTaskTypes'
 
 import EmployeeTrainingArchivePageView from '../components/EmployeeTrainingArchivePageView.vue'
 import TrainingOverviewPageView from '../components/TrainingOverviewPageView.vue'
@@ -251,7 +252,7 @@ function adminCompleteEmployee() {
     "
     :occupied-period-keys="
       trainingOperationsFixture.tasks
-        .filter((item) => item.taskType !== 'TEMPORARY')
+        .filter((item) => item.taskType !== TRAINING_TASK_TYPES.OTHER)
         .map((item) => item.period)
     "
     :state="state"

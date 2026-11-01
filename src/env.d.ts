@@ -18,6 +18,9 @@ declare module 'vue-router' {
   interface RouteMeta {
     title?: string
     permission?: string
+    resourceCode?: string
+    resource_element?: string
+    authorizationModel?: 'legacy' | 'v2'
     subsystem?: 'dms' | 'iam' | 'tms' | 'vms' | 'reference'
     implementationStatus?: 'implemented' | 'placeholder'
     breadcrumb?: string[]

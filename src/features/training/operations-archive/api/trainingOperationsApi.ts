@@ -1,5 +1,5 @@
 import { defineApiPath } from '@shared/api/apiPath'
-import { getStoredAuthSession } from '@shared/api/authSession'
+import { requireCurrentTenantId } from '@shared/api/tenantContext'
 import { serviceApiPath } from '@shared/api/backendServices'
 import { ApiError, requestApi, requestRaw } from '@shared/api/httpClient'
 import { createRequestId } from '@shared/api/requestIdentity'
@@ -39,7 +39,7 @@ import type { TrainingTaskType } from '../types/trainingOperations'
 export type * from '../types/trainingOperationsContracts'
 
 export function currentTrainingTenantId() {
-  return getStoredAuthSession()?.currentTenantId ?? 0
+  return requireCurrentTenantId()
 }
 
 export function trainingApiErrorMessage(error: unknown, fallback: string) {
@@ -63,7 +63,7 @@ const endpoints = Object.freeze({
 } as const)
 
 async function postTraining<Response, Request>(path: string, data: Request, requestId = createRequestId()) {
-  return requestApi<Response, Request>({ method: 'POST', url: serviceApiPath('iam', defineApiPath(path)), data, headers: { Accept: 'text/plain', 'Content-Type': 'application/json-patch+json', 'X-Request-ID': requestId } })
+  return requestApi<Response, Request>({ tenantScoped: true, method: 'POST', url: serviceApiPath('iam', defineApiPath(path)), data, headers: { Accept: 'text/plain', 'Content-Type': 'application/json-patch+json', 'X-Request-ID': requestId } })
 }
 
 export const trainingOperationsApi = {
@@ -106,9 +106,9 @@ export const trainingOperationsApi = {
   courseStatistics: (request: TrainingReportRequest) => postTraining<TrainingPagedReportDto<TrainingCourseStatisticsDto>, TrainingReportRequest>(endpoints.courseStatistics, request),
   examStatistics: (request: TrainingReportRequest) => postTraining<TrainingExamStatisticsDto, TrainingReportRequest>(endpoints.examStatistics, request),
   overdueStatistics: (request: TrainingReportRequest) => postTraining<TrainingOverdueReportDto, TrainingReportRequest>(endpoints.overdueStatistics, request),
-  exportTaskLedger: (request: TrainingReportRequest) => requestRaw<Blob, TrainingReportRequest>({ method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportTaskLedger)), data: request, responseType: 'blob' }),
-  exportEmployeeArchives: (request: TrainingReportRequest) => requestRaw<Blob, TrainingReportRequest>({ method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportEmployeeArchives)), data: request, responseType: 'blob' }),
-  exportExamMaterials: (request: TrainingReportRequest & { employee_exam_ids?: number[] }) => requestRaw<Blob, typeof request>({ method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportExamMaterials)), data: request, responseType: 'blob' }),
+  exportTaskLedger: (request: TrainingReportRequest) => requestRaw<Blob, TrainingReportRequest>({ tenantScoped: true, method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportTaskLedger)), data: request, responseType: 'blob' }),
+  exportEmployeeArchives: (request: TrainingReportRequest) => requestRaw<Blob, TrainingReportRequest>({ tenantScoped: true, method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportEmployeeArchives)), data: request, responseType: 'blob' }),
+  exportExamMaterials: (request: TrainingReportRequest & { employee_exam_ids?: number[] }) => requestRaw<Blob, typeof request>({ tenantScoped: true, method: 'POST', url: serviceApiPath('iam', defineApiPath(endpoints.exportExamMaterials)), data: request, responseType: 'blob' }),
 }
 
 export { endpoints as trainingOperationsEndpoints }

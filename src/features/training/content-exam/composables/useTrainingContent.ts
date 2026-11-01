@@ -3,6 +3,10 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useEffectivePermissions } from '@shared/composables/useEffectivePermissions'
 import { subscribeNavigationPermissionSnapshot } from '@shared/services/navigationPermissionState'
 import { notification } from '@shared/services/notification'
+import {
+  getPageResourcePermissionSnapshot,
+  subscribePageResourcePermissionSnapshot,
+} from '@shared/services/pageResourcePermissionState'
 import { contentErrorMessage, contentSessionKey, hasContentTenant } from '../api/trainingContentApi'
 import type { TrainingPreviewState, TrainingStatus } from '../types/trainingContent'
 import type {
@@ -40,10 +44,29 @@ export function useTrainingContent<
   map: (dto: Summary | Detail) => RecordType
   payload: (form: FormType) => Payload
   permissions: Partial<Record<ContentAction, string>>
+  pageResourceCode: string
 }) {
   const route = useRoute()
   const router = useRouter()
   const { hasFunctionPermission } = useEffectivePermissions()
+  const pagePermissions = shallowRef(getPageResourcePermissionSnapshot())
+  const navigationPending = ref(false)
+  const unsubscribePagePermissions = subscribePageResourcePermissionSnapshot((snapshot) => {
+    // The old component remains mounted while the router authorizes its destination.
+    // Loading is not denial, and a different page's snapshot cannot authorize this page.
+    if (!snapshot.ready && snapshot.loadingReason === 'navigation') navigationPending.value = true
+    pagePermissions.value = snapshot
+  })
+  const unsubscribeNavigation = router.afterEach((_to, _from, failure) => {
+    // Same-page filters also run the guard. Wait for the committed URL before querying.
+    if (!failure) navigationPending.value = false
+  })
+  const permissionsReady = computed(
+    () =>
+      !navigationPending.value &&
+      pagePermissions.value.ready &&
+      pagePermissions.value.pageResourceCode === options.pageResourceCode,
+  )
   const records = shallowRef<RecordType[]>([])
   const state = ref<TrainingPreviewState>('loading')
   const total = ref(0)
@@ -55,12 +78,13 @@ export function useTrainingContent<
   onBeforeRouteLeave(() => leaveGuard())
   let sequence = 0
   let controller: AbortController | undefined
-  const unsubscribe = subscribeNavigationPermissionSnapshot((snapshot) => {
-    scope.value = `${snapshot.scope ?? ''}:${contentSessionKey()}`
+  const unsubscribe = subscribeNavigationPermissionSnapshot(() => {
+    // Shell menu hydration is not a change of the tenant/session owning these records.
+    scope.value = contentSessionKey()
   })
   const allowed = (action: ContentAction) => {
     const code = options.permissions[action]
-    return Boolean(code && hasFunctionPermission(code))
+    return Boolean(permissionsReady.value && code && hasFunctionPermission(code))
   }
   const positiveInt = (value: unknown, fallback: number) => {
     const parsed = Number(value)
@@ -111,6 +135,7 @@ export function useTrainingContent<
     const started = requestContext()
     error.value = ''
     state.value = 'loading'
+    if (!permissionsReady.value) return
     try {
       assertAccess('view', started)
       const result = await options.api.query(requestQuery(), controller.signal)
@@ -213,25 +238,22 @@ export function useTrainingContent<
   }) as ContentRuntime<RecordType, FormType>
 
   watch(
-    scope,
-    () => {
-      epoch.value++
-      records.value = []
-    },
-    { flush: 'sync' },
-  )
-  watch(
-    () => allowed('view'),
-    (canView, before) => {
-      if (!canView && before) {
+    [scope, () => allowed('view')],
+    ([nextScope, canView], [beforeScope, before]) => {
+      if (nextScope !== beforeScope || (!canView && before)) {
+        sequence++
+        controller?.abort()
         epoch.value++
         records.value = []
+        total.value = 0
+        error.value = ''
+        state.value = 'loading'
       }
     },
     { flush: 'sync' },
   )
   watch(
-    [scope, () => allowed('view'), query],
+    [scope, permissionsReady, () => allowed('view'), query],
     () => {
       void fetchList()
     },
@@ -242,6 +264,8 @@ export function useTrainingContent<
     sequence++
     controller?.abort()
     unsubscribe()
+    unsubscribePagePermissions()
+    unsubscribeNavigation()
   })
   return { records, state, runtime, contextKey, assertAccess, requestContext }
 }

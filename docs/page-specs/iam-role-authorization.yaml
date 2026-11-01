@@ -1,0 +1,224 @@
+schemaVersion: '0.1'
+page:
+  id: iam-role-authorization
+  name: 角色授权
+  feature: iam/permission-governance
+  type: WorkspacePage
+  patternKey: WorkspacePageTemplate
+  revision: 4
+sources:
+  inputMode: prd-only
+  prd:
+    - id: permission-v2-prd
+      ref: docs/prd/iam/permission-scheme-v2.md
+      section: 角色授权
+      purpose: 定义角色勾选Permission和只读下钻 Permission／Resource 的授权模型
+  api:
+    - id: role-authorization-api
+      ref: src/features/iam/permission-governance/api/permissionGovernanceApi.ts
+      section: endpoints
+      operation: POST /iam-admin/PermissionApp/Query; POST /iam-admin/RolePermissionScheme/QueryEligiblePermissions; POST /iam-admin/PermissionScheme/Query; POST /iam-admin/RolePermissionScheme/Query; POST /iam-admin/RolePermissionScheme/Save
+      purpose: 绑定系统目录、完整Permission候选、角色授权快照与全量保存端点
+    - id: role-catalog-api
+      ref: src/features/iam/access-control/api/accessControlApi.ts
+      section: endpoints
+      operation: POST /iam-admin/RolePermission/QueryRoles
+      purpose: 读取当前 Tenant 下的正式角色详情和字符串 role_version
+  permissions:
+    - id: role-authorization-permission
+      ref: src/shared/constants/iamPermissions.ts
+      section: IAM_PERMISSION_GOVERNANCE_RESOURCES.roles
+      operation: IAM.ROLES.AUTHORIZATION; IAM.ROLES.AUTHORIZATION.SAVE
+      purpose: 分离角色授权路由可访问性与保存动作的稳定前端资源
+  ux:
+    - id: permission-ux
+      ref: UX-CONTRACT.md
+      section: Permission and clipboard
+      purpose: 约束Permission绑定、只读下钻和危险变更说明
+    - id: async-ux
+      ref: UX-CONTRACT.md
+      section: Async and resilience
+      purpose: 约束绑定变更提交、版本冲突和失败恢复
+    - id: navigation-ux
+      ref: UX-CONTRACT.md
+      section: Navigation and responsive behavior
+      purpose: 约束分层树展开、搜索和滚动稳定性
+  references:
+    - id: legacy-role-permission-sibling
+      ref: docs/page-specs/iam-role-function-permissions.yaml
+      origin: project
+      kind: legacy-page
+      purpose: 延续角色上下文和权限树视觉，但不复用运行时继承
+implementation:
+  canonicalEntry: src/features/iam/permission-governance/components/RoleAuthorizationPageView.vue
+  previewEntry: src/features/iam/permission-governance/public.preview.ts
+  previewBinding: src/features/iam/permission-governance/preview/PermissionGovernancePreviewPage.vue
+  productionBinding: src/features/iam/permission-governance/pages/RoleAuthorizationPage.vue
+  productionRoute: /iam/roles/authorization
+  routeSource: src/features/iam/routes.ts
+composition:
+  layoutKey: AppLayout
+  regions:
+    - { id: header, role: header, order: 1 }
+    - { id: role-context, role: summary, order: 2 }
+    - { id: permissions, role: data, order: 3 }
+    - { id: permission-detail, role: detail, order: 4 }
+    - { id: changes, role: summary, order: 5 }
+    - { id: feedback, role: feedback, order: 6 }
+  components:
+    - {
+        id: app-page,
+        componentKey: shared.app-page,
+        regionId: header,
+        purpose: 使用统一内容区和滚动边界,
+      }
+    - {
+        id: page-header,
+        componentKey: shared.page-header,
+        regionId: header,
+        purpose: 承载返回角色列表、保存和刷新动作,
+      }
+    - {
+        id: permission-tree,
+        componentKey: feature.iam.permission-governance.permission-permission-tree,
+        regionId: permissions,
+        purpose: 只勾选当前 Permission；下级 Permission 独立可选，Resource 只读,
+      }
+    - {
+        id: permission-inspector,
+        componentKey: feature.iam.permission-governance.resource-inspector,
+        regionId: permission-detail,
+        purpose: 展示Permission、Permission 和前后端资源信息,
+      }
+    - {
+        id: binding-confirmation,
+        componentKey: shared.confirm-action,
+        regionId: feedback,
+        purpose: 明确确认Permission新增移除和角色绑定变化,
+      }
+states:
+  - id: ready
+    isDefault: true
+    scopeRef: page
+    observableResult: 持续显示当前 Tenant、角色及可选Permission树
+    ruleRef: permission-v2-prd
+  - id: loading
+    scopeRef: permissions
+    observableResult: 角色授权加载时不显示其他角色或 Tenant 的Permission选择状态
+    ruleRef: async-ux
+  - id: empty
+    scopeRef: permissions
+    observableResult: 当前 App 无可用Permission时说明需先维护Permission，不提供资源直授权
+    ruleRef: permission-v2-prd
+  - id: no-binding
+    scopeRef: permissions
+    observableResult: 新角色默认不勾选任何Permission
+    ruleRef: permission-v2-prd
+  - id: dirty
+    scopeRef: changes
+    observableResult: 未保存的Permission新增和移除差异持续可见
+    ruleRef: permission-v2-prd
+  - id: retryable-error
+    scopeRef: feedback
+    observableResult: 加载或提交失败时保留角色和Permission选择上下文并提供重试
+    ruleRef: async-ux
+interactions:
+  - id: search-permissions
+    trigger: 输入Permission名称
+    targetRef: permissions
+    observableResult: 模糊筛选Permission并保留命中包的 Permission／Resource 下钻上下文
+    ruleRef: navigation-ux
+  - id: toggle-permission-binding
+    trigger: 勾选或取消勾选 Permission
+    targetRef: changes
+    observableResult: 只变更角色绑定的Permission集合，不直接修改 Permission 或 Resource
+    ruleRef: permission-v2-prd
+  - id: inspect-permission-contents
+    trigger: 展开Permission或 Permission
+    targetRef: permission-detail
+    observableResult: 只读查看 Permission 及其前端资源、后端 Function；子节点没有可修改勾选框
+    ruleRef: permission-v2-prd
+  - id: save-role-permissions
+    trigger: 点击保存并确认Permission差异
+    targetRef: feedback
+    observableResult: 提交角色的Permission集合并回读真实绑定，失败时不伪造成功
+    ruleRef: async-ux
+mockScenarios:
+  - id: ready-default
+    isDefault: true
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: ready
+    acceptanceRefs:
+      [
+        role-context-visible,
+        permission-only-editable,
+        permission-contents-readonly,
+        preview-isolated,
+      ]
+  - id: no-binding-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: no-binding
+    acceptanceRefs: [new-role-starts-empty]
+  - id: empty-state
+    fixtureRef: src/features/iam/permission-governance/preview/permissionGovernance.fixture.ts
+    stateRef: empty
+    acceptanceRefs: [permission-only-editable]
+exceptions: []
+issues:
+  blockers: []
+  deferred:
+    - id: production-deployment-deferred
+      description: 正式角色Permission DTO、字符串 role_version、稳定前端资源码与 Production Binding 已闭合；生产环境部署和真实身份端到端联调由发布流程继续跟踪
+      affectedScopes: [production-regression]
+      owner: Web 与 IAM 发布
+      resolutionTarget: 发布窗口完成生产部署和真实环境回归
+  outOfScope:
+    - id: no-direct-permission-or-resource-grant
+      description: 角色直接绑定明确 Permission 集合，不直接授权 iam_resource
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+    - id: no-data-scope
+      description: 本次不新增业务数据范围配置
+      affectedScopes: [preview-visual, preview-interaction, production-binding]
+acceptance:
+  - id: role-context-visible
+    sourceRef: permission-v2-prd
+    observableResult: 页面持续显示当前 Tenant 和角色，不让用户误解正在修改的对象
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: permission-only-editable
+    sourceRef: permission-v2-prd
+    observableResult: 资源树顶层为 Permission 列表，只有Permission节点支持勾选和取消勾选
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: toggle-permission-binding
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: permission-contents-readonly
+    sourceRef: permission-v2-prd
+    observableResult: Permission可展开查看 Permission 及其 Resource，但Resource 子节点只读；下级 Permission 独立勾选
+    affectedScopes: [preview-visual, preview-interaction]
+    interactionRef: inspect-permission-contents
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: new-role-starts-empty
+    sourceRef: permission-v2-prd
+    observableResult: 新角色默认不绑定任何Permission，不默认全选
+    affectedScopes: [preview-visual, preview-interaction]
+    stateRef: no-binding
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: preview-isolated
+    sourceRef: permission-ux
+    observableResult: Candidate Preview 只使用确定性 Fixture，不访问 API、认证 Store 或生产路由
+    affectedScopes: [preview-interaction]
+    testRef: tests/visual/iam-permission-governance-previews.spec.ts
+  - id: production-role-authorization-bound
+    sourceRef: role-authorization-api
+    observableResult: 正式路由读取目标角色、角色授权快照和全部带明细Permission候选，并保持角色与 Tenant 上下文
+    affectedScopes: [production-binding, production-regression]
+    stateRef: ready
+    testRef: tests/visual/iam-permission-governance-production.spec.ts
+verification:
+  viewports: [desktop-1366, desktop-1440, desktop-1920]
+  browserTests:
+    [
+      tests/visual/iam-permission-governance-previews.spec.ts,
+      tests/visual/iam-permission-governance-production.spec.ts,
+    ]

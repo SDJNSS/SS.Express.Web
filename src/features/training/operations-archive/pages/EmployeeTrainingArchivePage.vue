@@ -387,7 +387,6 @@ async function retry(section?: ArchiveSection) {
 }
 
 onMounted(() => {
-  document.title = '员工培训档案 · 陆链控制台'
   void Promise.all([loadOptions(), loadList()])
 })
 </script>

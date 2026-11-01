@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { overviewElements } from '../iam-resource.registry'
 import SubsystemWorkspace, {
   type WorkspaceMetric,
   type WorkspaceModule,
@@ -40,6 +41,7 @@ const modules: WorkspaceModule[] = [
 
 <template>
   <SubsystemWorkspace
+    v-resource-element="overviewElements.page"
     title="VMS 车辆管理"
     description="统一管理车辆、司机、证照与维保计划"
     :metrics="metrics"

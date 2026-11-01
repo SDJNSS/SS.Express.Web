@@ -3,10 +3,9 @@ import { resolveLocalMdiIcon } from '@shared/icons/registerIcons'
 
 import type {
   IamCurrentAppMenusResponse,
-  IamCurrentFunctionsResponse,
   IamCurrentMenuResourceResponse,
   IamPermissionResource,
-  IamUserQueryResponse,
+  IamCurrentProfileResponse,
   ShellUserProfile,
 } from '../types/shellContext'
 
@@ -15,7 +14,7 @@ export interface CurrentPermissionRoute {
   type: 'menu' | 'page'
   path: string
   component: string
-  permissionCode: string
+  resourceCode: string
   title: string
 }
 
@@ -35,7 +34,7 @@ export function normalizeInternalRoute(value: string): string | null {
 }
 
 function isEffectiveResource(resource: IamPermissionResource): boolean {
-  return resource.is_currently_effective !== false
+  return resource.status?.trim().toLowerCase() === 'active' && resource.lifecycle !== 'retired'
 }
 
 function isVisibleMenu(resource: IamPermissionResource): boolean {
@@ -47,23 +46,11 @@ function isVisibleMenu(resource: IamPermissionResource): boolean {
 }
 
 function isAvailableModuleContainer(resource: IamPermissionResource): boolean {
-  return (
-    resource.resource_type.trim().toLowerCase() === 'module' &&
-    resource.is_currently_effective !== false
-  )
+  return resource.resource_type.trim().toLowerCase() === 'module' && isEffectiveResource(resource)
 }
 
 function compareResources(left: IamPermissionResource, right: IamPermissionResource): number {
-  return left.sort_order - right.sort_order || left.resource_code.localeCompare(right.resource_code)
-}
-
-export function collectCurrentPermissionCodes(response: IamCurrentFunctionsResponse): string[] {
-  return [
-    ...(response.permission_codes ?? []),
-    ...(response.functions ?? []).map((item) => item.permission_code),
-  ]
-    .map((code) => code.trim())
-    .filter((code, index, values) => Boolean(code) && values.indexOf(code) === index)
+  return left.sort_order - right.sort_order || left.id - right.id
 }
 
 function permissionRoute(resource: IamPermissionResource): CurrentPermissionRoute[] {
@@ -71,7 +58,7 @@ function permissionRoute(resource: IamPermissionResource): CurrentPermissionRout
   const path = normalizeInternalRoute(resource.route_path)
   if (
     (type !== 'menu' && type !== 'page') ||
-    resource.is_currently_effective === false ||
+    !isEffectiveResource(resource) ||
     !path ||
     !resource.component.trim()
   ) {
@@ -83,7 +70,7 @@ function permissionRoute(resource: IamPermissionResource): CurrentPermissionRout
       type,
       path,
       component: resource.component.trim(),
-      permissionCode: resource.permission_code.trim(),
+      resourceCode: resource.resource_code.trim(),
       title: resource.resource_name.trim(),
     },
   ]
@@ -93,7 +80,7 @@ export function collectCurrentAppPermissionRoutes(
   response: IamCurrentAppMenusResponse,
 ): CurrentPermissionRoute[] {
   return (response.modules ?? []).flatMap((module) => {
-    if (!isAvailableModuleContainer(module)) return []
+    if (!isAvailableModuleContainer(module.resource)) return []
     return (module.menus ?? []).flatMap(permissionRoute)
   })
 }
@@ -102,9 +89,9 @@ export function collectCurrentAppMenuPermissionCodes(
   response: IamCurrentAppMenusResponse,
 ): string[] {
   return (response.modules ?? []).flatMap((module) => {
-    if (!isAvailableModuleContainer(module)) return []
+    if (!isAvailableModuleContainer(module.resource)) return []
     return (module.menus ?? []).flatMap((menu) => {
-      const permissionCode = menu.permission_code.trim()
+      const permissionCode = menu.resource_code.trim()
       if (menu.resource_type.trim().toLowerCase() !== 'menu' || !isEffectiveResource(menu)) {
         return []
       }
@@ -114,7 +101,7 @@ export function collectCurrentAppMenuPermissionCodes(
 }
 
 function routeMatchScore(resource: IamPermissionResource, currentPath: string): number {
-  if (resource.is_currently_effective === false) return -1
+  if (!isEffectiveResource(resource)) return -1
   const routePath = normalizeInternalRoute(resource.route_path)
   if (!routePath) return -1
   if (currentPath === routePath) return routePath.length + 1
@@ -126,7 +113,7 @@ export function findCurrentMenuForRoute(
   currentPath: string,
 ): IamCurrentMenuResourceResponse | undefined {
   return (response.modules ?? [])
-    .filter(isAvailableModuleContainer)
+    .filter((module) => isAvailableModuleContainer(module.resource))
     .flatMap((module) => module.menus ?? [])
     .filter(
       (menu) => menu.resource_type.trim().toLowerCase() === 'menu' && isEffectiveResource(menu),
@@ -142,13 +129,13 @@ export function mapCurrentAppMenusToNavigation(
   includeRoute: NavigationRoutePredicate = () => true,
 ): AppShellNavigationItem[] {
   return [...(response.modules ?? [])]
-    .sort(compareResources)
-    .flatMap((module): AppShellNavigationItem[] => {
+    .sort((left, right) => compareResources(left.resource, right.resource))
+    .flatMap(({ resource: module, menus }): AppShellNavigationItem[] => {
       const label = module.resource_name.trim()
       if (!label || !isAvailableModuleContainer(module)) return []
 
       const moduleHref = normalizeInternalRoute(module.route_path)
-      const visibleMenus = [...(module.menus ?? [])].sort(compareResources).filter(isVisibleMenu)
+      const visibleMenus = [...(menus ?? [])].sort(compareResources).filter(isVisibleMenu)
       const children = visibleMenus.flatMap((menu) => {
         // is_visible 的唯一作用域是左侧菜单栏；路由解析与授权上下文不得使用它。
         const menuLabel = menu.resource_name.trim()
@@ -206,45 +193,13 @@ export function resolveFirstCurrentAppMenuRoute(
   return undefined
 }
 
-export function mapUserDetailToProfile(
-  detail: IamUserQueryResponse,
-  tenantCode?: string,
-): ShellUserProfile {
-  const membership =
-    detail.memberships.find((item) => item.tenant_code === tenantCode) ??
-    detail.memberships.find((item) => item.tenant_user_id === detail.tenant_user_id) ??
-    detail.memberships.find((item) => item.is_currently_effective) ??
-    detail.memberships[0]
-  const hasExpandedMembership =
-    detail.tenant_user_id > 0 &&
-    (membership === undefined || membership.tenant_user_id === detail.tenant_user_id)
-  const position =
-    (hasExpandedMembership
-      ? detail.positions.find((item) => item.is_primary && item.is_currently_effective)
-      : undefined) ??
-    (hasExpandedMembership
-      ? detail.positions.find((item) => item.is_currently_effective)
-      : undefined) ??
-    (hasExpandedMembership ? detail.positions[0] : undefined)
-  const organization =
-    (hasExpandedMembership
-      ? detail.organizations.find((item) => item.is_primary && item.is_currently_effective)
-      : undefined) ??
-    (hasExpandedMembership
-      ? detail.organizations.find((item) => item.is_currently_effective)
-      : undefined) ??
-    (hasExpandedMembership ? detail.organizations[0] : undefined)
-
+export function mapCurrentProfileToUser(profile: IamCurrentProfileResponse): ShellUserProfile {
   return {
-    id: String(detail.user.id),
-    name:
-      (hasExpandedMembership ? detail.display_name : membership?.display_name) ||
-      detail.user.real_name ||
-      detail.user.nick_name ||
-      detail.user.user_name,
-    title: position?.position_name ?? '',
-    organization: organization?.org_name ?? '',
-    avatarUrl: detail.user.avatar_url?.trim() ?? '',
-    avatarFileId: detail.user.avatar_file_id?.trim() ?? '',
+    id: String(profile.user_id),
+    name: profile.display_name || profile.real_name || profile.nick_name || profile.user_name,
+    title: profile.position_name,
+    organization: profile.organization_name,
+    avatarUrl: profile.avatar_url.trim(),
+    avatarFileId: profile.avatar_file_id.trim(),
   }
 }

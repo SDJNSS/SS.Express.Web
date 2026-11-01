@@ -6,7 +6,7 @@ page:
     feature: training/operations-archive,
     type: ListPage,
     patternKey: ListPageTemplate,
-    revision: 3,
+    revision: 4,
   }
 sources:
   inputMode: prd-only
@@ -221,6 +221,13 @@ issues:
   }
 acceptance:
   [
+    {
+      id: compact-row-actions,
+      sourceRef: project-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    },
     {
       id: plan-list,
       sourceRef: training-operations-prd,

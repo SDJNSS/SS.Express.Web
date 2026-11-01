@@ -1,23 +1,30 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import { computed, inject, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import type { UploadProps, UploadUserFile } from 'element-plus'
 import { fileTransferKey, type UploadedAsset } from '@shared/services/fileTransfer'
+import { probeVideoDuration } from '@shared/utils/probeVideoDuration'
 
 const props = withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     modelValue: UploadUserFile[]
     accept?: string
     limit?: number
     maxSizeMb?: number
+    maxDurationSeconds?: number
     category?: string
     listType?: 'text' | 'picture-card'
     showTip?: boolean
     disabled?: boolean
   }>(),
   {
+    resource_element: undefined,
     accept: '',
     limit: 5,
     maxSizeMb: 20,
+    maxDurationSeconds: 0,
     category: '',
     listType: 'text',
     showTip: true,
@@ -37,10 +44,11 @@ type Task = ReturnType<NonNullable<typeof gateway>['createTask']>
 interface Job {
   uid: number
   name: string
-  state: 'uploading' | 'error' | 'cancelled' | 'success'
+  state: 'checking' | 'uploading' | 'error' | 'cancelled' | 'success'
   percent: number
   determinate: boolean
   message: string
+  notice?: string
   task?: Task
   controller?: AbortController
 }
@@ -51,7 +59,9 @@ let disposed = false
 const blocked = computed(
   () => Boolean(gateway) && [...jobs.values()].some((job) => job.state !== 'success'),
 )
-const uploading = computed(() => [...jobs.values()].some((job) => job.state === 'uploading'))
+const uploading = computed(() =>
+  [...jobs.values()].some((job) => job.state === 'uploading' || job.state === 'checking'),
+)
 watch(blocked, (value) => emit('blocked-change', value), { immediate: true, flush: 'sync' })
 function publish(next: UploadUserFile[]) {
   files.value = next
@@ -126,6 +136,20 @@ async function run(uid: number) {
   job.determinate = false
   job.message = '正在上传'
   try {
+    if (props.maxDurationSeconds > 0 && props.category.toUpperCase() === 'VIDEO') {
+      job.state = 'checking'
+      job.message = '正在检查视频时长'
+      const duration = await probeVideoDuration(file.raw, controller.signal)
+      if (controller.signal.aborted || disposed || !jobs.has(uid)) return
+      if (duration !== undefined && duration > props.maxDurationSeconds)
+        throw new Error(`视频时长不能超过 ${props.maxDurationSeconds / 60} 分钟，请重新选择`)
+      job.notice =
+        duration === undefined
+          ? '浏览器无法读取原片时长，将在上传转换后复核；超限不能保存为课程。'
+          : ''
+      job.state = 'uploading'
+      job.message = '正在上传'
+    }
     job.task ??= gateway.createTask(file.raw, props.category)
     const asset = await job.task.run({
       signal: controller.signal,
@@ -133,13 +157,30 @@ async function run(uid: number) {
         if (controller.signal.aborted) return
         job.percent = progress.percent ?? 0
         job.determinate = progress.percent !== undefined
-        job.message = job.percent === 100 ? '文件已传输，等待服务端校验' : '正在上传'
+        job.message =
+          job.percent === 100
+            ? props.category.toUpperCase() === 'VIDEO'
+              ? '视频转换及保存中，请稍候'
+              : '文件已传输，等待服务端校验'
+            : '正在上传'
+      },
+      onStage() {
+        if (controller.signal.aborted) return
+        job.message = '正在校验视频'
       },
     })
     if (controller.signal.aborted || disposed || !jobs.has(uid)) return
+    if (props.maxDurationSeconds > 0 && asset.durationMs > props.maxDurationSeconds * 1000)
+      throw new Error(`视频时长不能超过 ${props.maxDurationSeconds / 60} 分钟，请移除并重新选择`)
+    job.notice = ''
     job.state = 'success'
     job.percent = 100
-    job.message = '上传完成'
+    job.message =
+      asset.playbackStatus === 'ready'
+        ? asset.thumbnailStatus === 'failed'
+          ? '上传完成，视频已转换并保存；缩略图生成失败，不影响使用'
+          : '上传完成，视频已转换并保存'
+        : '上传完成'
     publish(
       files.value.map((item) =>
         item.uid === uid ? { ...item, status: 'success', response: asset } : item,
@@ -187,8 +228,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="file-uploader" :aria-busy="uploading">
+  <div
+    v-bind="resourceElementAttributes(resource_element)"
+    class="file-uploader"
+    :aria-busy="uploading"
+  >
     <el-upload
+      v-bind="resourceElementAttributes(resource_element)"
       :file-list="files"
       :accept="accept"
       :limit="limit"
@@ -203,7 +249,11 @@ onBeforeUnmount(() => {
         }
       "
     >
-      <slot><el-button :disabled="disabled">选择文件</el-button></slot>
+      <slot
+        ><el-button v-resource-element="resource_element" :disabled="disabled"
+          >选择文件</el-button
+        ></slot
+      >
       <template v-if="showTip" #tip>
         <div class="uploader-tip">
           单个文件不超过 {{ maxSizeMb }}MB，最多 {{ limit }} 个<span v-if="accept"
@@ -215,10 +265,25 @@ onBeforeUnmount(() => {
     <p v-if="validation" class="uploader-error" role="alert">{{ validation }}</p>
     <div v-for="job in jobs.values()" :key="job.uid" class="uploader-job" aria-live="polite">
       <span>{{ job.name }}：{{ job.message }}</span>
-      <el-progress v-if="job.state === 'uploading' && job.determinate" :percentage="job.percent" />
-      <el-button v-if="job.state === 'uploading'" link @click="cancel(job.uid)">取消上传</el-button>
+      <p v-if="job.notice">{{ job.notice }}</p>
+      <el-progress
+        v-if="job.state === 'uploading' || job.state === 'checking'"
+        :percentage="job.percent"
+        :indeterminate="!job.determinate || job.percent === 100"
+        :show-text="job.determinate && job.percent < 100"
+        :aria-valuenow="job.determinate && job.percent < 100 ? job.percent : undefined"
+        :aria-label="`${job.name}：${job.message}`"
+      />
+      <el-button
+        v-if="job.state === 'uploading' || job.state === 'checking'"
+        v-resource-element="resource_element"
+        link
+        @click="cancel(job.uid)"
+        >取消上传</el-button
+      >
       <el-button
         v-if="job.state === 'error' || job.state === 'cancelled'"
+        v-resource-element="resource_element"
         link
         type="primary"
         @click="run(job.uid)"

@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     total: number
     page: number
     pageSize: number
     pageSizes?: number[]
   }>(),
-  { pageSizes: () => [10, 20, 50, 100] },
+  { resource_element: undefined, pageSizes: () => [10, 20, 50, 100] },
 )
 
 const emit = defineEmits<{
@@ -28,7 +31,7 @@ function handleSizeChange(value: number) {
 </script>
 
 <template>
-  <div class="app-pagination">
+  <div v-bind="resourceElementAttributes(resource_element)" class="app-pagination">
     <el-pagination
       background
       :current-page="page"

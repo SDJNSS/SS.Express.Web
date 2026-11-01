@@ -56,6 +56,23 @@ export function canonicalContractSha256(contract) {
   return createHash('sha256').update(canonicalJson(contract)).digest('hex')
 }
 
+// Only source references may follow an explicitly recorded, byte-identical archive move.
+// Approval digests, production components and route validation remain unchanged.
+export function resolveHistoricalSource(projectRoot, sourcePath) {
+  const registryPath = resolve(projectRoot, 'standards/source-relocations.json')
+  if (!statIsFile(registryPath)) return sourcePath
+  const entry = readJson(registryPath).sources.find((item) => item.from === sourcePath)
+  if (!entry) return sourcePath
+  if (
+    !isSafeProjectPath(projectRoot, entry.to) ||
+    !entry.to.startsWith('archive/') ||
+    !projectFileExists(projectRoot, entry.to) ||
+    fileSha256(resolve(projectRoot, entry.to)) !== entry.sha256
+  )
+    return sourcePath
+  return entry.to
+}
+
 function fileSha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex')
 }
@@ -255,7 +272,7 @@ function validateContractSources(projectRoot, contract, file, findings) {
         projectRoot,
         file,
         `/sources/${groupIndex}/${sourceIndex}/ref`,
-        source.ref,
+        resolveHistoricalSource(projectRoot, source.ref),
       )
     }
   }

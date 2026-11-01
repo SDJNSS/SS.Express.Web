@@ -1,10 +1,11 @@
 import { getStoredAuthSession } from '@shared/api/authSession'
 import { ApiError } from '@shared/api/httpClient'
 import type { FileTransferGateway } from '@shared/services/fileTransfer'
+import type { EntityId } from '@shared/types/entityId'
 import { createDmsUploadTask, dmsFileApi } from './fileApi'
 
 export function createDmsFileTransferGateway(
-  getApp: () => { id: number; app_code: string } | undefined,
+  getApp: () => { id: EntityId; app_code: string } | undefined,
 ): FileTransferGateway {
   function scope() {
     const session = getStoredAuthSession()
@@ -41,23 +42,50 @@ export function createDmsFileTransferGateway(
       return {
         async run(options) {
           ensureScope(expected, options.signal)
-          const result = await task.run(options)
+          let result
+          try {
+            result = await task.run(options)
+          } catch (error) {
+            ensureScope(expected, options.signal)
+            throw error
+          }
           ensureScope(expected, options.signal)
           return {
             fileId: result.file_id,
             name: result.original_name,
             size: result.file_size_bytes,
             category: result.file_category,
-            durationMs: result.media_duration_ms,
+            durationMs: result.media_duration_ms ?? 0,
+            playbackStatus: result.playback_status ?? null,
+            playbackProfile: result.playback_profile ?? null,
+            thumbnailStatus: result.thumbnail_status ?? null,
           }
         },
       }
     },
     async access(fileId, signal) {
       const expected = scope()
-      const result = await dmsFileApi.getAccessUrl(fileId, 'preview', signal)
+      let result
+      try {
+        result = await dmsFileApi.getAccessUrl(fileId, 'preview', signal)
+      } catch (error) {
+        ensureScope(expected, signal)
+        throw error
+      }
       ensureScope(expected, signal)
-      return { url: result.url, expiresAt: result.expires_at }
+      return {
+        url: result.url,
+        expiresAt: result.expires_at,
+        name: result.original_name,
+        size: result.file_size_bytes,
+        contentType: result.content_type,
+        category: result.file_category,
+        playbackStatus: result.playback_status ?? null,
+        playbackProfile: result.playback_profile ?? null,
+        thumbnailStatus: result.thumbnail_status ?? null,
+        thumbnailUrl: result.thumbnail_url ?? null,
+        thumbnailExpiresAt: result.thumbnail_expires_at ?? null,
+      }
     },
   }
 }

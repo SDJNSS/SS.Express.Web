@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import FormDialog from './FormDialog.vue'
+import { setFormUnsaved } from '@shared/services/unsavedNavigation'
 
 const props = withDefaults(
   defineProps<{
+    resource_element?: ResourceElement | undefined
+
     modelValue: boolean
     title: string
     size?: string | number
@@ -19,6 +23,7 @@ const props = withDefaults(
     keepEditingButtonText?: string
   }>(),
   {
+    resource_element: undefined,
     size: 560,
     submitting: false,
     confirmDisabled: false,
@@ -46,6 +51,12 @@ const pendingClose = ref<CloseDrawer>()
 let portalListenerActive = false
 
 const hasUnsavedChanges = computed(() => props.dirty ?? interactionDirty.value)
+const navigationOwner = Symbol('form-drawer')
+watch(
+  () => props.modelValue && hasUnsavedChanges.value,
+  (dirty) => setFormUnsaved(navigationOwner, dirty),
+  { immediate: true },
+)
 
 function markInteractionDirty(event: Event) {
   const target = event.target
@@ -122,11 +133,15 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(() => setPortalListener(false))
+onBeforeUnmount(() => {
+  setPortalListener(false)
+  setFormUnsaved(navigationOwner, false)
+})
 </script>
 
 <template>
   <el-drawer
+    v-bind="resourceElementAttributes(resource_element)"
     :model-value="modelValue"
     :title="title"
     :size="size"
@@ -144,8 +159,14 @@ onBeforeUnmount(() => setPortalListener(false))
     </div>
     <template #footer>
       <slot name="footer" :request-close="requestCancel">
-        <el-button :disabled="submitting" @click="requestCancel">{{ cancelButtonText }}</el-button>
         <el-button
+          v-resource-element="resource_element"
+          :disabled="submitting"
+          @click="requestCancel"
+          >{{ cancelButtonText }}</el-button
+        >
+        <el-button
+          v-resource-element="resource_element"
           type="primary"
           :disabled="confirmDisabled || submitting"
           :loading="submitting"
@@ -158,6 +179,7 @@ onBeforeUnmount(() => setPortalListener(false))
   </el-drawer>
 
   <FormDialog
+    :resource_element="resource_element"
     :model-value="discardVisible"
     :title="discardTitle"
     width="480"

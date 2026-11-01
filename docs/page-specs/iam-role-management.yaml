@@ -6,7 +6,7 @@ page:
     feature: iam/access-control,
     type: ListPage,
     patternKey: ListPageTemplate,
-    revision: 6,
+    revision: 9,
   }
 sources:
   inputMode: prd-only
@@ -22,7 +22,7 @@ sources:
         id: role-api,
         ref: docs/api/iam-access-control-api.md,
         section: 角色管理,
-        operation: POST /iam-admin/RolePermission/QueryRoles; CreateRole; UpdateRole; ChangeRoleStatus; QueryFunctionPermissions; SaveFunctionPermissions; QueryDataPermissions; SaveDataPermission; /iam-admin/MemberRole/Query; Assign; Revoke,
+        operation: POST /iam-admin/RolePermission/QueryRoles; CreateRole; UpdateRole; ChangeRoleStatus; /iam-admin/MemberRole/Query; Assign; Revoke,
         purpose: 定义角色分页、字段、版本、状态及角色上下文权限工作区,
       }
   permissions:
@@ -30,7 +30,7 @@ sources:
         id: role-permission,
         ref: docs/permissions/iam-access-control.md,
         section: IAM 权限治理页面权限约束,
-        purpose: 约束目标 Tenant、系统角色、集团控制角色及隐藏 Page 的 Function 权限门禁,
+        purpose: 约束当前 Tenant、系统角色、集团控制角色及隐藏 Page 的 Function 权限门禁,
       }
   ux:
     - {
@@ -38,6 +38,12 @@ sources:
         ref: UX-CONTRACT.md,
         section: Dataset navigation and Flow ledger,
         purpose: 约束服务端分页、CRUD、确认和失败恢复,
+      }
+    - {
+        id: current-tenant-policy,
+        ref: docs/coordination/iam-current-tenant-scope.md,
+        section: 当前租户业务边界,
+        purpose: 角色列表和写操作仅作用于当前租户,
       }
   references:
     - {
@@ -71,7 +77,7 @@ composition:
         id: search-panel,
         componentKey: shared.search-panel,
         regionId: search,
-        purpose: 提供目标 Tenant 和角色筛选,
+        purpose: 提供当前租户范围内的角色筛选，不另设租户选择框,
       }
     - {
         id: data-table,
@@ -115,7 +121,7 @@ states:
   - {
       id: retryable-error,
       scopeRef: data,
-      observableResult: 保留 Tenant 与筛选并提供重试,
+      observableResult: 保留当前租户上下文与筛选并提供重试,
       ruleRef: list-ux,
     }
   - {
@@ -133,10 +139,10 @@ states:
 interactions:
   - {
       id: query-roles,
-      trigger: 提交 Tenant、关键词、类型或状态,
+      trigger: 提交关键词、类型或状态,
       targetRef: data,
-      observableResult: 页码归一并刷新结果,
-      ruleRef: access-prd,
+      observableResult: 页码归一并刷新当前租户的结果；无有效当前租户时不发送查询,
+      ruleRef: current-tenant-policy,
     }
   - {
       id: create-role,
@@ -149,7 +155,7 @@ interactions:
       id: edit-role,
       trigger: 点击编辑,
       targetRef: form,
-      observableResult: 角色编码只读且 UpdateRole 不再提交 role_code；可编辑 Tenant、类型、状态、名称、说明、备注和排序；具备 iam:roles:function-permissions:view 时可从编辑抽屉进入功能权限页,
+      observableResult: 角色编码与所属 Tenant 只读且 UpdateRole 不再提交 role_code；可编辑类型、状态、名称、说明、备注和排序；具备授权时可从编辑抽屉进入角色授权页,
       ruleRef: access-prd,
     }
   - {
@@ -206,12 +212,19 @@ issues:
         },
         {
           id: role-data-permission-entry-shelved,
-          description: 角色数据权限入口按当前产品决定暂时隐藏，既有实现保留待后续恢复,
+          description: 角色数据权限入口及旧实现已归档，不恢复生产路由,
           affectedScopes: [preview-visual, preview-interaction, production-binding],
         },
       ],
   }
 acceptance:
+  - {
+      id: compact-row-actions,
+      sourceRef: list-ux,
+      observableResult: 对象名称作为已有详情入口，不重复展示详情按钮；操作列按可见按钮自动测量，最多三列且紧凑行距,
+      affectedScopes: [preview-visual, preview-interaction, production-regression],
+      testRef: tests/visual/compact-row-actions.spec.ts,
+    }
   - {
       id: role-workflow,
       sourceRef: access-prd,
@@ -223,7 +236,7 @@ acceptance:
   - {
       id: function-permission-entry-gating,
       sourceRef: role-permission,
-      observableResult: 三个功能权限入口与 /iam/roles/function-permissions 路由均检查 iam:roles:function-permissions:view；不得使用 Page 编码 iam:roles:function-permissions 作为运行时门禁,
+      observableResult: 三个角色授权入口与 /iam/roles/authorization 路由均使用 CurrentPageResources 检查 IAM.ROLES.AUTHORIZATION；不得与旧 Function 权限合并补权,
       affectedScopes: [production-binding, production-regression],
       interactionRef: open-role-workspace,
       testRef: tests/visual/iam-access-control-production.spec.ts,

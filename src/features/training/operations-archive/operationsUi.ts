@@ -1,4 +1,5 @@
 import type { StatusTone } from '@shared/components/StatusTag.vue'
+import { TRAINING_TASK_TYPES } from './constants/trainingTaskTypes'
 import type {
   EmployeeTrainingStatus,
   PlanStatus,
@@ -94,7 +95,7 @@ export function optionalRate(rate?: number) {
 }
 
 export function taskTypeLabel(type: import('./types/trainingOperations').TrainingTaskType) {
-  return { MONTHLY: '月度', QUARTERLY: '季度', TEMPORARY: '临时' }[type]
+  return { MONTHLY: '月度', QUARTERLY: '季度', [TRAINING_TASK_TYPES.OTHER]: '其他' }[type]
 }
 
 export function courseLearningStatusLabel(

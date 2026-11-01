@@ -1,5 +1,7 @@
 # IAM 角色、资源与数据权限（受控需求摘要）
 
+> 2026-09-27 范围修订：本文继续作为角色 CRUD、角色成员分配的既有契约来源。旧功能权限、数据权限、应用资源、用户组合权限页面部分已退役，只供历史追溯；新七页以 `permission-scheme-v2.md`、`permission-governance/` 当前实现及对应 Page Contract 为准。旧页不再注册；详情见 `docs/coordination/iam-maintenance-adoption.md`。
+
 > 来源：用户提供的《IAM-角色资源与数据权限-前端PRD.md》，2026-09-07 纳入项目受控来源。原始附件仅作为证据；本文件继续记录角色管理、功能权限、数据权限与角色分配依赖的业务边界。应用与权限资源已迁移到 `application-permission-resources.md`。
 
 ## 页面范围

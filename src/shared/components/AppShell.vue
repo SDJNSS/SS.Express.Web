@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { provide, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { DropdownInstance } from 'element-plus'
+import { resolveAppShellBranding } from './appShellBranding'
 
 import type {
   AppShellBreadcrumb,
@@ -18,6 +19,8 @@ import {
 const props = withDefaults(
   defineProps<{
     productName: string
+    platformName?: string
+    brandLogoUrl?: string
     brandHref?: string
     currentSystemId: string
     currentSystemLabel: string
@@ -37,6 +40,8 @@ const props = withDefaults(
   }>(),
   {
     brandHref: '/platform/dashboard',
+    platformName: '',
+    brandLogoUrl: '',
     searchValue: '',
     searchPlaceholder: '搜索运输单、车辆、客户等',
     notificationCount: 0,
@@ -68,6 +73,40 @@ const expandedGroups = ref(new Set<string>())
 const userMenuDropdown = ref<DropdownInstance>()
 const isUserMenuOpen = ref(false)
 const avatarLoadFailed = ref(false)
+const brandLogoLoadFailed = ref(false)
+const brandCopy = ref<HTMLElement>()
+const brandTextOverflow = ref(false)
+const branding = computed(() =>
+  resolveAppShellBranding({
+    brandName: props.productName,
+    platformName: props.platformName,
+    logoUrl: props.brandLogoUrl,
+  }),
+)
+const brandDescription = computed(
+  () => `${branding.value.brandName} · ${branding.value.platformName}`,
+)
+let brandResizeObserver: ResizeObserver | undefined
+
+function measureBrandCopy() {
+  brandTextOverflow.value = [...(brandCopy.value?.children ?? [])].some(
+    (line) => line.scrollWidth > line.clientWidth,
+  )
+}
+
+watch(
+  () => branding.value.logoUrl,
+  () => {
+    brandLogoLoadFailed.value = false
+  },
+)
+watch([branding, () => props.collapsed], measureBrandCopy, { flush: 'post' })
+onMounted(() => {
+  brandResizeObserver = new ResizeObserver(measureBrandCopy)
+  if (brandCopy.value) brandResizeObserver.observe(brandCopy.value)
+  measureBrandCopy()
+})
+onBeforeUnmount(() => brandResizeObserver?.disconnect())
 
 watch(
   () => props.userAvatarUrl,
@@ -125,17 +164,36 @@ function updateUserMenuVisibility(visible: boolean) {
 <template>
   <div class="app-shell" :class="{ 'app-shell--collapsed': collapsed }" :data-collapsed="collapsed">
     <aside class="app-shell__sidebar">
-      <a
-        class="app-shell__brand"
-        :href="brandHref"
-        aria-label="返回平台总览"
-        @click="navigate($event, brandHref)"
+      <el-tooltip
+        :content="brandDescription"
+        :trigger="['hover', 'focus']"
+        placement="right"
+        :disabled="!collapsed && !brandTextOverflow"
       >
-        <span class="app-shell__brand-mark" aria-hidden="true">
-          <Icon icon="mdi:cube-outline" width="26" />
-        </span>
-        <span v-if="!collapsed" class="app-shell__brand-name">{{ productName }}</span>
-      </a>
+        <a
+          class="app-shell__brand"
+          :href="brandHref"
+          :aria-label="`${brandDescription}，返回平台总览`"
+          @click="navigate($event, brandHref)"
+        >
+          <span class="app-shell__brand-mark" aria-hidden="true">
+            <img
+              v-if="branding.logoUrl && !brandLogoLoadFailed"
+              :key="branding.logoUrl"
+              class="app-shell__brand-logo"
+              :src="branding.logoUrl"
+              alt=""
+              referrerpolicy="no-referrer"
+              @error="brandLogoLoadFailed = true"
+            />
+            <Icon v-else icon="mdi:cube-outline" width="26" />
+          </span>
+          <span v-show="!collapsed" ref="brandCopy" class="app-shell__brand-copy">
+            <span class="app-shell__brand-name">{{ branding.brandName }}</span>
+            <span class="app-shell__platform-name">{{ branding.platformName }}</span>
+          </span>
+        </a>
+      </el-tooltip>
 
       <div v-if="!collapsed" class="app-shell__system-label">{{ currentSystemLabel }}</div>
       <nav
@@ -262,7 +320,7 @@ function updateUserMenuVisibility(visible: boolean) {
             <slot name="user-menu">
               <el-dropdown-menu>
                 <el-dropdown-item command="settings">个人设置</el-dropdown-item>
-                <el-dropdown-item command="organization">切换组织</el-dropdown-item>
+                <el-dropdown-item command="organization">切换租户</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </slot>
@@ -399,6 +457,7 @@ function updateUserMenuVisibility(visible: boolean) {
   gap: var(--spacing-2);
   width: 100%;
   height: var(--size-header);
+  flex-shrink: 0;
   padding: 0 var(--spacing-3);
   overflow: hidden;
   color: var(--text-inverse);
@@ -414,11 +473,35 @@ function updateUserMenuVisibility(visible: boolean) {
   place-items: center;
 }
 
-.app-shell__brand-name {
+.app-shell__brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-shell__brand-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.app-shell__brand-name,
+.app-shell__platform-name {
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-shell__brand-name {
   font-size: var(--font-size-lg);
   font-weight: 650;
-  text-overflow: ellipsis;
+}
+
+.app-shell__platform-name {
+  color: var(--color-sidebar-link);
+  font-size: var(--font-size-xs);
 }
 
 .app-shell__system-label {
@@ -694,6 +777,15 @@ function updateUserMenuVisibility(visible: boolean) {
 .app-shell__user-menu:hover {
   color: var(--text-inverse);
   background: var(--background-sidebar-hover);
+}
+
+.app-shell__brand:hover {
+  background: var(--background-sidebar-hover);
+}
+
+.app-shell__brand:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
 }
 
 .app-shell__user-menu:focus-visible,

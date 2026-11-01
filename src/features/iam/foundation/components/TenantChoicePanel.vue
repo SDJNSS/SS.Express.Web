@@ -53,14 +53,14 @@ const emit = defineEmits<{
     >
       <Icon icon="mdi:alert-circle-outline" width="26" aria-hidden="true" />
       <strong>可用 Tenant 加载失败</strong>
-      <span>当前没有切换任何业务上下文，请重新加载。</span>
+      <span>{{ mode === 'switch' ? '当前 Tenant 保持不变，请重试或返回。' : '尚未进入业务空间，请重试。' }}</span>
       <el-button type="primary" plain @click="emit('retry')">重新加载</el-button>
     </div>
     <div v-else-if="state === 'empty'" class="tenant-choice__state">
       <Icon icon="mdi:inbox-outline" width="30" aria-hidden="true" />
       <strong>当前没有可用 Tenant</strong>
       <span>请联系集团或 Tenant 管理员核实成员状态与有效期。</span>
-      <el-button @click="emit('cancel')">退出登录</el-button>
+      <el-button @click="emit('cancel')">{{ mode === 'switch' ? '保持当前 Tenant' : '退出登录' }}</el-button>
     </div>
 
     <div v-else class="tenant-choice__body">

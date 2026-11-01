@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
 import { computed, ref, watch } from 'vue'
 import type { UploadUserFile } from 'element-plus'
 import ImageUploader from '@shared/components/ImageUploader.vue'
 import type { UploadedAsset } from '@shared/services/fileTransfer'
 
-const props = defineProps<{ fileId?: string | undefined; imageUrl: string; disabled?: boolean }>()
+const props = defineProps<{
+  resource_element?: ResourceElement | undefined
+  fileId?: string | undefined
+  imageUrl: string
+  disabled?: boolean
+}>()
 const emit = defineEmits<{
   'update:fileId': [value: string]
   'update:imageUrl': [value: string]
@@ -44,9 +50,10 @@ function changeUrl(value: string) {
 }
 </script>
 <template>
-  <div class="image-asset-field">
+  <div v-bind="resourceElementAttributes(resource_element)" class="image-asset-field">
     <ImageUploader
       v-model="files"
+      :resource_element="resource_element"
       :limit="1"
       :disabled="disabled"
       @uploaded="uploaded"

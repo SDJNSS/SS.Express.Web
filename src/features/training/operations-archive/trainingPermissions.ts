@@ -10,9 +10,10 @@ export const TRAINING_PERMISSIONS = Object.freeze({
     publish: 'iam:training:plans:publish',
     delete: 'iam:training:plans:delete',
     queryEmployees: 'iam:training:plans:employees:view',
-    addEmployees: 'iam:training:plans:employees:update',
-    exitEmployees: 'iam:training:plans:employees:update',
-    rejoinEmployee: 'iam:training:plans:employees:update',
+    addEmployees: 'IAM.TRAINING.PLANS.DETAIL.BUTTON.ADDEMPLOYEES',
+    exitEmployee: 'IAM.TRAINING.PLANS.DETAIL.BUTTON.EXITEMPLOYEE',
+    exitEmployees: 'IAM.TRAINING.PLANS.DETAIL.BUTTON.EXITEMPLOYEES',
+    rejoinEmployee: 'IAM.TRAINING.PLANS.DETAIL.BUTTON.REJOINEMPLOYEE',
   },
   tasks: {
     view: 'iam:training:tasks:view',

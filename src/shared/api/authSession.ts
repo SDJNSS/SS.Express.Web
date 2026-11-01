@@ -58,10 +58,14 @@ export function getStoredAccessToken(): string | null {
   )
 }
 
-export function getStoredAuthSession(): StoredAuthSession | null {
+export function getStoredAuthSession(persistence?: AccessTokenPersistence): StoredAuthSession | null {
   if (!browserStorageAvailable()) return null
 
-  const storage = window.sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  const storage = persistence === 'session'
+    ? window.sessionStorage
+    : persistence === 'persistent'
+      ? window.localStorage
+      : window.sessionStorage.getItem(ACCESS_TOKEN_KEY)
     ? window.sessionStorage
     : window.localStorage.getItem(ACCESS_TOKEN_KEY)
       ? window.localStorage
@@ -190,9 +194,14 @@ export function clearStoredAccessToken(): void {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY)
 }
 
-export function clearStoredAuthSession(): void {
+export function clearStoredAuthSession(persistence?: AccessTokenPersistence): void {
   if (!browserStorageAvailable()) return
-  for (const storage of [window.sessionStorage, window.localStorage]) {
+  const storages = persistence === 'session'
+    ? [window.sessionStorage]
+    : persistence === 'persistent'
+      ? [window.localStorage]
+      : [window.sessionStorage, window.localStorage]
+  for (const storage of storages) {
     storage.removeItem(ACCESS_TOKEN_KEY)
     storage.removeItem(LOGIN_STATE_KEY)
     storage.removeItem(ACCOUNT_KEY)

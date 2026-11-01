@@ -86,3 +86,15 @@ pnpm page-contract:production -- --page <page-id>
 ```
 
 完整本地检查使用 `pnpm quality`；CI 不调用用户机器上的 Codex Plugin 路径。
+
+## IAM 自动维护与退役边界
+
+- 六个保留 IAM 基础页和七个新版权限页已接入静态注册表与元素 SDK；使用方式见 [资源编码与元素标记](resource-elements.md)，声明、命令及迁移状态见 [IAM 自动维护标准](iam/README.md)。不能把 13 页清单当作全站扫描白名单。
+
+- 最新权限页：`src/features/iam/permission-governance/pages/`；最终生产入口以真实路由、实现状态和页面规格交叉核对，不以 Preview ID 推断资源码。
+- 正式页面、业务 Button 和结构 Module 必须提供简要 `remarks`，写清用途与使用场景；注册表、DOM 数据属性及离线清单统一透传，具体接口和触发时机仍取元素 events。详见 [资源语义说明](resource-elements.md)。本地代码维护与数据库资源同步分离，前端任务不自动执行入库。
+- 读取 [自动维护接入说明](../docs/coordination/iam-maintenance-adoption.md) 区分已完成与待实施能力；七页不是长期扫描白名单。
+- `archive/**` 全部排除资源发现、生产构建和 Preview；明确退役项见 `standards/iam-retirements.json`，由 `pnpm iam:retirement:check`（已纳入 Lint）防止回流。业务目录 `training/operations-archive/` **不是**归档目录，不得误排除。
+- 历史规格引用迁址通过 `standards/source-relocations.json` 保留旧源标识并校验归档文件 SHA-256；只用于 sources 引用解析，不改变审批摘要或为历史页面恢复批准状态。
+- 当前 V3 目录仍是兼容产物，不等于附件要求的完整维护清单，不得据此推断已声明 Permission、Package 或已完成在线授权。
+- `artifacts/iam-maintenance.frontend.json` 使用 Schema 3.0，包含全量路由发现、精确 Function 映射、Permission 模板（含显式展示父模板和默认联动元数据，不包含 Package），以及分离的 lifecycle、implementation_status、runtime_authorization_model。Lint 检查其与源码一致；complete/ready_for_sync 仅表示离线声明就绪，运行时切换由 authorization_rollout 独立记录。不得据离线 ready 宣称数据库同步、SA 授权或普通用户判权已生效。

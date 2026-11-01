@@ -1,27 +1,30 @@
-<script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+<script setup lang="ts" generic="TId extends number | string = number">
+import { resourceElementAttributes, type ResourceElement } from '@shared/services/resourceElement'
+import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 
 import type { PagedEntityLoader, PagedEntityOption } from '@shared/types/pagedOptions'
 
 const props = defineProps<{
-  modelValue?: number | undefined
+  resource_element?: ResourceElement | undefined
+
+  modelValue?: TId | undefined
   selectedLabel?: string | undefined
   scopeKey: string
   active: boolean
   disabled?: boolean
   clearOnly?: boolean
-  loadOptions?: PagedEntityLoader | undefined
+  loadOptions?: PagedEntityLoader<TId> | undefined
   placeholder?: string
   emptyText?: string
   label?: string
   retryText?: string
   loadingText?: string
 }>()
-const emit = defineEmits<{ 'update:modelValue': [value: number | undefined] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: TId | undefined] }>()
 const PAGE_SIZE = 20
 const SEARCH_DELAY = 300
-const options = ref<PagedEntityOption[]>([])
-const chosen = ref<PagedEntityOption>()
+const options = shallowRef<PagedEntityOption<TId>[]>([])
+const chosen = shallowRef<PagedEntityOption<TId>>()
 const loading = ref(false)
 const error = ref('')
 const keyword = ref('')
@@ -102,7 +105,7 @@ function changeVisibility(visible: boolean) {
   else invalidate()
 }
 
-function change(value: number | undefined) {
+function change(value: TId | undefined) {
   if (props.disabled) return
   if (!value) {
     chosen.value = undefined
@@ -147,8 +150,9 @@ onBeforeUnmount(invalidate)
 </script>
 
 <template>
-  <div class="paged-entity-select">
+  <div v-bind="resourceElementAttributes(resource_element)" class="paged-entity-select">
     <el-select
+      v-bind="resourceElementAttributes(resource_element)"
       :model-value="modelValue || undefined"
       :disabled="disabled"
       :loading="loading"
@@ -191,9 +195,15 @@ onBeforeUnmount(invalidate)
           <span v-else-if="!loading && !options.length && modelValue" role="status">{{
             resolvedEmptyText
           }}</span>
-          <el-button v-if="error" link type="primary" :disabled="loading" @click.stop="query">{{
-            retryText || '重试加载选项'
-          }}</el-button>
+          <el-button
+            v-if="error"
+            v-resource-element="resource_element"
+            link
+            type="primary"
+            :disabled="loading"
+            @click.stop="query"
+            >{{ retryText || '重试加载选项' }}</el-button
+          >
           <el-pagination
             v-if="total > PAGE_SIZE"
             :current-page="pageIndex"

@@ -43,7 +43,7 @@
 | App Shell       | `src/shared/components/AppShell.vue` + `src/app/layouts/AppLayout.vue` 生产绑定                | `DESIGN.md` + 本契约 Navigation              | flat navigation / grouped navigation；collapsed rail   | 三视口 Browser Test + production visual regression |
 | Authentication  | `src/shared/components/page-templates/AuthPageTemplate.vue` + IAM Canonical Page View          | IAM PRD/API/安全策略 + 本契约 Authentication | credentials / focused recovery；其他方式必须有权威来源 | validation + keyboard + failure-path E2E           |
 | Table Selection | `src/shared/components/DataTable.vue` + Element Plus table selection                           | 本契约 Dataset navigation + Page Contract    | page；all-results 仅在 API/PRD 明确时                  | `ui:typecheck` + 页面 E2E                          |
-| Row actions     | `src/shared/components/RowActionGrid.vue`                                                      | `DESIGN.md` + 本契约 Dataset navigation      | 固定三列、紧凑行距；隐藏项由权限指令移除后自动补位     | 三视口 Browser Test + 权限状态检查                 |
+| Row actions     | `src/shared/components/RowActionGrid.vue` + `DataTable.vue`                                    | `DESIGN.md` + 本契约 Dataset navigation      | 最多三列、紧凑行距、按可见操作测宽；权限隐藏后自动补位 | 三视口 Browser Test + 权限状态检查                 |
 | Select/Listbox  | Element Plus `ElSelect`（全局 `zh-CN` Provider）及 `src/shared/business-components` 业务选择器 | `DESIGN.md` + 本契约 Forms                   | authored                                               | 键盘、打开态 popup、三视口 Browser Test            |
 | Date            | Element Plus `ElDatePicker` + dayjs/`DateTimeText.vue`                                         | Page Contract 引用的 API 日期语义 + 本契约   | typed / authored                                       | locale、键盘、打开态 E2E                           |
 | Form            | Element Plus `ElForm` + `FormDialog.vue` / `FormDrawer.vue` / `FormPageTemplate.vue`           | 本契约 Validation + Page Contract            | create / edit                                          | validation E2E + failure path                      |
@@ -66,7 +66,8 @@
 ## Dataset navigation
 
 - 租户范围分页实体候选统一使用 `src/shared/components/PagedEntitySelect.vue`：Element Plus authored Select、分页20条、300ms远程搜索、Abort/请求代次防旧响应、scope改变清空旧候选、选中标签固定保留、失败重试和键盘翻页。接口 loader 由Feature注入，不在共享组件绑定业务权限。
-- 用户成员表允许 `RowActionGrid density="compact"`，保留三列、24px最小点击高度，额外行间距0、列间距4px（均使用已有Token）。
+- 所有标准表格复用紧凑 `RowActionGrid`：最多三列，24px最小点击高度，额外行间距0、列间距4px（均使用已有Token）；仅有一/两个可见按钮时不保留空轨道。`DataTable` 的 actions 列按当前页最宽可见操作组自动测量，不由 Feature 写死宽度；权限、数据及窗口变化后重新测量，空数据或加载刷新保留已有列宽避免闪动。
+- 除员工管理外，列表移除重复“详情”操作，使用对象名称/题干按钮打开已有详情，并保留原 resource_element、权限门禁与键盘可达性。普通数据单元格不触发详情。培训计划名称继续进入计划详情/任务页，不改变原路由流程；无其他操作的员工培训档案不保留空操作列。
 
 - Admin tables: 默认服务端分页；不得把未知或可能很大的数据集一次加载到客户端。
 - Exploratory lists: 只有 PRD 明确连续浏览目标时才选择 Load more / infinite scroll。
@@ -93,11 +94,12 @@
 
 ## Navigation and responsive behavior
 
-- Route document title policy: `{页面} · 陆链控制台`；加载、403、404 和错误路由也必须给出诚实标题。
+- Route document title policy: `{页面} · 多式联运智慧调度平台`；应用启动前的 HTML 标题为“多式联运智慧调度平台”，路由标题后缀复用 `appShellBranding.ts` 中的默认平台名，由统一路由守卫管理，Feature 生产页面不得自行覆盖。加载、403、404 和错误路由也必须给出诚实标题；UIDesign 保留独立预览标题，本规则不修改侧栏品牌名称。
 - Implementation visibility policy: `meta.implementationStatus = 'placeholder'` 表达实现状态而非授权。生产环境不得从服务端菜单、App 首入口或 Overview 卡片暴露这类入口；直接地址保留并明确显示“功能开发中”。`/reference/*` 仅用于开发环境的标准实现复用，不属于生产导航或动态页面注册范围。
 - Route error / 403 page behavior: 404 与权限不足必须区分并保留 App Shell 导航。当前无权限重定向总览属于迁移缺口；新增/触及权限路由不得继续复制该行为，具体披露范围由权限政策决定。
 - Breadcrumb/tab/route-state policy: 面包屑表达层级，路径、分隔符与最后一级标题共享同一垂直中心线；最后一级同时是生产页面唯一可见的 `h1`。页面级通用动作装配到面包屑右侧。普通无壳层 Preview 仍由 `PageHeader` 展示标题、说明和动作。可书签的 Tab 和列表状态进入 URL。
 - Sidebar/drawer/bottom-sheet transformation: 当前仅支持桌面持久侧栏；不得在没有需求和验证的情况下宣称移动端 Drawer/Bottom Sheet 支持。
+- Sidebar branding policy: AppShell 品牌区使用 CurrentProfile 的可选 branding（品牌名、平台名、Logo URL），默认值集中在 appShellBranding.ts。各字段独立降级；图片非法/加载失败使用本地图标；不为品牌增加业务权限。固定两行文字、Logo 占位，长名称通过聚焦/悬浮展示完整值；折叠只保留 Logo。品牌不持久化、不阻塞导航，旧会话响应不得覆盖当前品牌。正式接口增量见 docs/coordination/platform-shell-branding-backend-contract.md。
 - Sidebar control/account policy: 收起控制固定在侧栏右侧中部，展开态为左箭头、收起态为右箭头；账户区域固定在侧栏底部，展开态左侧显示头像、右侧以较大用户名和较小当前 Tenant 名称上下排列，折叠态保留可访问的头像入口。当前会话 Tenant 不再由内容页重复展示；目标用户或目标业务对象的 Tenant 选择仍是页面任务上下文，不能据此删除。
 - System-switcher separation: 顶部子系统入口之间使用半透明分割线；分割线只表达边界，当前系统仍由文字颜色和底部指示条共同表达。
 - App content containment: 生产路由只向 `AppLayout` 提供页面内容；页面根使用 `AppPage + Registry PageTemplate` 或已登记的等价全页组件。页面根不得复制 `AppShell`、使用视口单位/桌面视口级固定宽高，且必须在三个 Registry 视口中完全位于 `app-shell__content` 内、无页面级横向溢出。普通 `ListPageTemplate` 默认使用 natural/page 策略：结果面随当前页行数和页大小自然增高，由 `AppPage` 独占页面纵向滚动；DataTable 只拥有横向滚动，不以内部纵向滚动截断当前页。只有 Workspace、Drawer 或 Page Contract 明确的固定数据面板可使用 contained 内部纵向滚动。其他 Pattern 负责正常高度下的首选纵向滚动，`AppPage` 在所有滚动模式下保留纵向 `auto` 兜底；浏览器高度动态缩短或内容超过模式上限时必须自动出现可用滚动条。Feature 页面根不得使用 `overflow: hidden/clip` 或 `overflow-y: hidden/clip` 截断兜底。`DetailPageTemplate` 默认使用 `page` 模式，并由 `AppPage` 独占普通详情长内容的纵向滚动；只有固定高度表格/标签页工作区使用显式 `contained` 详情变体。`WorkspacePageTemplate` 默认使用 `contained` 模式；普通长内容可显式使用 `scrollMode="page"` 并由 `AppPage` 独占纵向滚动。超长树形工作区使用 `scrollMode="capped-page"`，默认上限为两个 `AppPage` 内容区高度；页面滚动到上限后，超出数据由树或数据面板内部滚动，主从面板使用 sticky 保持任务上下文。三倍高度只允许 Page Contract 明确登记的例外。
@@ -150,6 +152,8 @@
 - 图片业务数据保存 `logo_file_id` / `avatar_file_id`，课程视频使用 `file_id` 引用。临时访问 URL 仅存在展示状态，不写入业务字段或浏览器持久存储。
 - IAM 集团、Tenant、用户图片（含编辑回显和框架头像）直接展示信息接口返回的 `logo_url` / `avatar_url`，不调用 `GetAccessUrl` 或自动续签；URL 缺失显示原有占位，重新查询信息时更新图片。上传后先本地预览，保存文件 ID；展示 URL 不作为文件引用回写。访问 OSS 不附加后台 Token。
 - 服务端 `ValidateVideo` 确认后才可使用视频；时长以服务端 `media_duration_ms` 为准，课程秒数向上取整与后端一致。
+- 视频同步标准化沿用上述上传 Owner：字节传输达到 100% 仅表示请求体发送完成，继续显示“视频转换及保存中”和不确定进度；最终响应后仍等待 ValidateVideo，期间业务保存保持禁止。仅 playback_status=ready 时说明视频已转换，历史空字段不冒充已标准化。缩略图失败不阻断合格视频；确定失败后移除重选生成新上传任务，网络结果不明的重试仍复用原幂等键。契约见 docs/api/dms-files.md。
+- `FileUploader.maxDurationSeconds` 是可选的视频策略，不改变图片等既有上传。设置后先做有界、可取消的本地 metadata 时长预检，释放临时对象URL；未知时长保留说明并交服务端复核，不把浏览器不支持原片当作业务无效。上传/校验返回时长仍须满足上限才发出 uploaded。具体限制来自页面PRD。
 
 - Schema/validation layer: 优先 Element Plus Form + Feature 类型/规则；具体字段规则来自 PRD/API，不在页面临时发明。
 - Trigger timing: 首次提交后，对已出错字段在 change/blur 时更新；不在初始输入时持续报错。

@@ -8,24 +8,26 @@ import { useSessionStore } from '@app/store/session'
 import {
   collectCurrentAppPermissionRoutes,
   collectCurrentAppMenuPermissionCodes,
-  collectCurrentPermissionCodes,
-  findCurrentMenuForRoute,
   getCurrentAppMenus,
   getCurrentApps,
-  getCurrentFunctions,
+  clearCurrentPageResourceAccessCache,
+  getCurrentPageResourcesCached,
   mapCurrentAppMenusToNavigation,
-  mapUserDetailToProfile,
+  mapCurrentProfileToUser,
   normalizeInternalRoute,
   resolveFirstCurrentAppMenuRoute,
-  queryUsers,
+  getCurrentProfile,
   type IamApplication,
   type IamCurrentAppMenusResponse,
-  type IamCurrentFunctionsResponse,
-  type IamCurrentMenuResourceResponse,
 } from '@features/iam/shell-context/public'
 import { getStoredAuthSession } from '@shared/api/authSession'
 import { ApiError } from '@shared/api/httpClient'
+import {
+  DEFAULT_SHELL_BRANDING,
+  resolveAppShellBranding,
+} from '@shared/components/appShellBranding'
 import type { AppShellNavigationState, AppShellSystem } from '@shared/components/appShell.types'
+import { isRetiredIamRoute } from '@shared/constants/iamRetirements'
 import { resolveLocalMdiIcon } from '@shared/icons/registerIcons'
 import { notification } from '@shared/services/notification'
 import { subscribePermissionCatalogChanged } from '@shared/services/permissionCatalogEvents'
@@ -67,6 +69,7 @@ export function useAppShellContext() {
   const route = useRoute()
   const router = useRouter()
   const session = useSessionStore()
+  const shellBranding = ref({ ...DEFAULT_SHELL_BRANDING })
   const apps = ref<IamApplication[]>([])
   const activeAppMenus = ref<IamCurrentAppMenusResponse | null>(null)
   const appState = ref<LoadState>('idle')
@@ -77,12 +80,11 @@ export function useAppShellContext() {
   const menuCache = new Map<number, IamCurrentAppMenusResponse>()
   const menuRequests = new Map<number, Promise<IamCurrentAppMenusResponse>>()
   const appEntryRoutes = ref<Record<number, string>>({})
-  const functionCache = new Map<number, IamCurrentFunctionsResponse>()
   let appRequestSequence = 0
   let contextRequestSequence = 0
   let functionRequestSequence = 0
-  let activeFunctionMenuId: number | null = null
   let isLoadingApps = false
+  let isUnmounted = false
   let unsubscribePermissionCatalog: () => void = () => undefined
 
   const knownSubsystems = new Map<string, (typeof subsystemConfigs)[number]>(
@@ -143,6 +145,7 @@ export function useAppShellContext() {
   )
 
   function includeInShellNavigation(path: string): boolean {
+    if (isRetiredIamRoute(path)) return false
     if (import.meta.env.DEV) return true
     return router.resolve(path).meta.implementationStatus !== 'placeholder'
   }
@@ -179,6 +182,7 @@ export function useAppShellContext() {
 
   function registerPermissionPageRoutes() {
     for (const item of permissionRoutes.value) {
+      if (isRetiredIamRoute(item.path)) continue
       if (router.resolve(item.path).name !== 'not-found') continue
       const component = permissionPageComponent(item.component)
       if (!component) {
@@ -191,7 +195,8 @@ export function useAppShellContext() {
         component,
         meta: {
           title: item.title || '业务页面',
-          ...(item.permissionCode ? { permission: item.permissionCode } : {}),
+          resourceCode: item.resourceCode,
+          authorizationModel: 'v2',
           subsystem: normalizedAppCode(
             apps.value.find((app) => app.id === item.appId)?.app_code ?? '',
           ) as 'dms' | 'iam' | 'tms' | 'vms',
@@ -202,6 +207,8 @@ export function useAppShellContext() {
   }
 
   async function enforceCurrentRoutePermission(app: IamApplication) {
+    // Registered pages are checked by CurrentPageResources in the router, not by navigation.
+    if (route.meta.resourceCode || route.path === '/platform/welcome') return
     const permission = typeof route.meta.permission === 'string' ? route.meta.permission : undefined
     const scope = normalizedAppCode(app.app_code)
     if (!permission || !session.canEvaluatePermission(scope) || session.hasPermission(permission)) {
@@ -216,40 +223,36 @@ export function useAppShellContext() {
     await router.replace({ name: 'forbidden', query: { from: route.fullPath } })
   }
 
-  async function loadFunctionPermissions(
-    menu: IamCurrentMenuResourceResponse | undefined,
-    force = false,
-  ) {
-    if (!force && menu && activeFunctionMenuId === menu.id && session.functionPermissionsReady) {
-      return
-    }
+  async function refreshPagePermissions() {
+    const pageCode = typeof route.meta.resourceCode === 'string' ? route.meta.resourceCode : ''
+    if (!pageCode || route.path === '/platform/welcome') return
     const sequence = ++functionRequestSequence
-    session.beginFunctionPermissionLoad()
-    if (!menu || !Number.isFinite(menu.id) || menu.id <= 0) {
-      activeFunctionMenuId = null
-      session.setFunctionPermissions([])
-      if (menu) notification.warning('当前 Menu 标识无效，相关操作已默认隐藏')
-      return
-    }
+    const stored = getStoredAuthSession()
+    const isCurrent = () =>
+      !isUnmounted &&
+      sequence === functionRequestSequence &&
+      route.meta.resourceCode === pageCode &&
+      stored?.accessToken === getStoredAuthSession()?.accessToken &&
+      stored?.currentTenantId === getStoredAuthSession()?.currentTenantId
+    session.beginPageResourcePermissionLoad(pageCode)
     try {
-      let response = force ? undefined : functionCache.get(menu.id)
-      if (!response) {
-        response = await getCurrentFunctions(menu.id)
-        if (response.menu?.id !== menu.id) {
-          throw new Error(`CurrentFunctions 返回了不匹配的 Menu：${response.menu?.id ?? '空'}`)
-        }
-        functionCache.set(menu.id, response)
+      const response = await getCurrentPageResourcesCached(pageCode, { force: true })
+      if (!isCurrent()) return
+      if (!response.can_access) {
+        session.setPageResourcePermissions(pageCode, [])
+        await router.replace({ name: 'forbidden', query: { from: route.fullPath } })
+        return
       }
-      if (sequence !== functionRequestSequence) return
-      if (response.menu?.id !== menu.id) {
-        throw new Error(`CurrentFunctions 返回了不匹配的 Menu：${response.menu?.id ?? '空'}`)
-      }
-      activeFunctionMenuId = menu.id
-      session.setFunctionPermissions(collectCurrentPermissionCodes(response))
+      session.setPageResourcePermissions(pageCode, [
+        pageCode,
+        ...response.button_resource_codes,
+        ...response.button_page_resource_codes,
+      ])
     } catch (error) {
-      if (sequence !== functionRequestSequence) return
-      activeFunctionMenuId = null
+      if (!isCurrent()) return
+      session.setPageResourcePermissions(pageCode, [])
       notification.warning(shellErrorMessage(error, '功能权限加载失败，相关操作已默认隐藏'))
+      await router.replace({ name: 'authorization-service-error', query: { from: route.fullPath } })
     }
   }
 
@@ -300,9 +303,6 @@ export function useAppShellContext() {
     const scope = normalizedAppCode(app.app_code)
     const sequence = ++contextRequestSequence
     session.beginNavigationPermissionLoad(scope)
-    functionRequestSequence += 1
-    activeFunctionMenuId = null
-    session.beginFunctionPermissionLoad()
     menuError.value = ''
     activeAppMenus.value = null
     menuState.value = 'loading'
@@ -317,7 +317,6 @@ export function useAppShellContext() {
       session.setNavigationPermissions(collectCurrentAppMenuPermissionCodes(response), scope)
       menuState.value = shellNavigation.value.length ? 'ready' : 'empty'
 
-      await loadFunctionPermissions(findCurrentMenuForRoute(response, route.path), force)
       await enforceCurrentRoutePermission(app)
     } catch (error) {
       if (sequence !== contextRequestSequence) return
@@ -349,7 +348,6 @@ export function useAppShellContext() {
       menuCache.clear()
       menuRequests.clear()
       appEntryRoutes.value = {}
-      functionCache.clear()
     }
     try {
       const response = await getCurrentApps()
@@ -359,8 +357,6 @@ export function useAppShellContext() {
       if (!apps.value.length) {
         activeAppMenus.value = null
         permissionRoutes.value = []
-        activeFunctionMenuId = null
-        session.setFunctionPermissions([])
         menuState.value = 'empty'
         return
       }
@@ -380,30 +376,25 @@ export function useAppShellContext() {
 
   async function loadUserProfile() {
     const stored = getStoredAuthSession()
-    const account = stored?.account.trim()
-    const tenantCode = stored?.currentTenantCode
-    const tenantId = stored?.currentTenantId
-    const tenantIds = tenantId
-      ? [tenantId]
-      : (stored?.availableTenants?.map((tenant) => tenant.tenantId) ?? [])
-    if (!account || !tenantIds.length) return
+    if (!stored) return
     try {
-      const response = await queryUsers({
-        tenant_ids: tenantIds,
-        page_index: 1,
-        page_size: 1,
-        user_name: account,
-      })
-      const user = response.items.find(
-        (item) => item.user.user_name.trim().toLowerCase() === account.toLowerCase(),
+      const response = await getCurrentProfile()
+      const current = getStoredAuthSession()
+      // 旧会话/旧 Tenant 的慢响应不得覆盖退出或切换后的展示资料。
+      if (
+        isUnmounted ||
+        current?.accessToken !== stored.accessToken ||
+        current?.currentTenantId !== stored.currentTenantId
       )
-      if (!user) return
-      const profile = mapUserDetailToProfile(user, tenantCode)
-      session.setUserProfile({
-        ...profile,
-        organization: profile.organization || session.user.organization,
+        return
+      shellBranding.value = resolveAppShellBranding({
+        brandName: response.branding?.brand_name,
+        platformName: response.branding?.platform_name,
+        logoUrl: response.branding?.logo_url,
       })
+      session.setUserProfile(mapCurrentProfileToUser(response))
     } catch (error) {
+      if (isUnmounted || getStoredAuthSession()?.accessToken !== stored.accessToken) return
       if (error instanceof ApiError && error.category === 'authentication') return
       notification.warning('用户资料加载失败，当前显示登录账号')
     }
@@ -411,6 +402,7 @@ export function useAppShellContext() {
 
   async function retryNavigation() {
     if (session.isWelcomeOnlySession) return
+    await refreshPagePermissions()
     if (appState.value === 'error') {
       await loadApps(true)
       return
@@ -433,14 +425,16 @@ export function useAppShellContext() {
       const app = currentApp.value
       const response = activeAppMenus.value
       if (!app || !response || response.app.id !== app.id) return
-      await loadFunctionPermissions(findCurrentMenuForRoute(response, current))
       await enforceCurrentRoutePermission(app)
     },
   )
 
   onMounted(() => {
     unsubscribePermissionCatalog = subscribePermissionCatalogChanged(async () => {
-      if (!session.isWelcomeOnlySession) await loadApps(true)
+      if (!session.isWelcomeOnlySession) {
+        clearCurrentPageResourceAccessCache()
+        await Promise.all([loadApps(true), refreshPagePermissions()])
+      }
     })
     if (session.isWelcomeOnlySession) {
       appState.value = 'empty'
@@ -450,9 +444,13 @@ export function useAppShellContext() {
     void Promise.allSettled([loadApps(), loadUserProfile()])
   })
 
-  onBeforeUnmount(() => unsubscribePermissionCatalog())
+  onBeforeUnmount(() => {
+    isUnmounted = true
+    unsubscribePermissionCatalog()
+  })
 
   return {
+    shellBranding,
     currentApp,
     currentSystemId,
     currentSystemLabel,

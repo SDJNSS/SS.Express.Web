@@ -1,4 +1,5 @@
 import { ApiError } from '@shared/api/httpClient'
+export { currentTenantOption, requireCurrentTenantId } from '@shared/api/tenantContext'
 import { currentTenantId } from '@features/iam/foundation/public'
 
 import { mapRole } from '../adapters/accessControlAdapter'

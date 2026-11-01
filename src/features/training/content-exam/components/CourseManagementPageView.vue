@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { coursesElements } from '../iam-resource.registry'
 import { computed, inject, reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useTrainingContentView } from '../composables/useTrainingContentView'
+import CourseVideoPreview from './CourseVideoPreview.vue'
 import type { ContentRuntime, CourseForm } from '../types/trainingContentRuntime'
 import type { UploadUserFile } from 'element-plus'
 
@@ -81,7 +83,7 @@ const columns: DataTableColumn[] = [
   { label: '状态', width: 92, slot: 'status' },
   { label: '锁定', width: 84, slot: 'locked' },
   { prop: 'updatedAt', label: '更新时间', minWidth: 168 },
-  { label: '操作', width: 208, fixed: 'right', slot: 'actions' },
+  { label: '操作', fixed: 'right', slot: 'actions' },
 ]
 
 const visibleRecords = computed(() => {
@@ -284,7 +286,7 @@ function confirmStatus() {
 </script>
 
 <template>
-  <AppPage class="training-page course-management-page">
+  <AppPage :resource_element="coursesElements.page" class="training-page course-management-page">
     <ListPageTemplate>
       <el-alert
         v-if="actionError && !formVisible && !statusVisible"
@@ -304,6 +306,7 @@ function confirmStatus() {
         <PageHeader title="课程管理" description="维护培训视频、学习时长与课程生命周期">
           <template #actions>
             <el-button
+              v-resource-element="coursesElements.create"
               type="primary"
               :disabled="!allowed('create') || submitting"
               @click="openForm('create')"
@@ -315,10 +318,16 @@ function confirmStatus() {
       </template>
 
       <template #search>
-        <SearchPanel :loading="state === 'loading'" @search="search" @reset="reset">
+        <SearchPanel
+          :resource_element="coursesElements.query"
+          :loading="state === 'loading'"
+          @search="search"
+          @reset="reset"
+        >
           <el-form-item label="课程名称">
             <el-input
               v-model="query.keyword"
+              v-resource-element="coursesElements.query"
               clearable
               placeholder="输入课程名称"
               @keyup.enter="handleSearchKeyup"
@@ -353,6 +362,7 @@ function confirmStatus() {
 
       <template #toolbar>
         <TableToolbar
+          :resource_element="coursesElements.query"
           title="课程列表"
           :total="runtime?.total ?? visibleRecords.length"
           :refreshing="state === 'loading'"
@@ -373,18 +383,24 @@ function confirmStatus() {
         show-icon
       >
         <template #default
-          ><el-button link type="primary" @click="refresh">重新加载</el-button></template
+          ><el-button
+            v-resource-element="coursesElements.query"
+            link
+            type="primary"
+            @click="refresh"
+            >重新加载</el-button
+          ></template
         >
       </el-alert>
 
-      <DataTable
-        :data="visibleRecords"
-        :columns="columns"
-        :loading="state === 'loading'"
-        @row-click="openDetail(asCourse($event))"
-      >
+      <DataTable :data="visibleRecords" :columns="columns" :loading="state === 'loading'">
         <template #name="{ row }">
-          <button class="training-page__link" type="button" @click.stop="openDetail(asCourse(row))">
+          <button
+            v-resource-element="coursesElements.detail"
+            class="training-page__link"
+            type="button"
+            @click.stop="openDetail(asCourse(row))"
+          >
             {{ asCourse(row).name }}
           </button>
         </template>
@@ -406,7 +422,6 @@ function confirmStatus() {
         /></template>
         <template #actions="{ row }">
           <RowActionGrid :aria-label="`${asCourse(row).name} 的操作`">
-            <el-button link type="primary" @click.stop="openDetail(asCourse(row))">详情</el-button>
             <el-tooltip
               :disabled="!asCourse(row).isLocked"
               content="课程已被业务使用，核心内容不可编辑"
@@ -414,6 +429,7 @@ function confirmStatus() {
             >
               <span
                 ><el-button
+                  v-resource-element="coursesElements.edit"
                   link
                   type="primary"
                   :disabled="asCourse(row).isLocked || !allowed('update') || submitting"
@@ -423,6 +439,7 @@ function confirmStatus() {
               >
             </el-tooltip>
             <el-button
+              v-resource-element="coursesElements.copy"
               link
               type="primary"
               :disabled="!allowed('copy') || submitting"
@@ -430,6 +447,7 @@ function confirmStatus() {
               >复制</el-button
             >
             <el-button
+              v-resource-element="coursesElements.status"
               link
               :type="asCourse(row).status === 'ACTIVE' ? 'warning' : 'primary'"
               :disabled="!allowed('status') || submitting"
@@ -445,6 +463,7 @@ function confirmStatus() {
         <AppPagination
           v-model:page="page"
           v-model:page-size="pageSize"
+          :resource_element="coursesElements.query"
           :total="runtime?.total ?? visibleRecords.length"
           @change="paginate"
         />
@@ -453,6 +472,7 @@ function confirmStatus() {
 
     <DetailDrawer
       v-model="detailVisible"
+      :resource_element="coursesElements.detail"
       :title="selected ? `课程详情 · ${selected.name}` : '课程详情'"
       :size="720"
     >
@@ -480,15 +500,14 @@ function confirmStatus() {
             formatDuration(selected.plannedDurationSeconds)
           }}</el-descriptions-item>
         </el-descriptions>
-        <el-descriptions title="视频资源" :column="2" border>
-          <el-descriptions-item :label="runtime ? '文件 ID' : '文件名称'" :span="2">{{
-            selected.videoFileName
-          }}</el-descriptions-item>
-          <el-descriptions-item label="文件大小">{{ selected.videoSize }}</el-descriptions-item>
-          <el-descriptions-item v-if="!runtime" label="处理状态"
-            ><StatusTag label="可用" tone="success"
-          /></el-descriptions-item>
-        </el-descriptions>
+        <CourseVideoPreview
+          v-if="detailVisible"
+          :key="`${selected.id}:${selected.videoFileId ?? ''}`"
+          :file-id="selected.videoFileId"
+          :course-name="selected.name"
+          :production="Boolean(runtime)"
+          :gateway="runtime ? fileGateway : undefined"
+        />
         <el-descriptions title="审计信息" :column="2" border>
           <el-descriptions-item label="创建信息"
             >{{ selected.createdBy }} · {{ selected.createdAt }}</el-descriptions-item
@@ -503,6 +522,7 @@ function confirmStatus() {
 
     <FormDrawer
       v-model="formVisible"
+      :resource_element="formMode === 'create' ? coursesElements.create : coursesElements.edit"
       :title="formMode === 'create' ? '新建课程' : `编辑课程 · ${selected?.name ?? ''}`"
       :size="760"
       :submitting="submitting"
@@ -558,7 +578,7 @@ function confirmStatus() {
               <p>
                 {{
                   fileGateway
-                    ? '视频上传后由 DMS 校验，自动读取时长并保存文件 ID。'
+                    ? '支持 MP4、MOV、AVI，单个不超过 200MB、10 分钟。上传转换并校验成功后自动加载视频预览，请核对后保存课程。'
                     : '原型预览仅模拟选文件；生产环境使用 DMS 上传与视频校验。'
                 }}
               </p>
@@ -576,14 +596,27 @@ function confirmStatus() {
           </div>
           <FileUploader
             v-model="uploads"
-            accept="video/*"
+            :resource_element="
+              formMode === 'create' ? coursesElements.createUpload : coursesElements.editUpload
+            "
+            accept=".mp4,.mov,.avi"
             category="VIDEO"
             :limit="1"
-            :max-size-mb="1024"
+            :max-size-mb="200"
+            :max-duration-seconds="600"
             :disabled="submitting"
             @blocked-change="uploadBlocked = $event"
             @uploaded="uploadedVideo"
             @removed="removedVideo"
+          />
+          <CourseVideoPreview
+            v-if="formVisible && form.videoFileId && !uploadBlocked"
+            :key="`${formMode}:${form.videoFileId}`"
+            :file-id="form.videoFileId"
+            :course-name="form.name || '待保存课程'"
+            :production="Boolean(runtime)"
+            :gateway="fileGateway"
+            :editor-mode="formMode"
           />
           <div class="training-form-grid">
             <el-form-item label="视频时长（秒）" required
@@ -624,6 +657,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="copyModel"
+      :resource_element="coursesElements.copy"
       title="复制课程"
       confirm-button-text="创建副本"
       :confirm-disabled="!runtime && !copyName.trim()"
@@ -647,6 +681,7 @@ function confirmStatus() {
 
     <FormDialog
       v-model="statusModel"
+      :resource_element="coursesElements.status"
       :title="selected?.status === 'ACTIVE' ? '停用课程' : '启用课程'"
       :confirm-button-text="selected?.status === 'ACTIVE' ? '确认停用' : '确认启用'"
       :confirm-type="selected?.status === 'ACTIVE' ? 'warning' : 'primary'"
@@ -670,6 +705,7 @@ function confirmStatus() {
     </FormDialog>
     <FormDialog
       v-model="discardVisible"
+      :resource_element="coursesElements.local"
       title="放弃未保存的修改？"
       confirm-button-text="放弃修改"
       confirm-type="warning"

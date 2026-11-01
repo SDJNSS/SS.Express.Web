@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { overviewElements } from '../iam-resource.registry'
 import dayjs from 'dayjs'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -433,11 +434,15 @@ function displayTaskStatus(task: TrainingTaskRecord) {
 </script>
 
 <template>
-  <AppPage class="training-operations-page training-overview-page">
+  <AppPage
+    :resource_element="overviewElements.page"
+    class="training-operations-page training-overview-page"
+  >
     <DashboardPageTemplate>
       <template #header>
         <PageHeader title="培训概览" description="统一观察计划、任务、完成、考试与逾期结果" />
         <SearchPanel
+          :resource_element="overviewElements.query"
           :loading="
             Object.values(sectionStates).some((item) => item === 'loading') || state === 'loading'
           "
@@ -497,7 +502,11 @@ function displayTaskStatus(task: TrainingTaskRecord) {
           :closable="false"
           show-icon
           ><template #default
-            ><el-button link type="primary" @click="emit('retry', 'overview')"
+            ><el-button
+              v-resource-element="overviewElements.overview"
+              link
+              type="primary"
+              @click="emit('retry', 'overview')"
               >重试核心指标</el-button
             ></template
           ></el-alert
@@ -511,6 +520,7 @@ function displayTaskStatus(task: TrainingTaskRecord) {
           <template v-for="metric in metricCards" :key="metric.label">
             <button
               v-if="metric.scope"
+              v-resource-element="overviewElements.incomplete"
               type="button"
               class="training-kpi-card training-kpi-card--action"
               :class="{ 'training-kpi-card--active': drilldownScope === metric.scope }"
@@ -560,7 +570,11 @@ function displayTaskStatus(task: TrainingTaskRecord) {
             :closable="false"
             show-icon
             ><template #default
-              ><el-button link type="primary" @click="emit('retry', 'trends')"
+              ><el-button
+                v-resource-element="overviewElements.trends"
+                link
+                type="primary"
+                @click="emit('retry', 'trends')"
                 >重新加载</el-button
               ></template
             ></el-alert
@@ -598,7 +612,11 @@ function displayTaskStatus(task: TrainingTaskRecord) {
             :closable="false"
             show-icon
             ><template #default
-              ><el-button link type="primary" @click="emit('retry', 'trends')"
+              ><el-button
+                v-resource-element="overviewElements.trends"
+                link
+                type="primary"
+                @click="emit('retry', 'trends')"
                 >重新加载</el-button
               ></template
             ></el-alert
@@ -670,7 +688,11 @@ function displayTaskStatus(task: TrainingTaskRecord) {
           :closable="false"
           show-icon
           ><template #default
-            ><el-button link type="primary" @click="emit('retry', 'incomplete')"
+            ><el-button
+              v-resource-element="overviewElements.incomplete"
+              link
+              type="primary"
+              @click="emit('retry', 'incomplete')"
               >重新加载</el-button
             ></template
           ></el-alert
@@ -700,6 +722,7 @@ function displayTaskStatus(task: TrainingTaskRecord) {
         </DataTable>
         <AppPagination
           v-if="sectionState('incomplete') !== 'retryable-error'"
+          :resource_element="overviewElements.incomplete"
           :page="currentPage"
           :page-size="currentPageSize"
           :total="incomplete?.total ?? incompleteRows.length"
@@ -730,6 +753,11 @@ function displayTaskStatus(task: TrainingTaskRecord) {
 
 <style scoped lang="scss">
 @use '../styles/training-operations.scss';
+
+.training-overview-page .training-operations-page__alert {
+  // The dashboard's flex item must account for its existing inline margins.
+  width: auto;
+}
 
 .training-kpi-card--action {
   color: inherit;

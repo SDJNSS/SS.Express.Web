@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+
 withDefaults(
   defineProps<{
     ariaLabel?: string
@@ -6,14 +8,41 @@ withDefaults(
   }>(),
   {
     ariaLabel: '行操作',
-    density: 'default',
+    density: 'compact',
   },
 )
+
+const grid = ref<HTMLElement>()
+const columns = ref(1)
+let observer: MutationObserver | undefined
+
+function updateColumns() {
+  const visibleCount = Array.from(grid.value?.children ?? []).filter(
+    (child) =>
+      child instanceof HTMLElement && !child.hidden && getComputedStyle(child).display !== 'none',
+  ).length
+  columns.value = Math.max(1, Math.min(3, visibleCount))
+}
+
+onMounted(() => {
+  updateColumns()
+  observer = new MutationObserver(updateColumns)
+  if (grid.value)
+    observer.observe(grid.value, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'style', 'class'],
+    })
+})
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
   <div
+    ref="grid"
     class="row-action-grid"
+    :style="{ gridTemplateColumns: `repeat(${columns}, max-content)` }"
     :class="{ 'row-action-grid--compact': density === 'compact' }"
     role="group"
     :aria-label="ariaLabel"
@@ -24,12 +53,12 @@ withDefaults(
 
 <style scoped>
 .row-action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, max-content);
+  display: inline-grid;
+  width: max-content;
   align-items: center;
   justify-content: start;
-  row-gap: var(--spacing-1);
-  column-gap: var(--spacing-2);
+  row-gap: 0;
+  column-gap: var(--spacing-1);
   min-width: 0;
 }
 
@@ -38,18 +67,13 @@ withDefaults(
   margin-left: 0;
 }
 
-.row-action-grid :deep([hidden]) {
-  display: none !important;
-}
-
-.row-action-grid--compact {
-  row-gap: 0;
-  column-gap: var(--spacing-1);
-}
-
-.row-action-grid--compact :deep(.el-button.is-link) {
+.row-action-grid :deep(.el-button.is-link) {
   height: auto;
   min-height: var(--spacing-6);
   padding: 0;
+}
+
+.row-action-grid :deep([hidden]) {
+  display: none !important;
 }
 </style>

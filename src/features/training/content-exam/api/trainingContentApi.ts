@@ -12,6 +12,8 @@ import type {
   PaperContentRequest,
   PaperDetailDto,
   PaperSummaryDto,
+  PaperGeneratePreviewRequest,
+  PaperGeneratePreviewResponse,
   QuestionContentRequest,
   QuestionDetailDto,
   QuestionSummaryDto,
@@ -22,6 +24,7 @@ import type {
 
 function post<T>(path: string, data: unknown, signal?: AbortSignal) {
   return requestApi<T>({
+    tenantScoped: true,
     method: 'POST',
     url: serviceApiPath('iam', defineApiPath(path)),
     data,
@@ -52,7 +55,11 @@ export const trainingContentApi = {
   questions: resourceApi<QuestionSummaryDto, QuestionDetailDto, QuestionContentRequest>(
     '/TrainingQuestion',
   ),
-  papers: resourceApi<PaperSummaryDto, PaperDetailDto, PaperContentRequest>('/TrainingPaper'),
+  papers: {
+    ...resourceApi<PaperSummaryDto, PaperDetailDto, PaperContentRequest>('/TrainingPaper'),
+    generatePreview: (body: PaperGeneratePreviewRequest, signal: AbortSignal) =>
+      post<PaperGeneratePreviewResponse>('/TrainingPaper/GeneratePreview', body, signal),
+  },
   exams: resourceApi<ExamDto, ExamDto, ExamContentRequest>('/TrainingExam'),
 }
 

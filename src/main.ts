@@ -8,7 +8,9 @@ import router from '@app/router'
 import { permissionDirective } from '@app/providers/permission'
 import { useSessionStore } from '@app/store/session'
 import { configureHttpAuth } from '@shared/api/httpClient'
+import { observeTenantSwitch } from '@shared/api/tenantSwitchSignal'
 import { registerLocalIcons } from '@shared/icons/registerIcons'
+import { resourceElementDirective } from '@shared/services/resourceElement'
 import '@shared/styles/index.scss'
 
 const app = createApp(App)
@@ -19,8 +21,10 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
 app.directive('permission', permissionDirective)
+app.directive('resource-element', resourceElementDirective)
 
 const session = useSessionStore(pinia)
+observeTenantSwitch()
 configureHttpAuth({
   onSessionExpired: () => {
     const redirect = router.currentRoute.value.fullPath

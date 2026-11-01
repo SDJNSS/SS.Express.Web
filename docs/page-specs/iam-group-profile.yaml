@@ -5,7 +5,7 @@ page:
   feature: iam/foundation
   type: DetailPage
   patternKey: DetailPageTemplate
-  revision: 4
+  revision: 5
 sources:
   inputMode: prd-only
   prd:
@@ -21,9 +21,9 @@ sources:
       purpose: 定义集团档案字段、版本与更新结果
   permissions:
     - id: group-permission
-      ref: docs/prd/iam/organization-identity-tenant-foundation.md
-      section: M01 权限与安全要求
-      purpose: 集团超级管理员可编辑，其他身份无此入口
+      ref: docs/coordination/iam-current-tenant-scope.md
+      section: 当前租户授权与目录例外
+      purpose: 集团共享记录仍按当前 Tenant 的页面及 Function 授权，保留后端原有 SA 限制；身份不自动补权
   ux:
     - id: detail-ux
       ref: UX-CONTRACT.md
@@ -134,6 +134,13 @@ issues:
     - { id: no-mobile, description: 当前仅验证三个标准桌面视口, affectedScopes: [preview-visual] }
 acceptance:
   - {
+      id: group-current-tenant-authorization,
+      sourceRef: group-permission,
+      observableResult: 未选择租户不查询集团信息；SA 和旧登录权限不能覆盖当前 Tenant 的页面拒绝；编辑按钮来自本页精确资源集合,
+      affectedScopes: [production-binding, production-regression],
+      testRef: tests/visual/iam-current-api-migration.spec.ts,
+    }
+  - {
       id: group-layout,
       sourceRef: group-prd,
       observableResult: Logo 可展示和编辑，集团编码只读且不进入 Update 请求，基础信息与联系区域均固定为两列且长文本换行，三个桌面视口无横向溢出,
@@ -150,4 +157,5 @@ acceptance:
     }
 verification:
   viewports: [desktop-1366, desktop-1440, desktop-1920]
-  browserTests: [tests/visual/iam-foundation-previews.spec.ts]
+  browserTests:
+    [tests/visual/iam-foundation-previews.spec.ts, tests/visual/iam-current-api-migration.spec.ts]
